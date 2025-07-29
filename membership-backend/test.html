@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIS Membership API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        button { background: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .response { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>BIS Membership Database API Test</h1>
+    
+    <!-- Authentication Section -->
+    <div class="section">
+        <h2>1. Authentication Test</h2>
+        <div>
+            <input type="text" id="username" placeholder="Username" value="">
+            <input type="password" id="password" placeholder="Password" value="">
+            <button onclick="testLogin()">Login</button>
+            <button onclick="testCheckAuth()">Check Auth</button>
+            <button onclick="testLogout()">Logout</button>
+        </div>
+        <div id="auth-response" class="response"></div>
+    </div>
+
+    <!-- Database Connection Test -->
+    <div class="section">
+        <h2>2. Reference Data Test</h2>
+        <div>
+            <button onclick="testCounties()">Get Counties</button>
+            <button onclick="testCategories()">Get Categories</button>
+            <button onclick="testSurnames()">Get Surnames</button>
+            <button onclick="testOccupations()">Get Occupations</button>
+        </div>
+        <div id="reference-response" class="response"></div>
+    </div>
+
+    <!-- Members Test -->
+    <div class="section">
+        <h2>3. Members Test</h2>
+        <div>
+            <button onclick="testMembers()">Get All Members</button>
+            <button onclick="testMemberById()">Get Member by ID</button>
+            <input type="number" id="memberId" placeholder="Member ID" value="1">
+            <button onclick="testStats()">Get Stats</button>
+        </div>
+        <div id="members-response" class="response"></div>
+    </div>
+
+    <!-- Current User Info -->
+    <div class="section">
+        <h2>4. Current Session Info</h2>
+        <div id="session-info">Not logged in</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentUser = null;
+
+        // Helper function to make API calls
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    credentials: 'include', // Important for session cookies
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return { status: response.status, data };
+            } catch (error) {
+                return { status: 0, data: { error: error.message } };
+            }
+        }
+
+        // Display response helper
+        function displayResponse(elementId, result) {
+            const element = document.getElementById(elementId);
+            const className = result.status < 400 ? 'success' : 'error';
+            element.innerHTML = `
+                <div class="${className}">
+                    <strong>Status:</strong> ${result.status}<br>
+                    <strong>Response:</strong>
+                    <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        // Authentication tests
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('Please enter username and password');
+                return;
+            }
+
+            const result = await apiCall('/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+            
+            displayResponse('auth-response', result);
+            
+            if (result.status === 200) {
+                currentUser = result.data.user;
+                updateSessionInfo();
+            }
+        }
+
+        async function testCheckAuth() {
+            const result = await apiCall('/check-auth');
+            displayResponse('auth-response', result);
+            
+            if (result.data.authenticated) {
+                currentUser = result.data.user;
+                updateSessionInfo();
+            }
+        }
+
+        async function testLogout() {
+            const result = await apiCall('/logout', { method: 'POST' });
+            displayResponse('auth-response', result);
+            currentUser = null;
+            updateSessionInfo();
+        }
+
+        // Reference data tests
+        async function testCounties() {
+            const result = await apiCall('/counties');
+            displayResponse('reference-response', result);
+        }
+
+        async function testCategories() {
+            const result = await apiCall('/categories');
+            displayResponse('reference-response', result);
+        }
+
+        async function testSurnames() {
+            const result = await apiCall('/surnames');
+            displayResponse('reference-response', result);
+        }
+
+        async function testOccupations() {
+            const result = await apiCall('/occupations');
+            displayResponse('reference-response', result);
+        }
+
+        // Members tests
+        async function testMembers() {
+            const result = await apiCall('/members');
+            displayResponse('members-response', result);
+        }
+
+        async function testMemberById() {
+            const memberId = document.getElementById('memberId').value;
+            if (!memberId) {
+                alert('Please enter a member ID');
+                return;
+            }
+            
+            const result = await apiCall(`/members/${memberId}`);
+            displayResponse('members-response', result);
+        }
+
+        async function testStats() {
+            const result = await apiCall('/stats');
+            displayResponse('members-response', result);
+        }
+
+        // Update session info display
+        function updateSessionInfo() {
+            const sessionInfo = document.getElementById('session-info');
+            if (currentUser) {
+                sessionInfo.innerHTML = `
+                    <div class="success">
+                        <strong>Logged in as:</strong> ${currentUser.username}<br>
+                        <strong>Role:</strong> ${currentUser.role}<br>
+                        <strong>Email:</strong> ${currentUser.email}
+                    </div>
+                `;
+            } else {
+                sessionInfo.innerHTML = 'Not logged in';
+            }
+        }
+
+        // Check auth status on page load
+        window.onload = function() {
+            testCheckAuth();
+        };
+    </script>
+</body>
+</html>

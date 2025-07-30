@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import PublicLayout from "../../components/publiclayout";
+import MainLayout from "../../components/mainlayout";
+import { useAuth } from "../../hooks/useauth";
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
@@ -11,6 +13,10 @@ export default function PublicDashboard() {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const { user } = useAuth();
+
+  // Determine which layout to use based on authentication
+  const Layout = user ? MainLayout : PublicLayout;
 
   useEffect(() => {
     fetch("http://localhost:5000/api/public/dashboard")
@@ -41,7 +47,7 @@ export default function PublicDashboard() {
 
   if (isLoading) {
     return (
-      <PublicLayout>
+      <Layout>
         <div className="dashboard-container">
           <div style={{ 
             display: 'flex', 
@@ -52,12 +58,12 @@ export default function PublicDashboard() {
             <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
           </div>
         </div>
-      </PublicLayout>
+      </Layout>
     );
   }
 
   return (
-    <PublicLayout>
+    <Layout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
@@ -196,6 +202,6 @@ export default function PublicDashboard() {
           )}
         </div>
       </div>
-    </PublicLayout>
+    </Layout>
   );
 }

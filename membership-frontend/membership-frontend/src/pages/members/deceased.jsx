@@ -8,6 +8,10 @@ export default function DeceasedMembers() {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState("lastName");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [filterCounty, setFilterCounty] = useState("");
 
   // Redirect to login if not authenticated
   if (!user) {
@@ -35,6 +39,46 @@ export default function DeceasedMembers() {
       });
   }, []);
 
+  // Get unique counties for filter dropdown
+  const uniqueCounties = [...new Set(members.map(m => m.county).filter(Boolean))].sort();
+
+  // Filter and sort members
+  const filteredMembers = members
+    .filter(member => {
+      const matchesSearch = !searchTerm || 
+        member.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.firstName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCounty = !filterCounty || member.county === filterCounty;
+      return matchesSearch && matchesCounty;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortField] || "";
+      let bValue = b[sortField] || "";
+      
+      if (sortField === "dateOfBirth") {
+        aValue = new Date(aValue || "1900-01-01");
+        bValue = new Date(bValue || "1900-01-01");
+      }
+      
+      if (sortField === "membershipYears") {
+        aValue = parseInt(aValue) || 0;
+        bValue = parseInt(bValue) || 0;
+      }
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   return (
     <MainLayout>
       <div className="dashboard-container">
@@ -44,7 +88,7 @@ export default function DeceasedMembers() {
             <div>
               <h1 className="dashboard-title">📚 Member Directory</h1>
               <p className="dashboard-subtitle">
-                Browse our community membership records and memorial register
+                Browse and search member records
               </p>
             </div>
           </div>
@@ -58,13 +102,73 @@ export default function DeceasedMembers() {
           {isLoading ? (
             <div className="dashboard-card" style={{ textAlign: 'center', padding: '60px' }}>
               <div className="spinner" style={{ width: '40px', height: '40px', margin: '0 auto' }}></div>
-              <p style={{ color: '#64748b', marginTop: '16px' }}>Loading memorial records...</p>
+              <p style={{ color: '#64748b', marginTop: '16px' }}>Loading directory...</p>
             </div>
           ) : (
             <div className="dashboard-card">
-              <h2 className="dashboard-card-title">📋 Directory & Memorial Register</h2>
+              <h2 className="dashboard-card-title">📋 Member Directory</h2>
               
-              {members.length === 0 ? (
+              {/* Search and Filter Controls */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '16px', 
+                marginBottom: '24px',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+              }}>
+                {/* Search */}
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  />
+                </div>
+
+                {/* County Filter */}
+                <div style={{ minWidth: '150px' }}>
+                  <select
+                    value={filterCounty}
+                    onChange={(e) => setFilterCounty(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      background: 'white'
+                    }}
+                  >
+                    <option value="">All Counties</option>
+                    {uniqueCounties.map(county => (
+                      <option key={county} value={county}>{county}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Results Count */}
+                <div style={{ 
+                  padding: '8px 16px',
+                  background: '#f0fdfa',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  color: '#0f766e',
+                  fontWeight: '500'
+                }}>
+                  {filteredMembers.length} member{filteredMembers.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {filteredMembers.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
                   padding: '60px',
@@ -72,152 +176,144 @@ export default function DeceasedMembers() {
                 }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                   <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-                    No Records Found
+                    {searchTerm || filterCounty ? 'No Results Found' : 'No Records Available'}
                   </h3>
                   <p style={{ fontSize: '14px' }}>
-                    There are currently no deceased member records in the database.
+                    {searchTerm || filterCounty 
+                      ? 'Try adjusting your search or filter criteria.'
+                      : 'There are currently no deceased member records in the database.'
+                    }
                   </p>
                 </div>
               ) : (
-                <>
-                  <div style={{ 
-                    marginBottom: '20px',
-                    padding: '16px',
-                    background: '#f8fafc',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
-                    fontSize: '14px',
-                    color: '#64748b',
-                    textAlign: 'center'
-                  }}>
-                    <strong>{members.length}</strong> member{members.length !== 1 ? 's' : ''} remembered in our memorial register
-                  </div>
-
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', fontSize: '14px' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                          <th style={{ 
-                            padding: '16px', 
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#374151',
-                            fontSize: '12px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            Surname
-                          </th>
-                          <th style={{ 
-                            padding: '16px', 
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#374151',
-                            fontSize: '12px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            First Name
-                          </th>
-                          <th style={{ 
-                            padding: '16px', 
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#374151',
-                            fontSize: '12px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            Date of Birth
-                          </th>
-                          <th style={{ 
-                            padding: '16px', 
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#374151',
-                            fontSize: '12px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            County
-                          </th>
-                          <th style={{ 
-                            padding: '16px', 
-                            textAlign: 'left',
-                            fontWeight: '600',
-                            color: '#374151',
-                            fontSize: '12px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            Years Active
-                          </th>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', fontSize: '14px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'left', 
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => handleSort('lastName')}
+                        >
+                          SURNAME {sortField === 'lastName' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'left', 
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => handleSort('firstName')}
+                        >
+                          FIRST NAME {sortField === 'firstName' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'left', 
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => handleSort('dateOfBirth')}
+                        >
+                          DATE OF BIRTH {sortField === 'dateOfBirth' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'left', 
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => handleSort('county')}
+                        >
+                          COUNTY {sortField === 'county' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'left', 
+                          fontWeight: '600',
+                          color: '#374151',
+                          cursor: 'pointer',
+                          userSelect: 'none'
+                        }}
+                        onClick={() => handleSort('membershipYears')}
+                        >
+                          YEARS ACTIVE {sortField === 'membershipYears' && (sortDirection === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th style={{ 
+                          padding: '16px', 
+                          textAlign: 'center', 
+                          fontWeight: '600',
+                          color: '#374151'
+                        }}>
+                          ACTION
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map((member, index) => (
+                        <tr 
+                          key={member.id || index}
+                          style={{ 
+                            borderBottom: '1px solid #f1f5f9',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}
+                        >
+                          <td style={{ padding: '16px', color: '#0f172a', fontWeight: '500' }}>
+                            {member.lastName || '—'}
+                          </td>
+                          <td style={{ padding: '16px', color: '#64748b' }}>
+                            {member.firstName || '—'}
+                          </td>
+                          <td style={{ padding: '16px', color: '#64748b' }}>
+                            {member.dateOfBirth || '—'}
+                          </td>
+                          <td style={{ padding: '16px', color: '#64748b' }}>
+                            {member.county || '—'}
+                          </td>
+                          <td style={{ padding: '16px', color: '#64748b' }}>
+                            {member.membershipYears ? `${member.membershipYears} years` : '—'}
+                          </td>
+                          <td style={{ padding: '16px', textAlign: 'center' }}>
+                            <Link
+                              to={`/members/${member.id}`}
+                              style={{
+                                display: 'inline-block',
+                                padding: '8px 16px',
+                                background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+                                color: 'white',
+                                textDecoration: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                transition: 'all 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                            >
+                              View Profile
+                            </Link>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {members.map((member, index) => (
-                          <tr 
-                            key={member.id || index}
-                            style={{ 
-                              borderBottom: '1px solid #f1f5f9',
-                              transition: 'background-color 0.2s ease'
-                            }}
-                            onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8fafc'}
-                            onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}
-                          >
-                            <td style={{ padding: '16px', fontWeight: '500' }}>
-                              {member.lastName || "—"}
-                            </td>
-                            <td style={{ padding: '16px' }}>
-                              {member.firstName || "—"}
-                            </td>
-                            <td style={{ padding: '16px', color: '#64748b' }}>
-                              {member.dateOfBirth || "—"}
-                            </td>
-                            <td style={{ padding: '16px', color: '#64748b' }}>
-                              {member.county || "—"}
-                            </td>
-                            <td style={{ padding: '16px', color: '#64748b' }}>
-                              {member.membershipYears || "—"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           )}
-
-          {/* Memorial Message */}
-          <div className="dashboard-card" style={{ 
-            background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-            border: '1px solid #e5e7eb',
-            textAlign: 'center',
-            marginTop: '24px'
-          }}>
-            <div style={{ fontSize: '24px', marginBottom: '12px' }}>🕯️</div>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '600', 
-              color: '#374151',
-              marginBottom: '8px'
-            }}>
-              In Loving Memory
-            </h3>
-            <p style={{ 
-              color: '#6b7280', 
-              fontSize: '14px',
-              lineHeight: '1.6',
-              maxWidth: '600px',
-              margin: '0 auto'
-            }}>
-              We honor and remember our dear members who have passed away. 
-              Their contributions to our community will never be forgotten, 
-              and their legacy lives on in our hearts and memories.
-            </p>
-          </div>
         </div>
       </div>
     </MainLayout>

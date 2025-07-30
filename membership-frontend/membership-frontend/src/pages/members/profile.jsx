@@ -151,7 +151,13 @@ export default function MemberProfile() {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 40, justifyContent: 'center' }}>
-            <Link to="/members" className="btn-primary" style={{ background: '#f1f5f9', color: '#22223b', border: '1.5px solid #e2e8f0', fontWeight: 600, minWidth: 120, textAlign: 'center', textDecoration: 'none' }}>← Back to Members</Link>
+            <Link 
+              to={user && user.role === "public" ? "/members/deceased" : "/members"} 
+              className="btn-primary" 
+              style={{ background: '#f1f5f9', color: '#22223b', border: '1.5px solid #e2e8f0', fontWeight: 600, minWidth: 120, textAlign: 'center', textDecoration: 'none' }}
+            >
+              ← Back to Members
+            </Link>
             
             {/* Admin-only controls */}
             {user && user.role === "admin" && (

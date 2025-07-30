@@ -145,7 +145,7 @@ def health_check():
 def dashboard_stats():
     """Get dashboard statistics for the private dashboard"""
     try:
-        conn = pyodbc.connect(f'DRIVER={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={DATABASE_PATH}')
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Get total members count
@@ -269,6 +269,25 @@ def log_audit_event(user_id, action, table_name, record_id, details=None):
 
     try:
         cursor = conn.cursor()
+        # First, try to create the AuditLog table if it doesn't exist
+        try:
+            cursor.execute("""
+                CREATE TABLE AuditLog (
+                    ID AUTOINCREMENT PRIMARY KEY,
+                    UserID LONG,
+                    Action TEXT(50),
+                    TableName TEXT(50),
+                    RecordID LONG,
+                    Details MEMO,
+                    Timestamp DATETIME
+                )
+            """)
+            conn.commit()
+            logger.info("Created AuditLog table")
+        except Exception:
+            # Table already exists, continue
+            pass
+        
         cursor.execute("""
             INSERT INTO AuditLog (UserID, Action, TableName, RecordID, Details, Timestamp)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -276,6 +295,8 @@ def log_audit_event(user_id, action, table_name, record_id, details=None):
         conn.commit()
     except Exception as e:
         logger.error(f"Audit logging failed: {e}")
+        # For now, just log the error and continue - don't break the main functionality
+        pass
     finally:
         conn.close()
 
@@ -500,7 +521,7 @@ def create_test_user(username, password, role, email=None):
         cursor.execute("""
             INSERT INTO [User] (UserID, Username, Email, PasswordHash, Role, IsApproved, CreatedAt)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, username, email, hashed_password, role, True, datetime.now()))
+        """, (user_id, username, email, hashed_password, role, 1, datetime.now()))
 
         conn.commit()
         logger.info(f"Created test user: {username} with role: {role}")

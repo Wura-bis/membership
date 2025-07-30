@@ -62,9 +62,9 @@ export default function Members() {
 
   // Updated filter logic
   const filtered = members.filter((m) => {
-    // Public users: only show deceased (inactive) members
-    if (user && user.role === "public" && m.isActive) return false;
-
+    // Role-based filtering: Admin sees ALL members, others see backend-filtered results
+    // The backend already handles role-based filtering, so don't filter by isActive here
+    
     const matchesSearch = [m.firstName, m.lastName, m.county]
       .join(" ")
       .toLowerCase()
@@ -126,9 +126,9 @@ export default function Members() {
           <div className="dashboard-header">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h1 className="dashboard-title">👥 Members Directory</h1>
+                <h1 className="dashboard-title">👥 Active Members</h1>
                 <p className="dashboard-subtitle">
-                  Browse and manage the complete membership database
+                  Browse active membership records
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>

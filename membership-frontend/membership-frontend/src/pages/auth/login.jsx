@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useauth";
 
 export default function Login() {
   const [userID, setUserID] = useState("");
@@ -11,6 +12,7 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Real-time validation
   const validateField = (name, value) => {
@@ -81,10 +83,15 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      // Role-based redirect
-      if (data.user && data.user.role === "admin") {
+      
+      // Update AuthContext with user data
+      login(data.user);
+      
+      // Role-based redirect (use lowercase for comparison)
+      const userRole = data.user.role.toLowerCase();
+      if (userRole === "admin") {
         navigate("/dashboard");
-      } else if (data.user && data.user.role === "private") {
+      } else if (userRole === "private") {
         navigate("/dashboard/private");
       } else {
         navigate("/public");

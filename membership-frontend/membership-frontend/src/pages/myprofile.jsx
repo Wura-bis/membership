@@ -35,7 +35,9 @@ export default function MyProfile() {
         if (data.error) {
           setError(data.error);
         } else {
-          setUser(data);
+          // Convert role to lowercase to match frontend expectations
+          const userWithLowerRole = { ...data, role: data.role?.toLowerCase() };
+          setUser(userWithLowerRole);
           setForm({
             username: data.username || "",
             email: data.email || "",
@@ -81,7 +83,7 @@ export default function MyProfile() {
 
       setSuccess("Profile updated successfully!");
       setEditMode(false);
-      setUser((prev) => ({ ...prev, ...form }));
+      setUser((prev) => ({ ...prev, ...form, role: prev.role })); // Preserve role
     } catch (err) {
       setError(err.message);
     } finally {
@@ -417,13 +419,6 @@ export default function MyProfile() {
                        user.role === 'private' ? '🔒 Private Member' : 
                        '🌐 Public Member'}
                     </span>
-                  </div>
-                </div>
-
-                <div className="info-item">
-                  <div className="info-label">Member Since</div>
-                  <div className="info-value">
-                    {user.createdDate ? new Date(user.createdDate).toLocaleDateString() : "—"}
                   </div>
                 </div>
 

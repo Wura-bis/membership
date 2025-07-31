@@ -25,6 +25,9 @@ export default function MyProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  
+  // Private access request state
+  const [requestingPrivateAccess, setRequestingPrivateAccess] = useState(false);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/my-profile", {
@@ -163,6 +166,38 @@ export default function MyProfile() {
       setSuccess("Your data has been exported successfully!");
     } catch (err) {
       setError("Failed to export data: " + err.message);
+    }
+  };
+
+  // Handle private access request
+  const handleRequestPrivateAccess = async () => {
+    if (!confirm('Are you sure you want to request private member access? This will require administrator approval.')) {
+      return;
+    }
+    
+    setRequestingPrivateAccess(true);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const res = await fetch('http://localhost:5000/api/my-profile/request-private-access', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setSuccess(data.message);
+        // Update user state to reflect the change
+        setUser(prev => ({ ...prev, role: 'private', isApproved: false }));
+      } else {
+        setError(data.error || 'Failed to submit private access request');
+      }
+    } catch (err) {
+      setError('Error submitting request: ' + err.message);
+    } finally {
+      setRequestingPrivateAccess(false);
     }
   };
 
@@ -400,25 +435,64 @@ export default function MyProfile() {
                 <div className="info-item">
                   <div className="info-label">Account Role</div>
                   <div className="info-value">
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '4px 12px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      borderRadius: '20px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      background: user.role === 'admin' 
-                        ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
-                        : user.role === 'private'
-                        ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
-                        : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: 'white'
-                    }}>
-                      {user.role === 'admin' ? '👑 Administrator' : 
-                       user.role === 'private' ? '🔒 Private Member' : 
-                       '🌐 Public Member'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        borderRadius: '20px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        background: user.role === 'admin' 
+                          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
+                          : user.role === 'private'
+                          ? user.isApproved === false 
+                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'  // Orange for pending
+                            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'  // Blue for approved
+                          : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white'
+                      }}>
+                        {user.role === 'admin' ? '👑 Administrator' : 
+                         user.role === 'private' ? 
+                           user.isApproved === false ? '⏳ Private Access Pending' : '🔒 Private Member'
+                         : '🌐 Public Member'}
+                      </span>
+                      
+                      {/* Private Access Request Button */}
+                      {user.role === 'public' && (
+                        <button
+                          onClick={handleRequestPrivateAccess}
+                          disabled={requestingPrivateAccess}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            border: '1px solid #6366f1',
+                            borderRadius: '6px',
+                            background: 'white',
+                            color: '#6366f1',
+                            cursor: requestingPrivateAccess ? 'not-allowed' : 'pointer',
+                            opacity: requestingPrivateAccess ? 0.6 : 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!requestingPrivateAccess) {
+                              e.target.style.background = '#6366f1';
+                              e.target.style.color = 'white';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!requestingPrivateAccess) {
+                              e.target.style.background = 'white';
+                              e.target.style.color = '#6366f1';
+                            }
+                          }}
+                        >
+                          {requestingPrivateAccess ? '⏳ Requesting...' : '🔐 Request Private Access'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
 

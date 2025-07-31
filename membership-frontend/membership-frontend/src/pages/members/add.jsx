@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
 import MemberForm from "../../components/memberform";
 import { useAuth } from "../../hooks/useauth";
+import { useToast } from "../../components/toast";
+import { LoadingSpinner } from "../../components/loading";
 
 export default function AddMember() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Admin access check
   if (!user || user.role !== "admin") {
@@ -124,8 +127,6 @@ export default function AddMember() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
     setIsLoading(true);
     try {
       // Coerce types for backend
@@ -173,16 +174,16 @@ export default function AddMember() {
         });
       }
       if (res.ok) {
-        setSuccess("Member added successfully!");
+        showToast("Member added successfully!", "success");
         setTimeout(() => {
           navigate("/members");
         }, 1500);
       } else {
         const errorData = await res.json();
-        setError(errorData.message || "Failed to add member");
+        showToast(errorData.message || "Failed to add member", "error");
       }
     } catch (err) {
-      setError("Error adding member: " + err.message);
+      showToast("Error adding member: " + err.message, "error");
     } finally {
       setIsLoading(false);
     }

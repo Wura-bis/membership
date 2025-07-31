@@ -8,6 +8,8 @@ export default function ForgotNoEmail() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleReset = async (e) => {
     e.preventDefault();
@@ -120,15 +122,35 @@ export default function ForgotNoEmail() {
               <label className="form-label" htmlFor="password">
                 New Password
               </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="form-input"
-                placeholder="Enter new password"
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="form-input"
+                  placeholder="Enter new password"
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    fontSize: '14px'
+                  }}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
               <p style={{ 
                 fontSize: '12px', 
                 color: '#94a3b8', 
@@ -142,15 +164,35 @@ export default function ForgotNoEmail() {
               <label className="form-label" htmlFor="confirm">
                 Confirm New Password
               </label>
-              <input
-                id="confirm"
-                type="password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="form-input"
-                placeholder="Confirm new password"
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="confirm"
+                  type={showConfirm ? "text" : "password"}
+                  required
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  className="form-input"
+                  placeholder="Confirm new password"
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    fontSize: '14px'
+                  }}
+                >
+                  {showConfirm ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
 
             <button

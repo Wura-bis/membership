@@ -2,12 +2,15 @@ import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useauth";
 import MainLayout from "../../components/mainlayout";
+import { useToast } from "../../components/toast";
+import { LoadingSpinner, CardSkeleton } from "../../components/loading";
+import { StatusBadge } from "../../components/ui";
 
 export default function ViewMember() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [member, setMember] = useState(null);
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -20,42 +23,21 @@ export default function ViewMember() {
       })
       .then((data) => {
         setMember(data);
-        setIsLoading(false);
       })
       .catch((err) => {
-        setError("Unable to load member details: " + err.message);
+        showToast("Unable to load member details: " + err.message, "error");
+      })
+      .finally(() => {
         setIsLoading(false);
       });
-  }, [id]);
+  }, [id, showToast]);
 
   if (isLoading) {
     return (
       <MainLayout>
         <div className="dashboard-container">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: '400px'
-          }}>
-            <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <MainLayout>
-        <div className="dashboard-container">
-          <div className="alert alert-error" style={{ maxWidth: '600px', margin: '0 auto' }}>
-            {error}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: '24px' }}>
-            <Link to="/members" className="btn-primary" style={{ textDecoration: 'none' }}>
-              ← Back to Members
-            </Link>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <CardSkeleton height="600px" />
           </div>
         </div>
       </MainLayout>
@@ -66,11 +48,26 @@ export default function ViewMember() {
     return (
       <MainLayout>
         <div className="dashboard-container">
-          <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <h2 style={{ fontSize: '24px', color: '#64748b', marginBottom: '16px' }}>
-              Member not found
-            </h2>
-            <Link to="/members" className="btn-primary" style={{ textDecoration: 'none' }}>
+          <div style={{ 
+            maxWidth: '800px', 
+            margin: '0 auto',
+            textAlign: 'center',
+            padding: '40px 20px'
+          }}>
+            <h2 style={{ color: '#dc2626', marginBottom: '16px' }}>Member Not Found</h2>
+            <p style={{ marginBottom: '24px' }}>The member you're looking for could not be found.</p>
+            <Link 
+              to="/members"
+              style={{
+                display: 'inline-block',
+                background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                color: 'white',
+                padding: '12px 24px',
+                borderRadius: '8px',
+                textDecoration: 'none',
+                fontWeight: '500'
+              }}
+            >
               ← Back to Members
             </Link>
           </div>

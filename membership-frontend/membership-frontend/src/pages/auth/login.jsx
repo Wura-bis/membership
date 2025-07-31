@@ -1,18 +1,20 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useauth";
+import { useToast } from "../../components/toast";
+import { ActionButton } from "../../components/ui";
 
 export default function Login() {
   const [userID, setUserID] = useState("");
   const [password, setPassword] = useState("");
   const [accessLevel, setAccessLevel] = useState("private");
-  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { showToast } = useToast();
 
   // Real-time validation
   const validateField = (name, value) => {
@@ -41,9 +43,6 @@ export default function Login() {
     if (name === 'userID') setUserID(value);
     if (name === 'password') setPassword(value);
 
-    // Clear server error when user starts typing
-    if (error) setError("");
-
     // Validate if field has been touched
     if (touched[name]) {
       const errors = validateField(name, value);
@@ -60,7 +59,6 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     // Validation
@@ -86,6 +84,7 @@ export default function Login() {
       
       // Update AuthContext with user data
       login(data.user);
+      showToast("Welcome back!", "success");
       
       // Role-based redirect (use lowercase for comparison)
       const userRole = data.user.role.toLowerCase();
@@ -97,7 +96,7 @@ export default function Login() {
         navigate("/public");
       }
     } catch (err) {
-      setError(err.message);
+      showToast(err.message, "error");
     } finally {
       setIsLoading(false);
     }
@@ -278,68 +277,24 @@ export default function Login() {
             )}
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div style={{
-              background: '#fee2e2',
-              border: '1px solid #fecaca',
-              borderRadius: '8px',
-              padding: '12px',
-              color: '#dc2626',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>❌</span> {error}
-            </div>
-          )}
-
           {/* Submit Button */}
-          <button 
-            type="submit" 
-            disabled={isLoading}
+          <ActionButton
+            type="submit"
+            variant="primary"
+            size="large"
+            loading={isLoading}
             style={{
               width: '100%',
-              padding: '14px',
-              background: isLoading ? '#9ca3af' : 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
-              color: 'white',
+              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
               border: 'none',
               borderRadius: '8px',
-              fontSize: '16px',
               fontWeight: '600',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                e.target.style.transform = 'translateY(-1px)';
-                e.target.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }
+              letterSpacing: '0.5px',
+              transition: 'all 0.2s ease'
             }}
           >
-            {isLoading && (
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '2px solid white',
-                borderTop: '2px solid transparent',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
-            )}
-            {isLoading ? "Signing in..." : "Sign In"}
-          </button>
+            Sign In
+          </ActionButton>
 
           {/* Links */}
           <div style={{ textAlign: 'center', marginTop: '16px' }}>

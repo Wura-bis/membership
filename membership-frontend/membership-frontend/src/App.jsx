@@ -8,6 +8,7 @@ import ForgotEmail from "./pages/auth/forgot-email";
 import ForgotNoEmail from "./pages/auth/forgot-no-email";
 import AddMember from "./pages/members/add";
 import UserApprovals from "./pages/admin/user-approvals";
+import SupportTickets from "./pages/admin/support-tickets";
 import EditMember from "./pages/members/edit";
 import SearchResults from "./pages/search/search-results";
 import MemberProfile from "./pages/members/profile";
@@ -35,6 +36,7 @@ function App() {
         <Route path="/admin/stats" element={<RequireAuth allowedRoles={["admin"]}><AdminStats /></RequireAuth>} />
         <Route path="/admin/approvals" element={<RequireAuth allowedRoles={["admin"]}><UserApprovals /></RequireAuth>} />
         <Route path="/admin/users" element={<RequireAuth allowedRoles={["admin"]}><UserManagement /></RequireAuth>} />
+        <Route path="/admin/support-tickets" element={<RequireAuth allowedRoles={["admin"]}><SupportTickets /></RequireAuth>} />
         <Route path="/admin/import" element={<RequireAuth allowedRoles={["admin"]}><BulkImport /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth allowedRoles={["admin"]}><Settings /></RequireAuth>} />
         <Route path="/account-settings" element={<RequireAuth allowedRoles={["private","admin"]}><AccountSettings /></RequireAuth>} />

@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "../components/mainlayout";
 import { useAuth } from "../hooks/useauth";
+import { useToast } from "../components/toast";
+import { ActionButton, FormField } from "../components/ui";
+import { LoadingSpinner } from "../components/loading";
 
 export default function Support() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("faq");
   const [contactForm, setContactForm] = useState({
     subject: "",
@@ -11,10 +15,44 @@ export default function Support() {
     priority: "normal"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState("");
+  const [myTickets, setMyTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+
+  // Load user's tickets
+  useEffect(() => {
+    if (activeTab === "my-tickets") {
+      fetchMyTickets();
+    }
+  }, [activeTab]);
+
+  const fetchMyTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/support/my-tickets", {
+        credentials: "include"
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setMyTickets(data.tickets || []);
+      } else {
+        showToast("Failed to load your tickets", "error");
+      }
+    } catch (err) {
+      showToast("Error loading tickets: " + err.message, "error");
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!contactForm.subject.trim() || !contactForm.message.trim()) {
+      showToast("Please fill in both subject and message", "warning");
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -25,14 +63,19 @@ export default function Support() {
         body: JSON.stringify(contactForm)
       });
       
+      const data = await res.json();
+      
       if (res.ok) {
-        setSubmitMessage("Your support request has been submitted successfully!");
+        showToast(`Support request submitted! Ticket ID: #${data.ticket_id}`, "success");
         setContactForm({ subject: "", message: "", priority: "normal" });
+        
+        // Switch to tickets tab to show the new ticket
+        setActiveTab("my-tickets");
       } else {
-        throw new Error("Failed to submit request");
+        showToast(data.error || "Failed to submit request", "error");
       }
     } catch (err) {
-      setSubmitMessage("Error submitting request. Please try again.");
+      showToast("Error submitting request: " + err.message, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -109,6 +152,7 @@ export default function Support() {
               {[
                 { id: 'faq', label: '❓ FAQ', icon: '❓' },
                 { id: 'contact', label: '📧 Contact Support', icon: '📧' },
+                { id: 'my-tickets', label: '🎫 My Tickets', icon: '🎫' },
                 { id: 'resources', label: '📚 Resources', icon: '📚' }
               ].map(tab => (
                 <button
@@ -185,19 +229,6 @@ export default function Support() {
                   Contact Support
                 </h3>
                 
-                {submitMessage && (
-                  <div style={{
-                    background: submitMessage.includes('Error') ? '#fef2f2' : '#dcfce7',
-                    border: `1px solid ${submitMessage.includes('Error') ? '#fecaca' : '#bbf7d0'}`,
-                    color: submitMessage.includes('Error') ? '#dc2626' : '#166534',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '20px'
-                  }}>
-                    {submitMessage}
-                  </div>
-                )}
-
                 <form onSubmit={handleContactSubmit}>
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{
@@ -297,6 +328,145 @@ export default function Support() {
                     {isSubmitting ? 'Submitting...' : 'Submit Support Request'}
                   </button>
                 </form>
+              </div>
+            )}
+
+            {/* My Tickets Tab */}
+            {activeTab === 'my-tickets' && (
+              <div>
+                <h3 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '600', 
+                  color: '#1e293b', 
+                  marginBottom: '20px' 
+                }}>
+                  My Support Tickets
+                </h3>
+                
+                {loadingTickets ? (
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    padding: '40px' 
+                  }}>
+                    <LoadingSpinner />
+                  </div>
+                ) : myTickets.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#64748b'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎫</div>
+                    <h4 style={{ marginBottom: '8px' }}>No Support Tickets</h4>
+                    <p>You haven't submitted any support requests yet.</p>
+                    <button
+                      onClick={() => setActiveTab('contact')}
+                      style={{
+                        marginTop: '16px',
+                        background: '#14b8a6',
+                        color: 'white',
+                        padding: '12px 24px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Submit Your First Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {myTickets.map((ticket) => (
+                      <div key={ticket.ticket_id} style={{
+                        background: '#f8fafc',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'flex-start',
+                          marginBottom: '12px'
+                        }}>
+                          <div>
+                            <h4 style={{
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              color: '#1e293b',
+                              margin: '0 0 4px 0'
+                            }}>
+                              Ticket #{ticket.ticket_id}: {ticket.subject}
+                            </h4>
+                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#64748b' }}>
+                              <span>Created: {new Date(ticket.date_created).toLocaleDateString()}</span>
+                              <span>Priority: {ticket.priority.toUpperCase()}</span>
+                            </div>
+                          </div>
+                          <span style={{
+                            background: ticket.status === 'open' ? '#fee2e2' : 
+                                       ticket.status === 'in-progress' ? '#fef3c7' :
+                                       ticket.status === 'resolved' ? '#dcfce7' : '#f3f4f6',
+                            color: ticket.status === 'open' ? '#dc2626' : 
+                                   ticket.status === 'in-progress' ? '#d97706' :
+                                   ticket.status === 'resolved' ? '#166534' : '#64748b',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase'
+                          }}>
+                            {ticket.status.replace('-', ' ')}
+                          </span>
+                        </div>
+                        
+                        <p style={{
+                          margin: '12px 0',
+                          color: '#475569',
+                          lineHeight: 1.5
+                        }}>
+                          {ticket.message}
+                        </p>
+                        
+                        {ticket.admin_response && (
+                          <div style={{
+                            marginTop: '16px',
+                            padding: '16px',
+                            background: '#ecfdf5',
+                            borderRadius: '8px',
+                            border: '1px solid #bbf7d0'
+                          }}>
+                            <h5 style={{
+                              margin: '0 0 8px 0',
+                              color: '#166534',
+                              fontSize: '14px',
+                              fontWeight: '600'
+                            }}>
+                              💬 Admin Response:
+                            </h5>
+                            <p style={{
+                              margin: 0,
+                              color: '#166534',
+                              lineHeight: 1.5
+                            }}>
+                              {ticket.admin_response}
+                            </p>
+                            {ticket.date_updated && (
+                              <p style={{
+                                margin: '8px 0 0 0',
+                                fontSize: '12px',
+                                color: '#059669'
+                              }}>
+                                Updated: {new Date(ticket.date_updated).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

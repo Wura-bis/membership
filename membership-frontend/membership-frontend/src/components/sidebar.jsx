@@ -7,6 +7,7 @@ const linksByRole = {
     { to: "/admin/stats", label: "Statistics", icon: "📈" },
     { to: "/admin/users", label: "User Management", icon: "👥" },
     { to: "/admin/approvals", label: "User Approvals", icon: "🔍" },
+    { to: "/admin/support-tickets", label: "Support Tickets", icon: "🎫" },
     { to: "/members", label: "All Members", icon: "👤" },
     { to: "/admin/import", label: "Bulk Import", icon: "📥" },
     { to: "/settings", label: "System Settings", icon: "⚙️" },

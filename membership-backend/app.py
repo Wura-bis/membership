@@ -189,17 +189,318 @@ def submit_support_request():
         
         user_id = session.get('user_id')
         
-        # For now, just log the support request
-        # In a real system, you'd store this in a database and/or send an email
-        logger.info(f"Support request from user {user_id}: {subject} - {priority}")
+        # Validate priority
+        valid_priorities = ['normal', 'high', 'urgent']
+        if priority not in valid_priorities:
+            priority = 'normal'
+        
+        # Store in database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO SupportTickets (UserID, Subject, Message, Priority, Status, DateCreated)
+            VALUES (?, ?, ?, ?, 'open', NOW())
+        """, (user_id, subject, message, priority))
+        
+        conn.commit()
+        
+        # Get the auto-generated TicketID using @@IDENTITY (Access equivalent)
+        cursor.execute("SELECT @@IDENTITY")
+        ticket_id = cursor.fetchone()[0]
+        
+        # Get user details for email
+        cursor.execute("SELECT Username, Email FROM [User] WHERE UserID = ?", (user_id,))
+        user_row = cursor.fetchone()
+        
+        if user_row:
+            user_name = user_row[0]
+            user_email = user_row[1]
+        else:
+            user_name = f"User {user_id}"
+            user_email = "unknown@example.com"
+        
+        conn.close()
+        
+        # Send email notification to admin(s)
+        try:
+            admin_emails = ['admin@bis.com']  # Configure your admin email(s)
+            priority_label = priority.upper() if priority != 'normal' else ''
+            
+            subject_line = f"[SUPPORT TICKET #{ticket_id}] {priority_label} {subject}".strip()
+            
+            email_body = f"""
+New Support Ticket Submitted
+
+Ticket ID: #{ticket_id}
+Priority: {priority.upper()}
+Submitted by: {user_name} ({user_email})
+Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+Subject: {subject}
+
+Message:
+{message}
+
+---
+Please log in to the admin panel to respond to this ticket.
+            """.strip()
+            
+            for admin_email in admin_emails:
+                send_email(admin_email, subject_line, email_body)
+                
+        except Exception as email_error:
+            logger.error(f"Failed to send support ticket email: {email_error}")
+            # Don't fail the request if email fails
+        
+        logger.info(f"Support ticket #{ticket_id} created by user {user_id}: {subject} - {priority}")
         
         return jsonify({
             'success': True,
-            'message': 'Support request submitted successfully'
+            'message': f'Support request submitted successfully! Ticket ID: #{ticket_id}',
+            'ticket_id': ticket_id
         })
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error submitting support request: {e}")
+        return jsonify({'error': 'Failed to submit support request'}), 500
+
+
+@app.route('/api/admin/support/tickets', methods=['GET'])
+@admin_required
+def get_support_tickets():
+    """Get all support tickets for admin management"""
+    try:
+        status_filter = request.args.get('status', 'all')
+        priority_filter = request.args.get('priority', 'all')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # First, check if the table exists by trying a simple query
+        try:
+            cursor.execute("SELECT COUNT(*) FROM SupportTickets")
+            cursor.fetchone()
+        except Exception as table_error:
+            conn.close()
+            logger.error(f"SupportTickets table does not exist or has issues: {table_error}")
+            return jsonify({
+                'error': 'SupportTickets table not found. Please create the table first.',
+                'sql_error': str(table_error)
+            }), 500
+        
+        # Build query with filters
+        base_query = """
+            SELECT st.TicketID, st.UserID, st.Subject, st.Message, st.Priority, 
+                   st.Status, st.DateCreated, st.DateUpdated, st.AdminResponse,
+                   u.Username, u.Email
+            FROM SupportTickets st
+            LEFT JOIN [User] u ON st.UserID = u.UserID
+        """
+        
+        where_conditions = []
+        params = []
+        
+        if status_filter != 'all':
+            where_conditions.append("st.Status = ?")
+            params.append(status_filter)
+        
+        if priority_filter != 'all':
+            where_conditions.append("st.Priority = ?")
+            params.append(priority_filter)
+        
+        if where_conditions:
+            query = base_query + " WHERE " + " AND ".join(where_conditions)
+        else:
+            query = base_query
+        
+        query += " ORDER BY st.DateCreated DESC"
+        
+        logger.info(f"Executing query: {query} with params: {params}")
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        
+        tickets = []
+        for row in rows:
+            tickets.append({
+                'ticket_id': row[0],
+                'user_id': row[1],
+                'subject': row[2],
+                'message': row[3],
+                'priority': row[4],
+                'status': row[5],
+                'date_created': row[6].isoformat() if row[6] else None,
+                'date_updated': row[7].isoformat() if row[7] else None,
+                'admin_response': row[8],
+                'user_name': row[9] if row[9] else f"User {row[1]}",
+                'user_email': row[10] if row[10] else 'no-email@example.com'
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'tickets': tickets,
+            'total': len(tickets)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching support tickets: {e}")
+        return jsonify({'error': 'Failed to fetch support tickets', 'details': str(e)}), 500
+
+
+@app.route('/api/admin/support/tickets/<int:ticket_id>', methods=['PUT'])
+@admin_required
+def update_support_ticket(ticket_id):
+    """Update support ticket status and add admin response"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid input data'}), 400
+        
+        status = data.get('status')
+        admin_response = data.get('admin_response', '').strip()
+        admin_user_id = session.get('user_id')
+        
+        # Validate status
+        valid_statuses = ['open', 'in-progress', 'resolved', 'closed']
+        if status and status not in valid_statuses:
+            return jsonify({'error': 'Invalid status'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Simplified approach - build a complete query matching the actual table structure
+        from datetime import datetime
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Use the correct column names from the actual table structure
+        query = """
+            UPDATE SupportTickets 
+            SET Status = ?, AdminResponse = ?, AdminID = ?, DateUpdated = ?
+            WHERE TicketID = ?
+        """
+        
+        params = [
+            status if status else 'open',
+            admin_response if admin_response else '',
+            admin_user_id if admin_user_id else None,
+            current_time,
+            ticket_id
+        ]
+        
+        # Debug logging
+        logger.info(f"Update query: {query.strip()}")
+        logger.info(f"Parameters: {params}")
+        logger.info(f"Parameter count: {len(params)}")
+        
+        cursor.execute(query, params)
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Ticket not found'}), 404
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Support ticket #{ticket_id} updated by admin {admin_user_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Ticket #{ticket_id} updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating support ticket: {e}")
+        return jsonify({'error': 'Failed to update support ticket'}), 500
+
+
+@app.route('/api/support/my-tickets', methods=['GET'])
+@private_or_admin_required
+def get_my_support_tickets():
+    """Get current user's support tickets"""
+    try:
+        user_id = session.get('user_id')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT TicketID, Subject, Message, Priority, Status, DateCreated, 
+                   DateUpdated, AdminResponse
+            FROM SupportTickets
+            WHERE UserID = ?
+            ORDER BY DateCreated DESC
+        """, (user_id,))
+        
+        rows = cursor.fetchall()
+        
+        tickets = []
+        for row in rows:
+            tickets.append({
+                'ticket_id': row[0],
+                'subject': row[1],
+                'message': row[2],
+                'priority': row[3],
+                'status': row[4],
+                'date_created': row[5].isoformat() if row[5] else None,
+                'date_updated': row[6].isoformat() if row[6] else None,
+                'admin_response': row[7]
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'tickets': tickets
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching user support tickets: {e}")
+        return jsonify({'error': 'Failed to fetch your support tickets'}), 500
+
+
+@app.route('/api/admin/support/create-table', methods=['POST'])
+@admin_required
+def create_support_table():
+    """Create the SupportTickets table if it doesn't exist"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Create the SupportTickets table
+        create_table_sql = """
+        CREATE TABLE SupportTickets (
+            TicketID AUTOINCREMENT PRIMARY KEY,
+            UserID INTEGER,
+            Subject TEXT(255) NOT NULL,
+            Message MEMO NOT NULL,
+            Priority TEXT(50) DEFAULT 'normal',
+            Status TEXT(50) DEFAULT 'open',
+            DateCreated DATETIME DEFAULT NOW(),
+            DateUpdated DATETIME,
+            AdminResponse MEMO,
+            AdminUserID INTEGER
+        )
+        """
+        
+        cursor.execute(create_table_sql)
+        conn.commit()
+        conn.close()
+        
+        logger.info("SupportTickets table created successfully")
+        
+        return jsonify({
+            'success': True,
+            'message': 'SupportTickets table created successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error creating SupportTickets table: {e}")
+        return jsonify({
+            'error': 'Failed to create SupportTickets table',
+            'details': str(e)
+        }), 500
 
 def generate_user_id():
     return "USR" + secrets.token_hex(3).upper()
@@ -2730,6 +3031,76 @@ def toggle_user_status(user_id):
     finally:
         conn.close()
 
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def update_user(user_id):
+    """Update user information (username, email, etc.)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get current user info
+        cursor.execute("SELECT Username, Email, FirstName, [Last Name] FROM [User] WHERE UserID = ?", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Build update query dynamically
+        update_fields = []
+        params = []
+        
+        if 'username' in data:
+            update_fields.append("Username = ?")
+            params.append(data['username'])
+        
+        if 'email' in data:
+            update_fields.append("Email = ?")
+            params.append(data['email'])
+        
+        if 'firstName' in data:
+            update_fields.append("FirstName = ?")
+            params.append(data['firstName'])
+        
+        if 'lastName' in data:
+            update_fields.append("[Last Name] = ?")
+            params.append(data['lastName'])
+        
+        if not update_fields:
+            return jsonify({'error': 'No valid fields to update'}), 400
+        
+        # Add user_id for WHERE clause
+        params.append(user_id)
+        
+        query = f"UPDATE [User] SET {', '.join(update_fields)} WHERE UserID = ?"
+        cursor.execute(query, params)
+        conn.commit()
+        
+        # Log the change
+        log_audit_event(
+            session['user_id'], 
+            'USER_UPDATE', 
+            'User', 
+            user_id,
+            f'Updated user fields: {", ".join(data.keys())}'
+        )
+        
+        return jsonify({
+            'success': True, 
+            'message': f'User {user_id} updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating user {user_id}: {e}")
+        return jsonify({'error': f'Failed to update user: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
 # --- Search Page Dropdowns ---
 
 
@@ -2860,6 +3231,146 @@ def get_my_profile():
         })
     except Exception as e:
         return jsonify({'error': f'Failed to fetch profile: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/my-profile', methods=['PUT'])
+@auth_required  # All logged-in users can update their own profile
+def update_my_profile():
+    """Update profile information for the logged-in user"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get current user info to verify they exist
+        cursor.execute("SELECT Username, Email, FirstName, [Last Name] FROM [User] WHERE UserID = ?", (session['user_id'],))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Build update query dynamically based on provided fields
+        update_fields = []
+        params = []
+        
+        if 'username' in data:
+            # Check if username is already taken by another user - use separate queries to avoid parameter issues
+            cursor.execute("SELECT UserID FROM [User] WHERE Username = ?", (data['username'],))
+            existing_user = cursor.fetchone()
+            if existing_user and existing_user[0] != session['user_id']:
+                return jsonify({'error': 'Username is already taken'}), 400
+            update_fields.append("Username = ?")
+            params.append(data['username'])
+        
+        if 'email' in data:
+            # Check if email is already taken by another user - use separate queries to avoid parameter issues
+            cursor.execute("SELECT UserID FROM [User] WHERE Email = ?", (data['email'],))
+            existing_user = cursor.fetchone()
+            if existing_user and existing_user[0] != session['user_id']:
+                return jsonify({'error': 'Email is already taken'}), 400
+            if cursor.fetchone():
+                return jsonify({'error': 'Email is already taken'}), 400
+            update_fields.append("Email = ?")
+            params.append(data['email'])
+        
+        if 'firstName' in data:
+            update_fields.append("FirstName = ?")
+            params.append(data['firstName'])
+        
+        if 'lastName' in data:
+            update_fields.append("[Last Name] = ?")
+            params.append(data['lastName'])
+        
+        if not update_fields:
+            return jsonify({'error': 'No valid fields to update'}), 400
+        
+        # Add user_id for WHERE clause
+        params.append(session['user_id'])
+        
+        query = f"UPDATE [User] SET {', '.join(update_fields)} WHERE UserID = ?"
+        cursor.execute(query, params)
+        conn.commit()
+        
+        # Log the change
+        log_audit_event(
+            session['user_id'], 
+            'PROFILE_UPDATE', 
+            'User', 
+            session['user_id'],
+            f'Updated profile fields: {", ".join(data.keys())}'
+        )
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Profile updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating profile for user {session['user_id']}: {e}")
+        return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/my-profile/request-private-access', methods=['POST'])
+@auth_required
+def request_private_access():
+    """Allow public users to request private access"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get current user info
+        cursor.execute("SELECT Role, IsApproved, Username, FirstName, [Last Name] FROM [User] WHERE UserID = ?", (session['user_id'],))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        current_role, is_approved, username, first_name, last_name = user
+        
+        # Check if user is already private or has already requested private access
+        if current_role == 'private':
+            if is_approved:
+                return jsonify({'error': 'You already have private access'}), 400
+            else:
+                return jsonify({'error': 'Your private access request is already pending approval'}), 400
+        
+        # Check if user is admin (admins don't need to request private access)
+        if current_role == 'admin':
+            return jsonify({'error': 'Administrators already have full access'}), 400
+        
+        # Update user to private role but not approved (pending)
+        cursor.execute("""
+            UPDATE [User] 
+            SET Role = 'private', IsApproved = FALSE 
+            WHERE UserID = ?
+        """, (session['user_id'],))
+        conn.commit()
+        
+        # Log the request
+        log_audit_event(
+            session['user_id'], 
+            'PRIVATE_ACCESS_REQUEST', 
+            'User', 
+            session['user_id'],
+            f'User {username} ({first_name} {last_name}) requested private access'
+        )
+        
+        # Update session to reflect the change
+        session['user_role'] = 'private'
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Private access request submitted successfully. An administrator will review your request.'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error processing private access request for user {session['user_id']}: {e}")
+        return jsonify({'error': f'Failed to submit request: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -3378,20 +3889,33 @@ def signup():
 
     try:
         # Insert into [User] table (not Users)
+        # Use userID if provided, otherwise fall back to firstName for compatibility
+        username_to_use = userID if userID else firstName
+        
+        # Determine initial role and approval status based on private access request
+        if requestPrivate:
+            role = "private"
+            is_approved = False  # Private access requests need approval
+        else:
+            role = "public"
+            is_approved = True   # Public users are auto-approved
+        
         cursor.execute("""
             INSERT INTO [User] (Username, FirstName, [Last Name], Email, PasswordHash, Role, IsApproved, CreatedAt, Preferences)
             VALUES (?, ?, ?, ?, ?, ?, ?, Now(), ?)
         """, (
-            firstName,        # Username (using firstName as requested)
+            username_to_use,  # Username (use userID if provided, else firstName)
             firstName,
             lastName,
             email if email else "",
             hashed_password,
-            "public",
-            True,            # IsApproved (auto-approve public users)
+            role,
+            is_approved,
             ""                # Preferences (empty string)
         ))
-        print("Inserted user:", firstName, lastName, email)
+        
+        approval_status = "pending approval" if requestPrivate else "approved"
+        print(f"Inserted user: {username_to_use}, {firstName}, {lastName}, {email} - Role: {role}, Status: {approval_status}")
         conn.commit()
         return jsonify({"success": True, "message": "Signup successful!"})
     except Exception as e:

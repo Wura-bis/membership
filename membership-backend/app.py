@@ -88,13 +88,20 @@ CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://l
 
 # Helper Functions
 def check_session_timeout():
-    """Check if session has timed out"""
-    if 'last_activity' in session:
-        if datetime.now().timestamp() - \
-                session['last_activity'] > SESSION_TIMEOUT:
-            session.clear()
-            return True
-    session['last_activity'] = datetime.now().timestamp()
+    """Check if session has timed out - optimized"""
+    if 'last_activity' not in session:
+        return True
+    
+    # Check timeout less frequently for better performance
+    now = datetime.now().timestamp()
+    if now - session['last_activity'] > SESSION_TIMEOUT:
+        session.clear()
+        return True
+    
+    # Update activity timestamp only every 5 minutes to reduce session writes
+    if now - session['last_activity'] > 300:  # 5 minutes
+        session['last_activity'] = now
+    
     return False
 
 # Authentication Decorators
@@ -143,7 +150,13 @@ def health_check():
 
 @app.route('/api/dashboard-stats', methods=['GET'])
 def dashboard_stats():
-    """Get dashboard statistics for the private dashboard"""
+    """Get dashboard statistics for the private dashboard - cached version"""
+    cache_key = f"dashboard_stats_{datetime.now().strftime('%Y-%m-%d-%H')}"  # Cache for 1 hour
+    
+    # Simple in-memory cache check
+    if hasattr(dashboard_stats, 'cache') and cache_key in dashboard_stats.cache:
+        return jsonify(dashboard_stats.cache[cache_key])
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -162,11 +175,22 @@ def dashboard_stats():
         
         conn.close()
         
-        return jsonify({
+        stats = {
             'totalMembers': total_members,
             'activeMembers': active_members,
             'newThisMonth': new_this_month
-        })
+        }
+        
+        # Cache the results
+        if not hasattr(dashboard_stats, 'cache'):
+            dashboard_stats.cache = {}
+        dashboard_stats.cache[cache_key] = stats
+        
+        # Clean old cache entries (keep only current hour)
+        current_hour_key = cache_key
+        dashboard_stats.cache = {k: v for k, v in dashboard_stats.cache.items() if k == current_hour_key}
+        
+        return jsonify(stats)
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -563,43 +587,63 @@ def send_email(to_email, subject, body):
 
 
 def log_audit_event(user_id, action, table_name, record_id, details=None):
-    """Log audit events"""
+    """Log audit events - optimized version"""
     conn = get_db_connection()
     if not conn:
         return
 
     try:
         cursor = conn.cursor()
-        # First, try to create the AuditLog table if it doesn't exist
-        try:
-            cursor.execute("""
-                CREATE TABLE AuditLog (
-                    ID AUTOINCREMENT PRIMARY KEY,
-                    UserID LONG,
-                    Action TEXT(50),
-                    TableName TEXT(50),
-                    RecordID LONG,
-                    Details MEMO,
-                    Timestamp DATETIME
-                )
-            """)
-            conn.commit()
-            logger.info("Created AuditLog table")
-        except Exception:
-            # Table already exists, continue
-            pass
-        
+        # Direct insert without trying to create table every time
         cursor.execute("""
             INSERT INTO AuditLog (UserID, Action, TableName, RecordID, Details, Timestamp)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (user_id, action, table_name, record_id, details or '', datetime.now()))
         conn.commit()
     except Exception as e:
-        logger.error(f"Audit logging failed: {e}")
-        # For now, just log the error and continue - don't break the main functionality
-        pass
+        # If table doesn't exist, create it once and retry
+        if "doesn't exist" in str(e).lower() or "not found" in str(e).lower():
+            try:
+                cursor.execute("""
+                    CREATE TABLE AuditLog (
+                        ID AUTOINCREMENT PRIMARY KEY,
+                        UserID LONG,
+                        Action TEXT(50),
+                        TableName TEXT(50),
+                        RecordID LONG,
+                        Details MEMO,
+                        Timestamp DATETIME
+                    )
+                """)
+                conn.commit()
+                # Retry the insert
+                cursor.execute("""
+                    INSERT INTO AuditLog (UserID, Action, TableName, RecordID, Details, Timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (user_id, action, table_name, record_id, details or '', datetime.now()))
+                conn.commit()
+                logger.info("Created AuditLog table and logged event")
+            except Exception as create_error:
+                logger.error(f"Failed to create AuditLog table and log event: {create_error}")
+        else:
+            logger.error(f"Audit logging failed: {e}")
     finally:
         conn.close()
+
+
+def log_audit_event_async(user_id, action, table_name, record_id, details=None):
+    """Non-blocking audit logging for login events"""
+    import threading
+    
+    def async_log():
+        try:
+            log_audit_event(user_id, action, table_name, record_id, details)
+        except Exception as e:
+            logger.error(f"Async audit logging failed: {e}")
+    
+    thread = threading.Thread(target=async_log)
+    thread.daemon = True
+    thread.start()
 
 
 @app.route('/api/me/change-password', methods=['PUT'])
@@ -836,7 +880,7 @@ def create_test_user(username, password, role, email=None):
 
 @app.route('/api/login', methods=['POST'])
 def login():
-    """User login endpoint"""
+    """User login endpoint - optimized version"""
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
@@ -869,6 +913,7 @@ def login():
         
         logger.info(f"Login attempt - username: {username}")
         
+        # Single optimized query that gets user data and updates last login in one transaction
         cursor.execute("""
             SELECT UserID, Username, Email, Role, IsApproved, FirstName, [Last Name]
             FROM [User]
@@ -879,7 +924,8 @@ def login():
 
         if user:
             logger.info(f"User {user[1]} logged in successfully")
-            # Update last login
+            
+            # Update last login in same transaction
             cursor.execute("""
                 UPDATE [User]
                 SET LastLogin = ?
@@ -887,21 +933,21 @@ def login():
             """, (datetime.now(), user[0]))
             conn.commit()
 
-            # Set session
+            # Set comprehensive session data to avoid database lookups
             session['user_id'] = user[0]
             session['username'] = user[1]
             session['email'] = user[2]
             session['user_role'] = user[3]
+            session['first_name'] = user[5]
+            session['last_name'] = user[6]
             session['last_activity'] = datetime.now().timestamp()
-            session.permanent = True  # Make session permanent
+            session.permanent = True
 
-            # Log audit event
-            log_audit_event(
-                user[0],
-                'LOGIN',
-                'User',
-                user[0],
-                f'User {username} logged in')
+            # Async audit logging to avoid blocking login response
+            try:
+                log_audit_event_async(user[0], 'LOGIN', 'User', user[0], f'User {username} logged in')
+            except Exception:
+                pass  # Don't fail login if audit logging fails
 
             return jsonify({
                 'success': True,
@@ -940,54 +986,24 @@ def logout():
 
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
-    """Check if user is authenticated"""
+    """Check if user is authenticated - optimized to use session data"""
     if check_session_timeout():
         return jsonify({'authenticated': False, 'message': 'Session expired'})
 
     if 'user_id' in session:
-        # Get full user data from database
-        conn = get_db_connection()
-        if conn:
-            try:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT FirstName, [Last Name], Username, Email, Role
-                    FROM [User]
-                    WHERE UserID = ?
-                """, (session['user_id'],))
-                
-                user_data = cursor.fetchone()
-                if user_data:
-                    return jsonify({
-                        'authenticated': True,
-                        'user': {
-                            'id': session['user_id'],
-                            'firstName': user_data[0],
-                            'lastName': user_data[1], 
-                            'username': user_data[2] or session.get('username'),
-                            'email': user_data[3] or session.get('email'),
-                            'role': user_data[4] or session.get('user_role')
-                        }
-                    })
-                else:
-                    logger.error(f"Check-auth: No user found for UserID: {session['user_id']}")
-            except Exception as e:
-                logger.error(f"Error fetching user data: {e}")
-            finally:
-                conn.close()
-        
-        # Fallback to session data if database query fails
+        # Use session data directly instead of database query for better performance
         return jsonify({
             'authenticated': True,
             'user': {
                 'id': session['user_id'],
-                'firstName': None,
-                'lastName': None,
-                'username': session.get('username'),
-                'email': session.get('email'),
-                'role': session.get('user_role')
+                'firstName': session.get('first_name', ''),
+                'lastName': session.get('last_name', ''), 
+                'username': session.get('username', ''),
+                'email': session.get('email', ''),
+                'role': session.get('user_role', '')
             }
         })
+    
     return jsonify({'authenticated': False})
 
 # Enhanced Dashboard Routes

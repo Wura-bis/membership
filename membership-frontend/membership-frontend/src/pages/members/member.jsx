@@ -12,10 +12,14 @@ export default function Members() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [countyFilter, setCountyFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("lastName");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [error, setError] = useState("");
   const [selectedMember, setSelectedMember] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [countyOptions, setCountyOptions] = useState([]);
 
   // Remove forced redirect for public users
 
@@ -60,7 +64,7 @@ export default function Members() {
     }
   };
 
-  // Updated filter logic
+  // Updated filter logic with sorting
   const filtered = members.filter((m) => {
     // Role-based filtering: Admin sees ALL members, others see backend-filtered results
     // The backend already handles role-based filtering, so don't filter by isActive here
@@ -84,10 +88,103 @@ export default function Members() {
       countyFilter === "all" || m.county === countyFilter;
 
     return matchesSearch && matchesStatus && matchesCategory && matchesCounty;
+  }).sort((a, b) => {
+    let aValue, bValue;
+    
+    switch (sortBy) {
+      case "firstName":
+        aValue = a.firstName?.toLowerCase() || "";
+        bValue = b.firstName?.toLowerCase() || "";
+        break;
+      case "lastName":
+        aValue = a.lastName?.toLowerCase() || "";
+        bValue = b.lastName?.toLowerCase() || "";
+        break;
+      case "county":
+        aValue = a.county?.toLowerCase() || "";
+        bValue = b.county?.toLowerCase() || "";
+        break;
+      case "category":
+        aValue = a.category?.toLowerCase() || "";
+        bValue = b.category?.toLowerCase() || "";
+        break;
+      case "status":
+        aValue = a.isActive ? "active" : "inactive";
+        bValue = b.isActive ? "active" : "inactive";
+        break;
+      default:
+        aValue = a.lastName?.toLowerCase() || "";
+        bValue = b.lastName?.toLowerCase() || "";
+    }
+    
+    if (sortOrder === "asc") {
+      return aValue.localeCompare(bValue);
+    } else {
+      return bValue.localeCompare(aValue);
+    }
   });
 
-  const [categoryOptions, setCategoryOptions] = useState([]);
-  const [countyOptions, setCountyOptions] = useState([]);
+  // Helper function to handle column header clicks
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  // Helper function to render sortable column header
+  const SortableHeader = ({ column, children }) => {
+    const isActive = sortBy === column;
+    return (
+      <th 
+        style={{ 
+          padding: '16px', 
+          textAlign: 'left',
+          fontWeight: '600',
+          color: isActive ? '#14b8a6' : '#374151',
+          fontSize: '12px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+          cursor: 'pointer',
+          userSelect: 'none',
+          position: 'relative',
+          transition: 'color 0.2s ease',
+          borderBottom: isActive ? '2px solid #14b8a6' : '2px solid #e2e8f0'
+        }}
+        onClick={() => handleSort(column)}
+        onMouseEnter={(e) => {
+          if (!isActive) e.target.style.color = '#64748b';
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) e.target.style.color = '#374151';
+        }}
+        title={`Sort by ${children}${isActive ? ` (currently ${sortOrder === "asc" ? "A-Z" : "Z-A"})` : ""}`}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {children}
+          {isActive ? (
+            <span style={{ 
+              fontSize: '12px', 
+              fontWeight: 'bold',
+              color: '#14b8a6'
+            }}>
+              {sortOrder === "asc" ? "↑" : "↓"}
+            </span>
+          ) : (
+            <span style={{ 
+              fontSize: '10px', 
+              opacity: 0.4,
+              transition: 'opacity 0.2s ease'
+            }}>
+              ↕
+            </span>
+          )}
+        </div>
+      </th>
+    );
+  };
 
   // Fetch lookup options for category and county
   useEffect(() => {
@@ -203,21 +300,67 @@ export default function Members() {
           {/* Filter Bar */}
           <div className="dashboard-card" style={{ marginBottom: '24px' }}>
             <h2 className="dashboard-card-title">🔍 Search & Filters</h2>
+            
+            {/* Primary Search */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '20px',
+              flexWrap: 'wrap'
+            }}>
+              <input
+                type="text"
+                placeholder="Search by name or county..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="form-input"
+                style={{
+                  fontSize: '16px',
+                  padding: '12px 16px',
+                  flex: '1',
+                  minWidth: '300px',
+                  maxWidth: '500px'
+                }}
+              />
+              {(search || statusFilter !== "all" || categoryFilter !== "all" || countyFilter !== "all" || sortBy !== "lastName" || sortOrder !== "asc") && (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setStatusFilter("all");
+                    setCategoryFilter("all");
+                    setCountyFilter("all");
+                    setSortBy("lastName");
+                    setSortOrder("asc");
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>✕</span>
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {/* Filters Grid */}
             <div style={{ 
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '16px'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '16px',
+              marginBottom: '20px'
             }}>
-              <div>
-                <label className="form-label">Search</label>
-                <input
-                  type="text"
-                  placeholder="Search by name or county..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="form-input"
-                />
-              </div>
               <div>
                 <label className="form-label">Status</label>
                 <select
@@ -257,17 +400,138 @@ export default function Members() {
                 </select>
               </div>
             </div>
+
+            {/* Sort Controls */}
+            <div style={{
+              padding: '16px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ 
+                    fontSize: '13px', 
+                    fontWeight: '600', 
+                    color: '#64748b'
+                  }}>
+                    Sort by:
+                  </span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: 'white'
+                    }}
+                  >
+                    <option value="lastName">Last Name</option>
+                    <option value="firstName">First Name</option>
+                    <option value="county">County</option>
+                    <option value="category">Category</option>
+                    <option value="status">Status</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {sortOrder === "asc" ? "A → Z" : "Z → A"}
+                    <span>{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  </button>
+                </div>
+                
+                {/* Quick actions */}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => { setSortBy("lastName"); setSortOrder("asc"); }}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      background: sortBy === "lastName" && sortOrder === "asc" ? '#14b8a6' : 'white',
+                      color: sortBy === "lastName" && sortOrder === "asc" ? 'white' : '#64748b',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    A-Z Names
+                  </button>
+                  <button
+                    onClick={() => { setSortBy("county"); setSortOrder("asc"); }}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      background: sortBy === "county" && sortOrder === "asc" ? '#14b8a6' : 'white',
+                      color: sortBy === "county" && sortOrder === "asc" ? 'white' : '#64748b',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    By County
+                  </button>
+                </div>
+              </div>
+            </div>
             
             {/* Results Summary */}
             <div style={{ 
               marginTop: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '8px',
               padding: '12px 16px',
               background: '#f8fafc',
               borderRadius: '8px',
               fontSize: '14px',
               color: '#64748b'
             }}>
-              Showing <strong>{filtered.length}</strong> of <strong>{members.length}</strong> members
+              <div>
+                <strong style={{ color: '#374151' }}>{filtered.length}</strong> 
+                {filtered.length === members.length 
+                  ? ` total members` 
+                  : ` of ${members.length} members`
+                }
+              </div>
+              {(sortBy && sortBy !== "lastName") || sortOrder !== "asc" ? (
+                <div style={{ 
+                  fontSize: '12px',
+                  padding: '4px 8px',
+                  background: 'white',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  Sorted by {sortBy === "lastName" ? "surname" : sortBy === "firstName" ? "first name" : sortBy} 
+                  ({sortOrder === "asc" ? "A-Z" : "Z-A"})
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -277,61 +541,21 @@ export default function Members() {
               <table style={{ width: '100%', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ 
-                      padding: '16px', 
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    <SortableHeader column="lastName">
                       Surname
-                    </th>
-                    <th style={{ 
-                      padding: '16px', 
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    </SortableHeader>
+                    <SortableHeader column="firstName">
                       First Name
-                    </th>
-                    <th style={{ 
-                      padding: '16px', 
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    </SortableHeader>
+                    <SortableHeader column="county">
                       County
-                    </th>
-                    <th style={{ 
-                      padding: '16px', 
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    </SortableHeader>
+                    <SortableHeader column="category">
                       Category
-                    </th>
-                    <th style={{ 
-                      padding: '16px', 
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
+                    </SortableHeader>
+                    <SortableHeader column="status">
                       Status
-                    </th>
+                    </SortableHeader>
                     <th style={{ 
                       padding: '16px', 
                       textAlign: 'left',

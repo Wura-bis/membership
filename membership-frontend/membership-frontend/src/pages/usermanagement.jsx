@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import MainLayout from "../components/mainlayout";
+import ConfirmModal from "../components/confirmmodal";
 import { useAuth } from "../hooks/useauth";
 
 export default function UserManagement() {
@@ -11,6 +12,8 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Admin access check
   if (!user || user.role !== "admin") {
@@ -85,8 +88,35 @@ export default function UserManagement() {
             : u
         )
       );
-    } catch (err) {
-      alert(err.message);
+      
+      // Show success message
+      const actionText = payload.isApproved === false ? 'deactivated' : 'updated';
+      alert(`User ${actionText} successfully!`);
+      
+    } catch (error) {
+      alert(`Failed to update user: ${error.message}`);
+    } finally {
+      setShowConfirm(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleConfirmUserAction = (userId, action, payload, user) => {
+    if (action === 'status' && payload.isApproved === false) {
+      // Show confirmation modal for user deactivation
+      setConfirmAction({
+        userId,
+        action,
+        payload,
+        user,
+        title: "⚠️ Deactivate User Account",
+        message: `Are you sure you want to deactivate the account for "${user.name || user.username}"? This will prevent them from logging into the system.`,
+        confirmLabel: "Deactivate"
+      });
+      setShowConfirm(true);
+    } else {
+      // Other actions don't need confirmation
+      updateUser(userId, action, payload);
     }
   };
 
@@ -435,7 +465,7 @@ export default function UserManagement() {
                               {u.isActive ? (
                                 <button
                                   onClick={() =>
-                                    updateUser(u.id, "status", { isApproved: false })
+                                    handleConfirmUserAction(u.id, "status", { isApproved: false }, u)
                                   }
                                   style={{
                                     background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
@@ -486,6 +516,21 @@ export default function UserManagement() {
             </div>
           </div>
         </div>
+
+        {/* Confirmation Modal */}
+        {showConfirm && confirmAction && (
+          <ConfirmModal
+            isOpen={showConfirm}
+            title={confirmAction.title}
+            message={confirmAction.message}
+            confirmLabel={confirmAction.confirmLabel}
+            onConfirm={() => updateUser(confirmAction.userId, confirmAction.action, confirmAction.payload)}
+            onCancel={() => {
+              setShowConfirm(false);
+              setConfirmAction(null);
+            }}
+          />
+        )}
       </div>
     </MainLayout>
   );

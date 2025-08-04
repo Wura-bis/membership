@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import MainLayout from "../../components/mainlayout";
+import ConfirmModal from "../../components/confirmmodal";
 
 export default function AdminApprovals() {
   const [pending, setPending] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   useEffect(() => {
     fetch("http://localhost:5000/api/admin/approvals", {
@@ -44,6 +47,26 @@ export default function AdminApprovals() {
       alert(`Failed to ${action} user. Please try again.`);
     } finally {
       setProcessingId(null);
+      setShowConfirm(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleConfirmAction = (userID, action, user) => {
+    if (action === 'reject') {
+      // Show confirmation modal for dangerous rejection action
+      setConfirmAction({
+        userID,
+        action,
+        user,
+        title: "⚠️ Permanently Delete User Account",
+        message: `Are you sure you want to PERMANENTLY DELETE the account for "${user.name}"? This action cannot be undone and will remove all user data from the system.`,
+        confirmLabel: "Delete Forever"
+      });
+      setShowConfirm(true);
+    } else {
+      // Approve action doesn't need confirmation
+      handleAction(userID, action);
     }
   };
 
@@ -302,7 +325,7 @@ export default function AdminApprovals() {
                         <td style={{ padding: '16px', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                             <button
-                              onClick={() => handleAction(user.userID, "approve")}
+                              onClick={() => handleConfirmAction(user.userID, "approve", user)}
                               disabled={processingId === user.userID}
                               style={{
                                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
@@ -338,7 +361,7 @@ export default function AdminApprovals() {
                               Approve
                             </button>
                             <button
-                              onClick={() => handleAction(user.userID, "reject")}
+                              onClick={() => handleConfirmAction(user.userID, "reject", user)}
                               disabled={processingId === user.userID}
                               style={{
                                 background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
@@ -383,6 +406,21 @@ export default function AdminApprovals() {
             )}
           </div>
         </div>
+
+        {/* Confirmation Modal */}
+        {showConfirm && confirmAction && (
+          <ConfirmModal
+            isOpen={showConfirm}
+            title={confirmAction.title}
+            message={confirmAction.message}
+            confirmLabel={confirmAction.confirmLabel}
+            onConfirm={() => handleAction(confirmAction.userID, confirmAction.action)}
+            onCancel={() => {
+              setShowConfirm(false);
+              setConfirmAction(null);
+            }}
+          />
+        )}
       </div>
     </MainLayout>
   );

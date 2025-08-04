@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
+import ConfirmModal from "../components/confirmmodal";
 
 export default function MyProfile() {
   const { user: authUser } = useAuth();
@@ -25,6 +26,8 @@ export default function MyProfile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPrivateAccessConfirm, setShowPrivateAccessConfirm] = useState(false);
+  const [showDataExportConfirm, setShowDataExportConfirm] = useState(false);
   
   // Private access request state
   const [requestingPrivateAccess, setRequestingPrivateAccess] = useState(false);
@@ -171,10 +174,6 @@ export default function MyProfile() {
 
   // Handle private access request
   const handleRequestPrivateAccess = async () => {
-    if (!confirm('Are you sure you want to request private member access? This will require administrator approval.')) {
-      return;
-    }
-    
     setRequestingPrivateAccess(true);
     setError('');
     setSuccess('');
@@ -462,7 +461,7 @@ export default function MyProfile() {
                       {/* Private Access Request Button */}
                       {user.role === 'public' && (
                         <button
-                          onClick={handleRequestPrivateAccess}
+                          onClick={() => setShowPrivateAccessConfirm(true)}
                           disabled={requestingPrivateAccess}
                           style={{
                             padding: '6px 12px',
@@ -556,11 +555,7 @@ export default function MyProfile() {
                 </button>
                 
                 <button
-                  onClick={() => {
-                    if (confirm("Download your personal data as a PDF? This will include your profile information and activity history.")) {
-                      handleExportMyData();
-                    }
-                  }}
+                  onClick={() => setShowDataExportConfirm(true)}
                   style={{
                     background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                     color: 'white',
@@ -878,6 +873,36 @@ export default function MyProfile() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Private Access Confirmation Modal */}
+      {showPrivateAccessConfirm && (
+        <ConfirmModal
+          isOpen={showPrivateAccessConfirm}
+          title="🔒 Request Private Member Access"
+          message="Are you sure you want to request private member access? This will require administrator approval and may take some time to process."
+          confirmLabel="Request Access"
+          onConfirm={() => {
+            setShowPrivateAccessConfirm(false);
+            handleRequestPrivateAccess();
+          }}
+          onCancel={() => setShowPrivateAccessConfirm(false)}
+        />
+      )}
+
+      {/* Data Export Confirmation Modal */}
+      {showDataExportConfirm && (
+        <ConfirmModal
+          isOpen={showDataExportConfirm}
+          title="📄 Download Personal Data"
+          message="Download your personal data as a PDF? This will include your profile information and activity history."
+          confirmLabel="Download PDF"
+          onConfirm={() => {
+            setShowDataExportConfirm(false);
+            handleExportMyData();
+          }}
+          onCancel={() => setShowDataExportConfirm(false)}
+        />
       )}
     </MainLayout>
   );

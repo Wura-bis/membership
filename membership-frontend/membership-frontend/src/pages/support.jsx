@@ -81,6 +81,40 @@ export default function Support() {
     }
   };
 
+  const handleDownloadUserGuide = async () => {
+    try {
+      showToast("Generating user guide...", "info");
+      
+      const response = await fetch("http://localhost:5000/api/user-guide/download", {
+        method: "GET",
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to generate user guide");
+      }
+      
+      // Create blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `user-guide-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      showToast("User guide downloaded successfully!", "success");
+    } catch (err) {
+      showToast("Failed to download user guide: " + err.message, "error");
+    }
+  };
+
   const faqData = [
     {
       question: "How do I update my member profile?",
@@ -502,19 +536,31 @@ export default function Support() {
                       color: '#64748b', 
                       marginBottom: '12px' 
                     }}>
-                      Complete guide to using the membership system
+                      Complete guide with current system statistics, features, and step-by-step instructions
                     </p>
-                    <button style={{
-                      background: '#14b8a6',
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}>
-                      Download PDF
+                    <button 
+                      onClick={handleDownloadUserGuide}
+                      style={{
+                        background: '#14b8a6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#0f766e';
+                        e.target.style.transform = 'translateY(-1px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = '#14b8a6';
+                        e.target.style.transform = 'translateY(0)';
+                      }}
+                    >
+                      📄 Download PDF
                     </button>
                   </div>
 
@@ -533,9 +579,9 @@ export default function Support() {
                       📧 Contact Information
                     </h4>
                     <div style={{ fontSize: '14px', color: '#64748b' }}>
-                      <p><strong>Email:</strong> support@biscenter.org</p>
-                      <p><strong>Phone:</strong> (555) 123-4567</p>
-                      <p><strong>Hours:</strong> Mon-Fri 9AM-5PM EST</p>
+                      <p><strong>Email:</strong> me_callaghan@bellaliant.net</p>
+                      <p><strong>Phone:</strong> (902) 887-2106</p>
+                      <p><strong>Hours:</strong> Mon-Fri 10AM-2PM AST</p>
                     </div>
                   </div>
 

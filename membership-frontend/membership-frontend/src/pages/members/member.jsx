@@ -69,7 +69,7 @@ export default function Members() {
     // Role-based filtering: Admin sees ALL members, others see backend-filtered results
     // The backend already handles role-based filtering, so don't filter by isActive here
     
-    const matchesSearch = [m.firstName, m.lastName, m.county]
+    const matchesSearch = [m.firstName, m.lastName, m.county, m.address, m.role]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase());
@@ -104,9 +104,17 @@ export default function Members() {
         aValue = a.county?.toLowerCase() || "";
         bValue = b.county?.toLowerCase() || "";
         break;
+      case "address":
+        aValue = a.address?.toLowerCase() || "";
+        bValue = b.address?.toLowerCase() || "";
+        break;
       case "category":
         aValue = a.category?.toLowerCase() || "";
         bValue = b.category?.toLowerCase() || "";
+        break;
+      case "role":
+        aValue = a.role?.toLowerCase() || "";
+        bValue = b.role?.toLowerCase() || "";
         break;
       case "status":
         aValue = a.isActive ? "active" : "inactive";
@@ -550,8 +558,14 @@ export default function Members() {
                     <SortableHeader column="county">
                       County
                     </SortableHeader>
+                    <SortableHeader column="address">
+                      Address
+                    </SortableHeader>
                     <SortableHeader column="category">
                       Category
+                    </SortableHeader>
+                    <SortableHeader column="role">
+                      Role
                     </SortableHeader>
                     <SortableHeader column="status">
                       Status
@@ -572,7 +586,7 @@ export default function Members() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ 
+                      <td colSpan="8" style={{ 
                         textAlign: 'center', 
                         padding: '48px', 
                         color: '#94a3b8',
@@ -595,7 +609,9 @@ export default function Members() {
                         <td style={{ padding: '16px', fontWeight: '500' }}>{m.lastName}</td>
                         <td style={{ padding: '16px' }}>{m.firstName}</td>
                         <td style={{ padding: '16px', color: '#64748b' }}>{m.county}</td>
+                        <td style={{ padding: '16px', color: '#64748b', fontSize: '12px' }}>{m.address || 'N/A'}</td>
                         <td style={{ padding: '16px', color: '#64748b' }}>{m.category}</td>
+                        <td style={{ padding: '16px', color: '#64748b', fontSize: '12px' }}>{m.role || 'N/A'}</td>
                         <td style={{ padding: '16px' }}>
                           <span style={{
                             display: 'inline-block',
@@ -639,6 +655,51 @@ export default function Members() {
                           >
                             View
                           </Link>
+                          
+                          {/* Export buttons for admin and private users */}
+                          {user && (user.role === "admin" || user.role === "private") && (
+                            <>
+                              <button
+                                onClick={() => window.open(`http://localhost:5000/api/export/member/${m.id}/csv`, '_blank')}
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  background: '#22c55e',
+                                  color: 'white',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={e => e.target.style.background = '#16a34a'}
+                                onMouseLeave={e => e.target.style.background = '#22c55e'}
+                                title="Export as CSV"
+                              >
+                                CSV
+                              </button>
+                              <button
+                                onClick={() => window.open(`http://localhost:5000/api/export/member/${m.id}/pdf`, '_blank')}
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  background: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={e => e.target.style.background = '#2563eb'}
+                                onMouseLeave={e => e.target.style.background = '#3b82f6'}
+                                title="Export as PDF"
+                              >
+                                PDF
+                              </button>
+                            </>
+                          )}
+                          
                           {/* Deactivate button for admin only */}
                           {user && user.role === "admin" && m.isActive && (
                             <button

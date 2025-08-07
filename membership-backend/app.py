@@ -60,7 +60,7 @@ ALLOWED_EXTENSIONS = {
 }
 PHOTO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx'}
-SESSION_TIMEOUT = 1800  # 30 minutes
+SESSION_TIMEOUT = 7200  # 2 hours (instead of 30 minutes)
 EMAIL_CONFIG = {
     'smtp_server': 'smtp.gmail.com',
     'smtp_port': 587,
@@ -842,6 +842,531 @@ def export_my_data():
         conn.close()
 
 
+@app.route('/api/user-guide/download', methods=['GET'])
+def download_user_guide():
+    """Generate and download a comprehensive user guide PDF with dynamic content"""
+    try:
+        # Get system statistics for dynamic content
+        active_members = active_users = total_societies = counties_represented = 0
+        
+        try:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                
+                # Get basic stats with error handling for each query
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = True")
+                    row = cursor.fetchone()
+                    active_members = row[0] if row else 0
+                except:
+                    active_members = 0
+                
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM [User] WHERE IsApproved = True")
+                    row = cursor.fetchone()
+                    active_users = row[0] if row else 0
+                except:
+                    active_users = 0
+                
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM Society")
+                    row = cursor.fetchone()
+                    total_societies = row[0] if row else 0
+                except:
+                    total_societies = 0
+                
+                try:
+                    cursor.execute("SELECT COUNT(DISTINCT ic.CountyName) FROM IrishCounties ic INNER JOIN Members m ON ic.CountyID = m.CountyID WHERE ic.CountyName IS NOT NULL")
+                    row = cursor.fetchone()
+                    counties_represented = row[0] if row else 0
+                except:
+                    counties_represented = 0
+                
+                conn.close()
+        except Exception as db_error:
+            logger.error(f"Database error in user guide: {db_error}")
+            # Continue with default values
+
+        # Generate comprehensive user guide PDF - NO UNICODE CHARACTERS
+        pdf = FPDF()
+        pdf.add_page()
+        
+        # Cover Page
+        pdf.set_font("Arial", 'B', 24)
+        pdf.cell(200, 20, "USER GUIDE", ln=True, align='C')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 15, "BIS Membership Management System", ln=True, align='C')
+        pdf.ln(10)
+        
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 8, f"Generated: {datetime.now().strftime('%B %d, %Y')}", ln=True, align='C')
+        pdf.cell(200, 8, f"Version: {datetime.now().strftime('%Y.%m')}", ln=True, align='C')
+        pdf.ln(15)
+        
+        # Current System Stats Box
+        pdf.set_fill_color(240, 248, 255)  # Light blue background
+        pdf.rect(30, 80, 150, 40, 'F')
+        pdf.set_xy(35, 85)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(140, 8, "CURRENT SYSTEM STATISTICS", ln=True, align='C')
+        pdf.set_xy(35, 95)
+        pdf.set_font("Arial", size=10)
+        pdf.cell(70, 6, f"Active Members: {active_members:,}", ln=False)
+        pdf.cell(70, 6, f"Counties: {counties_represented}", ln=True)
+        pdf.set_xy(35, 105)
+        pdf.cell(70, 6, f"Active Users: {active_users:,}", ln=False)
+        pdf.cell(70, 6, f"Societies: {total_societies}", ln=True)
+        
+        pdf.ln(30)
+        
+        # Table of Contents
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "TABLE OF CONTENTS", ln=True, align='L')
+        pdf.ln(5)
+        
+        toc_items = [
+            "1. Getting Started",
+            "2. User Roles & Access Levels", 
+            "3. Navigation & Dashboard",
+            "4. Member Directory Features",
+            "5. Profile Management",
+            "6. Support & Help"
+        ]
+        
+        pdf.set_font("Arial", size=12)
+        for item in toc_items:
+            pdf.cell(200, 8, item, ln=True, align='L')
+        
+        # Start new page for content
+        pdf.add_page()
+        
+        # Section 1: Getting Started
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "1. GETTING STARTED", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", size=11)
+        getting_started = [
+            "Welcome to the BIS Membership Management System!",
+            "",
+            "LOGIN PROCESS:",
+            "- Visit the login page and enter your credentials",
+            "- Use 'Sign Up' to register for a new account",
+            "- Use 'Forgot Password' for password recovery",
+            "",
+            "FIRST TIME SETUP:",
+            "- Complete your profile information",
+            "- Review your access level and features",
+            "- Explore the navigation menu"
+        ]
+        
+        for line in getting_started:
+            if line == "":
+                pdf.ln(3)
+            else:
+                pdf.cell(200, 6, line, ln=True, align='L')
+        
+        pdf.ln(10)
+        
+        # Section 2: User Roles
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "2. USER ROLES & ACCESS LEVELS", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", size=11)
+        roles_info = [
+            "THREE MAIN USER ROLES:",
+            "",
+            "PUBLIC USERS:",
+            "- View deceased member directories",
+            "- Access public statistics",
+            "- Submit support requests",
+            "",
+            "PRIVATE USERS:",
+            "- All public features plus:",
+            "- View complete member directories",
+            "- Advanced search capabilities",
+            "",
+            "ADMINISTRATORS:",
+            "- All system management features",
+            "- User approval and management",
+            "- Member record management"
+        ]
+        
+        for line in roles_info:
+            if line == "":
+                pdf.ln(3)
+            else:
+                pdf.cell(200, 6, line, ln=True, align='L')
+        
+        # Section 3: Navigation
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "3. NAVIGATION & FEATURES", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", size=11)
+        nav_info = [
+            "MAIN NAVIGATION AREAS:",
+            "",
+            "DASHBOARD:",
+            "- System overview and statistics",
+            "- Recent activity updates",
+            "",
+            "MEMBERS:",
+            "- Search member directories",
+            "- Filter by category, county, status",
+            "- View member profiles",
+            "",
+            "MY PROFILE:",
+            "- Update personal information",
+            "- Change password",
+            "- Request access changes",
+            "",
+            "SUPPORT:",
+            "- Submit help requests",
+            "- View FAQ and guides",
+            "- Track support tickets"
+        ]
+        
+        for line in nav_info:
+            if line == "":
+                pdf.ln(3)
+            else:
+                pdf.cell(200, 6, line, ln=True, align='L')
+        
+        # Current Statistics Section
+        pdf.ln(15)
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(200, 10, "CURRENT SYSTEM STATUS", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", size=11)
+        current_stats = [
+            f"As of {datetime.now().strftime('%B %Y')}:",
+            f"Total Active Members: {active_members:,}",
+            f"Geographic Coverage: {counties_represented} Irish counties",
+            f"Registered System Users: {active_users:,}",
+            f"Societies Represented: {total_societies}"
+        ]
+        
+        for line in current_stats:
+            pdf.cell(200, 6, line, ln=True, align='L')
+        
+        # Footer
+        pdf.ln(20)
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(200, 6, f"Auto-generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align='C')
+        pdf.cell(200, 6, "For latest information, please refer to the live system.", ln=True, align='C')
+        
+        # Generate PDF output
+        pdf_output = pdf.output(dest='S').encode('latin1')
+        
+        response = Response(
+            pdf_output,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=user-guide-{datetime.now().strftime("%Y%m%d")}.pdf',
+                'Content-Type': 'application/pdf'
+            }
+        )
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error generating user guide: {e}")
+        return jsonify({'error': f'Failed to generate user guide: {str(e)}'}), 500
+
+
+# Authentication Routes
+        pdf.cell(200, 12, "1. 🚀 Getting Started", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 8, "Creating Your Account", ln=True, align='L')
+        pdf.set_font("Arial", size=10)
+        getting_started_text = [
+            "• Visit the membership portal homepage",
+            "• Click 'Sign Up' to create a new account",
+            "• Choose your access level (Public or Private)",
+            "• Fill in your details and create a password",
+            "• Wait for admin approval (for Private access)",
+            "• Check your email for login credentials",
+            "",
+            "Login Process:",
+            "• Enter your username or email address",
+            "• Enter your password",
+            "• Click 'Login' to access the system"
+        ]
+        
+        for line in getting_started_text:
+            pdf.cell(200, 6, line, ln=True, align='L')
+        
+        pdf.ln(5)
+        
+        # Section 2: User Roles
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "2. 👥 User Roles & Access Levels", ln=True, align='L')
+        pdf.ln(5)
+        
+        roles = [
+            ("🌐 Public Users", [
+                "• View deceased/inactive member records only",
+                "• Access public dashboard and statistics",
+                "• Submit support tickets",
+                "• No registration approval required"
+            ]),
+            ("🔒 Private Members", [
+                "• View all member records (active & inactive)",
+                "• Access enhanced member search and filtering",
+                "• View detailed member profiles",
+                "• Requires admin approval"
+            ]),
+            ("⚙️ Administrators", [
+                "• Full system access and management",
+                "• User approval and role management",
+                "• Data import/export capabilities",
+                "• System configuration and settings"
+            ])
+        ]
+        
+        for role_title, role_features in roles:
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 8, role_title, ln=True, align='L')
+            pdf.set_font("Arial", size=10)
+            for feature in role_features:
+                pdf.cell(200, 6, feature, ln=True, align='L')
+            pdf.ln(3)
+        
+        # Section 3: Navigation
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "3. 🧭 Navigation & Dashboard", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 8, "Main Navigation Menu", ln=True, align='L')
+        pdf.set_font("Arial", size=10)
+        nav_items = [
+            "🏠 Dashboard - Overview and statistics",
+            "👥 Members - Browse and search member directory",
+            "⚙️ Settings - Account and system preferences",
+            "🎫 Support - Help desk and documentation",
+            "👤 Profile - Your personal account information"
+        ]
+        
+        for item in nav_items:
+            pdf.cell(200, 6, f"• {item}", ln=True, align='L')
+        
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 8, "Dashboard Features", ln=True, align='L')
+        pdf.set_font("Arial", size=10)
+        dashboard_features = [
+            "• Live membership statistics and charts",
+            "• Regional distribution visualization",
+            "• Recent activity and updates",
+            "• Quick access to common tasks",
+            "• Role-specific content and options"
+        ]
+        
+        for feature in dashboard_features:
+            pdf.cell(200, 6, feature, ln=True, align='L')
+        
+        # Section 4: Member Directory
+        pdf.ln(10)
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "4. 🔍 Member Directory Features", ln=True, align='L')
+        pdf.ln(5)
+        
+        directory_features = [
+            ("Search & Filtering", [
+                "• Text search across names, counties, and notes",
+                "• Filter by membership status (Active/Inactive)",
+                "• Filter by membership category",
+                "• Filter by Irish county",
+                "• Advanced sorting options"
+            ]),
+            ("Member Information", [
+                "• Full name and contact details",
+                "• Birth and membership dates",
+                "• Irish county connections",
+                "• Membership category and status",
+                "• Historical information and notes"
+            ]),
+            ("Export Options", [
+                "• Download search results as CSV",
+                "• Generate PDF reports",
+                "• Filter by date ranges",
+                "• Include/exclude specific fields"
+            ])
+        ]
+        
+        for section_title, section_items in directory_features:
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 8, section_title, ln=True, align='L')
+            pdf.set_font("Arial", size=10)
+            for item in section_items:
+                pdf.cell(200, 6, item, ln=True, align='L')
+            pdf.ln(3)
+        
+        # Section 5: Profile Management
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "5. 👤 Profile Management", ln=True, align='L')
+        pdf.ln(5)
+        
+        profile_sections = [
+            ("Account Information", [
+                "• Update your personal details",
+                "• Change your password securely",
+                "• Manage email preferences",
+                "• View account creation date and activity"
+            ]),
+            ("Privacy Controls", [
+                "• Request private member access",
+                "• Download your personal data",
+                "• View data usage and activity logs",
+                "• Manage privacy preferences"
+            ]),
+            ("Access Requests", [
+                "• Submit requests for elevated access",
+                "• Track approval status",
+                "• Understand access level differences",
+                "• Contact admins for special requests"
+            ])
+        ]
+        
+        for section_title, section_items in profile_sections:
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 8, section_title, ln=True, align='L')
+            pdf.set_font("Arial", size=10)
+            for item in section_items:
+                pdf.cell(200, 6, item, ln=True, align='L')
+            pdf.ln(3)
+        
+        # Section 6: Support
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "6. 🎫 Support & Help", ln=True, align='L')
+        pdf.ln(5)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(200, 8, "Getting Help", ln=True, align='L')
+        pdf.set_font("Arial", size=10)
+        support_info = [
+            "• Use the Support tab to submit help tickets",
+            "• Include detailed descriptions of issues",
+            "• Set appropriate priority levels",
+            "• Track ticket status and responses",
+            "• FAQ section for common questions",
+            "",
+            "Contact Information:",
+            "• Submit tickets through the support portal",
+            "• Response time: 24-48 hours typically",
+            "• Check your ticket history in 'My Tickets'"
+        ]
+        
+        for line in support_info:
+            pdf.cell(200, 6, line, ln=True, align='L')
+        
+        # Section 7: Privacy
+        pdf.ln(10)
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "7. 🔒 Privacy & Data Protection", ln=True, align='L')
+        pdf.ln(5)
+        
+        privacy_info = [
+            "Data Collection:",
+            "• Only necessary information is collected",
+            "• Account details for authentication",
+            "• Activity logs for security and support",
+            "",
+            "Data Usage:",
+            "• Information used only for membership management",
+            "• No data sharing with third parties",
+            "• Regular security updates and monitoring",
+            "",
+            "Your Rights:",
+            "• Request access to your personal data",
+            "• Download your data in PDF format",
+            "• Request account deletion",
+            "• Update incorrect information"
+        ]
+        
+        pdf.set_font("Arial", size=10)
+        for line in privacy_info:
+            if line and not line.startswith("•"):
+                pdf.set_font("Arial", 'B', 10)
+            else:
+                pdf.set_font("Arial", size=10)
+            pdf.cell(200, 6, line, ln=True, align='L')
+        
+        # Section 8: Troubleshooting
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 12, "8. 🔧 Troubleshooting", ln=True, align='L')
+        pdf.ln(5)
+        
+        troubleshooting = [
+            ("Login Issues", [
+                "• Check username/email spelling",
+                "• Verify password (case-sensitive)",
+                "• Clear browser cache and cookies",
+                "• Try incognito/private browsing mode",
+                "• Contact support if account is locked"
+            ]),
+            ("Search Problems", [
+                "• Try simpler search terms",
+                "• Check spelling and punctuation",
+                "• Use filters to narrow results",
+                "• Clear all filters and try again",
+                "• Verify your access permissions"
+            ]),
+            ("Performance Issues", [
+                "• Check internet connection",
+                "• Close other browser tabs",
+                "• Refresh the page",
+                "• Try a different browser",
+                "• Report persistent slow loading"
+            ])
+        ]
+        
+        for issue_title, solutions in troubleshooting:
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(200, 8, issue_title, ln=True, align='L')
+            pdf.set_font("Arial", size=10)
+            for solution in solutions:
+                pdf.cell(200, 6, solution, ln=True, align='L')
+            pdf.ln(3)
+        
+        # Footer
+        pdf.ln(15)
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(200, 6, f"Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align='C')
+        pdf.cell(200, 6, "This guide reflects the current system features and statistics.", ln=True, align='C')
+        
+        # Generate PDF output
+        pdf_output = pdf.output(dest='S').encode('latin1')
+        
+        response = Response(
+            pdf_output,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=user-guide-{datetime.now().strftime("%Y%m%d")}.pdf',
+                'Content-Type': 'application/pdf'
+            }
+        )
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error generating user guide: {e}")
+        return jsonify({'error': 'Failed to generate user guide'}), 500
+
+
 # Authentication Routes
 
 
@@ -1006,6 +1531,14 @@ def check_auth():
     
     return jsonify({'authenticated': False})
 
+@app.route('/api/refresh-session', methods=['POST'])
+@auth_required
+def refresh_session():
+    """Refresh user session to extend timeout"""
+    session['last_activity'] = datetime.now().timestamp()
+    session.permanent = True
+    return jsonify({'success': True, 'message': 'Session refreshed'})
+
 # Enhanced Dashboard Routes
 
 
@@ -1062,13 +1595,15 @@ def get_dashboard():
         categories = [{'name': row[0], 'count': row[1]}
                       for row in cursor.fetchall()]
 
-        # Members by county (top 10)
+        # Members by province (from addresses)
         cursor.execute("""
-            SELECT TOP 10 ic.CountyName, COUNT(m.MemberID) as Count
-            FROM IrishCounties ic
-            LEFT JOIN Members m ON ic.CountyID = m.CountyID
-            WHERE m.IsActive = True
-            GROUP BY ic.CountyName
+            SELECT ma.Province, COUNT(DISTINCT m.MemberID) as Count
+            FROM MemberAddress ma, Members m
+            WHERE ma.MemberID = m.MemberID 
+            AND ma.IsCurrent = True
+            AND m.IsActive = True
+            AND ma.Province IS NOT NULL
+            GROUP BY ma.Province
             ORDER BY Count DESC
         """)
         counties = [{'name': row[0], 'count': row[1]}
@@ -1410,7 +1945,7 @@ def get_members():
     try:
         cursor = conn.cursor()
 
-        # Base query using MS Access JOIN syntax
+        # Base query using MS Access JOIN syntax - back to original working version
         query = """
             SELECT 
                 m.MemberID, m.FirstName, m.LastName, 
@@ -1418,9 +1953,9 @@ def get_members():
                 m.IsActive, mc.CategoryName, ic.CountyName,
                 m.DateJoined, m.DateEnded
             FROM 
-                (((Members AS m 
+                (Members AS m 
                 LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
-                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID))
+                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
         """
 
         # Role-based filtering - all users must be logged in
@@ -1438,6 +1973,37 @@ def get_members():
         cursor.execute(query)
         members = []
         for row in cursor.fetchall():
+            member_id = row[0]
+            
+            # Get address info with simple query
+            address_info = ""
+            try:
+                cursor.execute("""
+                    SELECT Street, City, Province 
+                    FROM MemberAddress 
+                    WHERE MemberID = ? AND IsCurrent = True
+                """, (member_id,))
+                addr_row = cursor.fetchone()
+                if addr_row:
+                    address_parts = [part for part in [addr_row[0], addr_row[1], addr_row[2]] if part]
+                    address_info = ", ".join(address_parts)
+            except:
+                address_info = ""
+                
+            # Get role info with simple query
+            role_info = ""
+            try:
+                cursor.execute("""
+                    SELECT Role 
+                    FROM Users 
+                    WHERE MemberID = ?
+                """, (member_id,))
+                role_row = cursor.fetchone()
+                if role_row:
+                    role_info = role_row[0]
+            except:
+                role_info = ""
+            
             member_data = {
                 'id': row[0],
                 'firstName': row[1],
@@ -1449,7 +2015,9 @@ def get_members():
                 'county': row[7],
                 'dateJoined': row[8].strftime('%Y-%m-%d') if row[8] else None,
                 'dateEnded': row[9].strftime('%Y-%m-%d') if row[9] else None,
-                'membershipYears': calculate_membership_years(row[8], row[9]) if row[8] else None
+                'membershipYears': calculate_membership_years(row[8], row[9]) if row[8] else None,
+                'address': address_info,
+                'role': role_info
             }
             members.append(member_data)
 
@@ -2911,6 +3479,194 @@ def export_recognitions_by_fiscal_year_pdf():
     finally:
         conn.close()
 
+# --- Individual Member Export ---
+
+@app.route('/api/export/member/<int:member_id>/csv', methods=['GET'])
+@private_or_admin_required
+def export_member_csv(member_id):
+    """Export individual member information as CSV"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        
+        # Get member details with simple query
+        cursor.execute("""
+            SELECT 
+                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
+                m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
+            FROM 
+                (Members AS m 
+                LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
+                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            WHERE m.MemberID = ?
+        """, (member_id,))
+        
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Member not found'}), 404
+
+        # Get address info with simple query
+        address_row = None
+        try:
+            cursor.execute("""
+                SELECT Street, City, Province, PostalCode 
+                FROM MemberAddress 
+                WHERE MemberID = ? AND IsCurrent = True
+            """, (member_id,))
+            address_row = cursor.fetchone()
+        except:
+            pass
+
+        # Get user account info with simple query
+        user_row = None
+        try:
+            cursor.execute("""
+                SELECT Username, Role, Email 
+                FROM Users 
+                WHERE MemberID = ?
+            """, (member_id,))
+            user_row = cursor.fetchone()
+        except:
+            pass
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Field', 'Value'])
+        
+        # Write member data
+        writer.writerow(['First Name', row[0] or ''])
+        writer.writerow(['Last Name', row[1] or ''])
+        writer.writerow(['Place of Birth', row[2] or ''])
+        writer.writerow(['Date of Birth', row[3].strftime('%Y-%m-%d') if row[3] else ''])
+        writer.writerow(['Date Joined', row[4].strftime('%Y-%m-%d') if row[4] else ''])
+        writer.writerow(['Date Ended', row[5].strftime('%Y-%m-%d') if row[5] else ''])
+        writer.writerow(['Active', 'Yes' if row[6] else 'No'])
+        writer.writerow(['Category', row[7] or ''])
+        writer.writerow(['County', row[8] or ''])
+        writer.writerow(['Street', address_row[0] if address_row else ''])
+        writer.writerow(['City', address_row[1] if address_row else ''])
+        writer.writerow(['Province', address_row[2] if address_row else ''])
+        writer.writerow(['Postal Code', address_row[3] if address_row else ''])
+        writer.writerow(['Username', user_row[0] if user_row else ''])
+        writer.writerow(['Role', user_row[1] if user_row else ''])
+        writer.writerow(['Email', user_row[2] if user_row else ''])
+        
+        output.seek(0)
+        filename = f"member_{row[0]}_{row[1]}.csv".replace(' ', '_')
+        return Response(output, mimetype='text/csv', headers={
+            "Content-Disposition": f"attachment;filename={filename}"
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to export member CSV: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/export/member/<int:member_id>/pdf', methods=['GET'])
+@private_or_admin_required  
+def export_member_pdf(member_id):
+    """Export individual member information as PDF"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        
+        # Get member details with simple query
+        cursor.execute("""
+            SELECT 
+                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
+                m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
+            FROM 
+                (Members AS m 
+                LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
+                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            WHERE m.MemberID = ?
+        """, (member_id,))
+        
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Member not found'}), 404
+
+        # Get address info with simple query
+        address_row = None
+        try:
+            cursor.execute("""
+                SELECT Street, City, Province, PostalCode 
+                FROM MemberAddress 
+                WHERE MemberID = ? AND IsCurrent = True
+            """, (member_id,))
+            address_row = cursor.fetchone()
+        except:
+            pass
+
+        # Get user account info with simple query
+        user_row = None
+        try:
+            cursor.execute("""
+                SELECT Username, Role, Email 
+                FROM Users 
+                WHERE MemberID = ?
+            """, (member_id,))
+            user_row = cursor.fetchone()
+        except:
+            pass
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font('Arial', 'B', 16)
+        pdf.cell(0, 10, f'Member Information: {row[0]} {row[1]}', ln=True, align='C')
+        pdf.ln(10)
+        
+        pdf.set_font('Arial', '', 12)
+        
+        # Member details
+        fields = [
+            ('First Name', row[0]),
+            ('Last Name', row[1]), 
+            ('Place of Birth', row[2]),
+            ('Date of Birth', row[3].strftime('%Y-%m-%d') if row[3] else 'N/A'),
+            ('Date Joined', row[4].strftime('%Y-%m-%d') if row[4] else 'N/A'),
+            ('Date Ended', row[5].strftime('%Y-%m-%d') if row[5] else 'N/A'),
+            ('Status', 'Active' if row[6] else 'Inactive'),
+            ('Category', row[7] or 'N/A'),
+            ('County', row[8] or 'N/A'),
+            ('Street Address', address_row[0] if address_row else 'N/A'),
+            ('City', address_row[1] if address_row else 'N/A'),
+            ('Province', address_row[2] if address_row else 'N/A'),
+            ('Postal Code', address_row[3] if address_row else 'N/A'),
+            ('Username', user_row[0] if user_row else 'N/A'),
+            ('Role', user_row[1] if user_row else 'N/A'),
+            ('Email', user_row[2] if user_row else 'N/A')
+        ]
+        
+        for field, value in fields:
+            pdf.cell(50, 8, f'{field}:', 0, 0)
+            pdf.cell(0, 8, str(value or 'N/A'), 0, 1)
+            
+        pdf_bytes = pdf.output(dest='S')
+        if isinstance(pdf_bytes, bytearray):
+            pdf_bytes = bytes(pdf_bytes)
+        
+        filename = f"member_{row[0]}_{row[1]}.pdf".replace(' ', '_')
+        response = Response(pdf_bytes)
+        response.headers.set('Content-Disposition', 'attachment', filename=filename)
+        response.headers.set('Content-Type', 'application/pdf')
+        return response
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to export member PDF: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
 # --- Change Password ---
 
 
@@ -3462,6 +4218,26 @@ def get_recognition_types():
         return jsonify(types)
     except Exception as e:
         return jsonify({'error': f'Failed to fetch types: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/fiscal-years', methods=['GET'])
+@auth_required
+def get_fiscal_years():
+    """List all fiscal years"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT FiscalYearID, YearLabel FROM FiscalYear ORDER BY StartDate DESC")
+        years = [{'id': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        return jsonify(years)
+    except Exception as e:
+        return jsonify({'error': f'Failed to fetch fiscal years: {str(e)}'}), 500
     finally:
         conn.close()
 

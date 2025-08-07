@@ -105,6 +105,31 @@ export default function MemberProfile() {
                 <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>HOME PHONE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.homePhone || '—'}</div></div>
                 <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CELL PHONE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.cellPhone || '—'}</div></div>
               </div>
+              {/* Address Information */}
+              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Address Information</h2>
+                {Array.isArray(member.addresses) && member.addresses.length > 0 ? (
+                  member.addresses.map((addr, idx) => (
+                    <div key={idx} style={{ marginBottom: idx < member.addresses.length - 1 ? 16 : 0, padding: idx > 0 ? '16px 0 0 0' : 0, borderTop: idx > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                      <div style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600, marginBottom: 8 }}>
+                        {addr.isCurrent ? 'CURRENT ADDRESS' : `${addr.yearLabel || 'HISTORICAL'} ADDRESS`}
+                      </div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>STREET</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.street || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CITY</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.city || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PROVINCE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.province || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>POSTAL CODE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.postalCode || '—'}</div></div>
+                    </div>
+                  ))
+                ) : (
+                  <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>No address information available</p>
+                )}
+              </div>
+              {/* Account Information */}
+              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Account Information</h2>
+                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>USERNAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.username || 'No account'}</div></div>
+                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>ROLE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.role || 'No account'}</div></div>
+              </div>
               {/* Membership Details */}
               <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
                 <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Membership Details</h2>
@@ -158,6 +183,26 @@ export default function MemberProfile() {
             >
               ← Back to Members
             </Link>
+            
+            {/* Export buttons for admin and private users */}
+            {user && (user.role === "admin" || user.role === "private") && (
+              <>
+                <button 
+                  className="btn-primary" 
+                  style={{ background: '#22c55e', color: 'white', fontWeight: 600, minWidth: 120 }}
+                  onClick={() => window.open(`http://localhost:5000/api/export/member/${member.id}/csv`, '_blank')}
+                >
+                  Export CSV
+                </button>
+                <button 
+                  className="btn-primary" 
+                  style={{ background: '#3b82f6', color: 'white', fontWeight: 600, minWidth: 120 }}
+                  onClick={() => window.open(`http://localhost:5000/api/export/member/${member.id}/pdf`, '_blank')}
+                >
+                  Export PDF
+                </button>
+              </>
+            )}
             
             {/* Admin-only controls */}
             {user && user.role === "admin" && (

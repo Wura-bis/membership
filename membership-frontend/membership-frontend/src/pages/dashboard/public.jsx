@@ -127,7 +127,7 @@ export default function PublicDashboard() {
 
                 {/* Regional Distribution */}
                 <div className="dashboard-card">
-                  <h2 className="dashboard-card-title">🗺️ Regional Distribution (Top 10)</h2>
+                                  <h3 className="text-lg font-semibold mb-4">Provincial Distribution</h3>
                   <div style={{ height: '220px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats.regions} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>

@@ -191,63 +191,92 @@ export default function PrivateDashboard() {
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
               gap: '20px'
             }}>
-              <div style={{ 
-                textAlign: 'center',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
+              <Link to="/members" style={{ textDecoration: 'none' }}>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b', 
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  fontWeight: '500'
-                }}>
-                  Member Directory
+                  textAlign: 'center',
+                  padding: '16px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.15)';
+                  e.target.style.borderColor = '#14b8a6';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.borderColor = '#e2e8f0';
+                }}
+                >
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#64748b', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: '500'
+                  }}>
+                    Member Directory
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '700', 
+                    color: '#059669',
+                    marginBottom: '4px'
+                  }}>
+                    Available
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#64748b'
+                  }}>
+                    {memberStats.totalMembers} total members
+                  </div>
                 </div>
-                <div style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  color: '#059669',
-                  marginBottom: '4px'
-                }}>
-                  Available
-                </div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b'
-                }}>
-                  {memberStats.totalMembers} total members
-                </div>
-              </div>
+              </Link>
 
-              <div style={{ 
-                textAlign: 'center',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
+              <Link to="/recognitions" style={{ textDecoration: 'none' }}>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b', 
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  fontWeight: '500'
-                }}>
-                  Recognitions
-                </div>
-                <div style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '700', 
-                  color: '#1e293b',
-                  marginBottom: '4px'
-                }}>
-                  Browse
+                  textAlign: 'center',
+                  padding: '16px',
+                  background: '#f8fafc',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.15)';
+                  e.target.style.borderColor = '#14b8a6';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.borderColor = '#e2e8f0';
+                }}
+                >
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#64748b', 
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    fontWeight: '500'
+                  }}>
+                    Recognitions
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '700', 
+                    color: '#1e293b',
+                    marginBottom: '4px'
+                  }}>
+                    Browse
                 </div>
                 <div style={{ 
                   fontSize: '12px', 
@@ -256,14 +285,29 @@ export default function PrivateDashboard() {
                   Awards & achievements
                 </div>
               </div>
+            </Link>
 
+            <Link to="/support" style={{ textDecoration: 'none' }}>
               <div style={{ 
                 textAlign: 'center',
                 padding: '16px',
                 background: '#f8fafc',
                 borderRadius: '8px',
-                border: '1px solid #e2e8f0'
-              }}>
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.15)';
+                e.target.style.borderColor = '#14b8a6';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+                e.target.style.borderColor = '#e2e8f0';
+              }}
+              >
                 <div style={{ 
                   fontSize: '12px', 
                   color: '#64748b', 
@@ -289,6 +333,7 @@ export default function PrivateDashboard() {
                   Always available
                 </div>
               </div>
+            </Link>
             </div>
           </div>
 

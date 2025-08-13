@@ -1595,15 +1595,15 @@ def get_dashboard():
         categories = [{'name': row[0], 'count': row[1]}
                       for row in cursor.fetchall()]
 
-        # Members by province (from addresses)
+        # Members by province (from addresses) - Province column doesn't exist, so count by city instead
         cursor.execute("""
-            SELECT ma.Province, COUNT(DISTINCT m.MemberID) as Count
+            SELECT ma.City, COUNT(DISTINCT m.MemberID) as Count
             FROM MemberAddress ma, Members m
             WHERE ma.MemberID = m.MemberID 
             AND ma.IsCurrent = True
             AND m.IsActive = True
-            AND ma.Province IS NOT NULL
-            GROUP BY ma.Province
+            AND ma.City IS NOT NULL
+            GROUP BY ma.City
             ORDER BY Count DESC
         """)
         counties = [{'name': row[0], 'count': row[1]}
@@ -1979,13 +1979,13 @@ def get_members():
             address_info = ""
             try:
                 cursor.execute("""
-                    SELECT Street, City, Province 
+                    SELECT Street, City 
                     FROM MemberAddress 
                     WHERE MemberID = ? AND IsCurrent = True
                 """, (member_id,))
                 addr_row = cursor.fetchone()
                 if addr_row:
-                    address_parts = [part for part in [addr_row[0], addr_row[1], addr_row[2]] if part]
+                    address_parts = [part for part in [addr_row[0], addr_row[1]] if part]
                     address_info = ", ".join(address_parts)
             except:
                 address_info = ""
@@ -2042,8 +2042,9 @@ def calculate_membership_years(date_joined, date_ended):
 @app.route('/api/members/<int:member_id>', methods=['GET'])
 @auth_required
 def get_member(member_id):
-    print('DEBUG PARAM TYPE:', type(member_id), 'DEBUG PARAM VALUE:', member_id)  # Debug: show type and value
-    """Get specific member details"""
+    """Get specific member details with properly resolved foreign keys"""
+    print(f'DEBUG: Getting member {member_id}')
+    
     conn = get_db_connection()
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
@@ -2053,159 +2054,184 @@ def get_member(member_id):
 
         # Check if user has permission to view this member
         if session['user_role'] == 'Public':
-            print('DEBUG: Checking public access for member', member_id)
-            try:
-                cursor.execute("SELECT IsActive FROM Members WHERE MemberID = ?", (member_id,))
-                result = cursor.fetchone()
-                print('DEBUG: Public access check result:', result)
-                if not result or result[0]:  # Active member
-                    print('DEBUG: Access denied for public user')
-                    return jsonify({'error': 'Access denied'}), 403
-            except Exception as e:
-                print('DEBUG ERROR during public access check:', e)
-                raise
+            cursor.execute("SELECT IsActive FROM Members WHERE MemberID = ?", (member_id,))
+            result = cursor.fetchone()
+            if not result or result[0]:  # Active member - public can't view
+                return jsonify({'error': 'Access denied'}), 403
 
-        # Get member details (including all profile fields)
-        sql = """
-            SELECT m.MemberID, m.FirstName, m.LastName, m.Email, m.PhoneNumber, m.[Place of Birth], m.[Date of Birth],
-                   m.MemberCategoryID, c.CategoryName, m.CountyID, co.CountyName, m.SurnameID, s.Surname, m.OccupationID, o.OccupationName,
-                   m.Notes, m.IsActive, m.OtherSocieties, m.[DateJoined], m.[DateEnded], m.[ApplicationDate], m.[Approval Date],
-                   m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.[ProposalDate]
-            FROM (((((Members AS m
-            LEFT JOIN MemberCategory AS c ON m.MemberCategoryID = c.CategoryID)
-            LEFT JOIN IrishCounties AS co ON m.CountyID = co.CountyID)
-            LEFT JOIN IrishSurnames AS s ON m.SurnameID = s.SurnameID)
-            LEFT JOIN Occupation AS o ON m.OccupationID = o.OccupationID))
+        # 1. GET MEMBER BASIC INFO with all foreign key resolutions
+        member_query = """
+            SELECT 
+                m.MemberID, m.FirstName, m.LastName, m.Email, m.PhoneNumber, 
+                m.[Place of Birth], m.[Date of Birth],
+                m.MemberCategoryID, mc.CategoryName,
+                m.CountyID, ic.CountyName, 
+                m.SurnameID, s.Surname,
+                m.OccupationID, o.OccupationName,
+                m.Notes, m.IsActive, m.OtherSocieties, 
+                m.DateJoined, m.DateEnded, m.ApplicationDate, m.[Approval Date],
+                m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate
+            FROM Members AS m
+            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            LEFT JOIN IrishSurnames AS s ON m.SurnameID = s.SurnameID
+            LEFT JOIN Occupation AS o ON m.OccupationID = o.OccupationID
             WHERE m.MemberID = ?
         """
-        print('DEBUG: About to execute member details query:', sql)
-        print('DEBUG: Params:', member_id, type(member_id))
-        try:
-            cursor.execute(sql, (member_id,))
-            print('DEBUG: Member details query executed')
-            member = cursor.fetchone()
-            print('DEBUG: Member details fetched:', member)
-        except Exception as e:
-            print('DEBUG ERROR during member details query:', e)
-            raise
-        if not member:
-            print('DEBUG: Member not found')
+        
+        cursor.execute(member_query, (member_id,))
+        member_row = cursor.fetchone()
+        
+        if not member_row:
             return jsonify({'error': 'Member not found'}), 404
 
-        # Get member addresses
-        try:
-            print('DEBUG: About to execute addresses query')
-            cursor.execute("""
-                SELECT ma.MemberAddressID, ma.Street, ma.City, ma.Province, ma.CountryID, ma.PostalCode, ma.FiscalYearID, ma.IsCurrent, fy.YearLabel, fy.StartDate
-                FROM MemberAddress AS ma
-                LEFT JOIN FiscalYear AS fy ON ma.FiscalYearID = fy.FiscalYearID
-                WHERE ma.MemberID = ?
-                ORDER BY ma.IsCurrent DESC, fy.StartDate DESC
-            """, (member_id,))
-            addresses = cursor.fetchall()
-            print('DEBUG: Addresses fetched:', addresses)
-        except Exception as e:
-            print('DEBUG ERROR during addresses query:', e)
-            addresses = []
-
-        # Get member roles & fiscal years (all pairs)
-        try:
-            print('DEBUG: About to execute role/fiscal year query')
-            cursor.execute("""
-                SELECT r.RoleName, fy.YearLabel, fy.StartDate, fy.EndDate
-                FROM MemberRole AS mr
-                INNER JOIN Role AS r ON mr.RoleID = r.RoleID
-                INNER JOIN FiscalYear AS fy ON mr.FiscalYearID = fy.FiscalYearID
-                WHERE mr.MemberID = ?
-            """, (member_id,))
-            role_fiscal_years = [{'role': row[0], 'fiscalYear': row[1], 'from': row[2], 'to': row[3]} for row in cursor.fetchall()]
-            print('DEBUG: Role/fiscal years fetched:', role_fiscal_years)
-        except Exception as e:
-            print('DEBUG ERROR during role/fiscal year query:', e)
-            role_fiscal_years = []
-
-        # Get Irish Connections (County)
-        try:
-            print('DEBUG: About to execute Irish connection (county) query')
-            cursor.execute("""
-                SELECT c.CountyName
-                FROM IrishConnectionByCounty AS icc
-                INNER JOIN IrishCounties AS c ON icc.CountyID = c.CountyID
-                WHERE icc.MemberID = ?
-            """, (member_id,))
-            irish_counties = [row[0] for row in cursor.fetchall()]
-            print('DEBUG: Irish counties fetched:', irish_counties)
-        except Exception as e:
-            print('DEBUG ERROR during Irish connection (county) query:', e)
-            irish_counties = []
-
-        # Get Irish Connections (Surname)
-        try:
-            print('DEBUG: About to execute Irish connection (surname) query')
-            cursor.execute("""
-                SELECT s.Surname
-                FROM IrishConnectionBySurname AS ics
-                INNER JOIN IrishSurnames AS s ON ics.SurnameID = s.SurnameID
-                WHERE ics.MemberID = ?
-            """, (member_id,))
-            irish_surnames = [row[0] for row in cursor.fetchall()]
-            print('DEBUG: Irish surnames fetched:', irish_surnames)
-        except Exception as e:
-            print('DEBUG ERROR during Irish connection (surname) query:', e)
-            irish_surnames = []
-
-        # Compose member_data for profile page
+        # Build base member data
         member_data = {
-            'id': member[0],
-            'firstName': member[1],
-            'lastName': member[2],
-            'email': member[3] if len(member) > 3 else None,
-            'phoneNumber': member[4] if len(member) > 4 else None,
-            'placeOfBirth': member[5] if len(member) > 5 else None,
-            'dateOfBirth': member[6].strftime('%Y-%m-%d') if len(member) > 6 and member[6] else None,
-            'memberCategoryID': member[7] if len(member) > 7 else None,
-            'memberCategory': member[8] if len(member) > 8 else None,
-            'countyID': member[9] if len(member) > 9 else None,
-            'county': member[10] if len(member) > 10 else None,
-            'surnameID': member[11] if len(member) > 11 else None,
-            'surname': member[12] if len(member) > 12 else None,
-            'occupationID': member[13] if len(member) > 13 else None,
-            'occupation': member[14] if len(member) > 14 else None,
-            'notes': member[15] if len(member) > 15 else None,
-            'isActive': member[16] if len(member) > 16 else None,
-            'otherSocieties': member[17] if len(member) > 17 else None,
-            'dateJoined': member[18].strftime('%Y-%m-%d') if len(member) > 18 and member[18] else None,
-            'dateEnded': member[19].strftime('%Y-%m-%d') if len(member) > 19 and member[19] else None,
-            'applicationDate': member[20].strftime('%Y-%m-%d') if len(member) > 20 and member[20] else None,
-            'approvalDate': member[21].strftime('%Y-%m-%d') if len(member) > 21 and member[21] else None,
-            'approvedBy': member[22] if len(member) > 22 else None,
-            'signedBy': member[23] if len(member) > 23 else None,
-            'proposer': member[24] if len(member) > 24 else None,
-            'seconder': member[25] if len(member) > 25 else None,
-            'proposalDate': member[26].strftime('%Y-%m-%d') if len(member) > 26 and member[26] else None,
-            'addresses': [
-                {
-                    'id': addr[0],
-                    'street': addr[1],
-                    'city': addr[2],
-                    'province': addr[3],
-                    'countryId': addr[4],
-                    'postalCode': addr[5],
-                    'fiscalYearId': addr[6],
-                    'isCurrent': addr[7],
-                    'fiscalYear': addr[8],
-                    'fiscalYearStart': addr[9]
-                } for addr in addresses
-            ],
-            'roleFiscalYears': role_fiscal_years
+            'id': member_row[0],
+            'firstName': member_row[1] or '',
+            'lastName': member_row[2] or '',
+            'email': member_row[3] or '',
+            'phoneNumber': member_row[4] or '',
+            'placeOfBirth': member_row[5] or '',
+            'dateOfBirth': member_row[6].strftime('%Y-%m-%d') if member_row[6] else '',
+            # Category info
+            'memberCategoryID': member_row[7],
+            'memberCategory': member_row[8] or '',
+            # County info  
+            'countyID': member_row[9],
+            'county': member_row[10] or '',
+            # Surname info
+            'surnameID': member_row[11],
+            'surname': member_row[12] or '',
+            # Occupation info
+            'occupationID': member_row[13],
+            'occupation': member_row[14] or '',
+            # Other fields
+            'notes': member_row[15] or '',
+            'isActive': bool(member_row[16]),
+            'otherSocieties': member_row[17] or '',
+            'dateJoined': member_row[18].strftime('%Y-%m-%d') if member_row[18] else '',
+            'dateEnded': member_row[19].strftime('%Y-%m-%d') if member_row[19] else '',
+            'applicationDate': member_row[20].strftime('%Y-%m-%d') if member_row[20] else '',
+            'approvalDate': member_row[21].strftime('%Y-%m-%d') if member_row[21] else '',
+            'approvedBy': member_row[22] or '',
+            'signedBy': member_row[23] or '',
+            'proposer': member_row[24] or '',
+            'seconder': member_row[25] or '',
+            'proposalDate': member_row[26].strftime('%Y-%m-%d') if member_row[26] else '',
         }
 
-        print('DEBUG: Final member_data:', member_data)
+        # 2. GET ADDRESSES with proper field mapping
+        address_query = """
+            SELECT 
+                ma.MemberAddressID, ma.Street, ma.City, 
+                ma.ProvinceID, ma.CountryID, ma.PostalCode, 
+                ma.FiscalYearID, fy.YearLabel, ma.IsCurrent
+            FROM MemberAddress AS ma
+            LEFT JOIN FiscalYear AS fy ON ma.FiscalYearID = fy.FiscalYearID
+            WHERE ma.MemberID = ?
+            ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC
+        """
+        
+        cursor.execute(address_query, (member_id,))
+        address_rows = cursor.fetchall()
+        
+        addresses = []
+        for addr in address_rows:
+            addresses.append({
+                'id': addr[0],
+                'addressLine1': addr[1] or '',  # Street -> addressLine1
+                'addressLine2': '',  # Not in database
+                'city': addr[2] or '',
+                'provinceID': addr[3],
+                'province': '',  # Would need Province lookup table
+                'countryID': addr[4], 
+                'country': '',  # Would need Country lookup table
+                'postalCode': addr[5] or '',
+                'fiscalYearID': addr[6],
+                'fiscalYear': addr[7] or '',  # Resolved from FiscalYear table
+                'isCurrent': bool(addr[8])
+            })
+        
+        member_data['addresses'] = addresses
+
+        # 3. GET ROLES with proper name resolution
+        role_query = """
+            SELECT 
+                mr.RoleID, r.RoleName, 
+                mr.FiscalYearID, fy.YearLabel
+            FROM MemberRole AS mr
+            LEFT JOIN Role AS r ON mr.RoleID = r.RoleID
+            LEFT JOIN FiscalYear AS fy ON mr.FiscalYearID = fy.FiscalYearID
+            WHERE mr.MemberID = ?
+            ORDER BY mr.FiscalYearID DESC
+        """
+        
+        cursor.execute(role_query, (member_id,))
+        role_rows = cursor.fetchall()
+        
+        role_fiscal_years = []
+        for role in role_rows:
+            role_fiscal_years.append({
+                'roleID': role[0],
+                'role': role[1] or f'Role ID {role[0]}',  # Use name or fallback to ID
+                'fiscalYearID': role[2],
+                'fiscalYear': role[3] or f'Fiscal Year ID {role[2]}',  # Use label or fallback to ID
+                'roleName': role[1] or '',  # For compatibility
+                'fiscalYearLabel': role[3] or ''  # For compatibility
+            })
+        
+        member_data['roleFiscalYears'] = role_fiscal_years
+
+        # 4. GET IRISH CONNECTIONS with proper name resolution
+        irish_connections = []
+        try:
+            # Get county connections
+            cursor.execute("""
+                SELECT icc.CountyID, ic.CountyName
+                FROM IrishConnectionByCounty AS icc
+                LEFT JOIN IrishCounties AS ic ON icc.CountyID = ic.CountyID
+                WHERE icc.MemberID = ?
+            """, (member_id,))
+            county_rows = cursor.fetchall()
+            
+            # Get surname connections
+            cursor.execute("""
+                SELECT ics.SurnameID, isur.Surname
+                FROM IrishConnectionBySurname AS ics
+                LEFT JOIN IrishSurnames AS isur ON ics.SurnameID = isur.SurnameID
+                WHERE ics.MemberID = ?
+            """, (member_id,))
+            surname_rows = cursor.fetchall()
+            
+            # Combine county and surname connections
+            for county in county_rows:
+                irish_connections.append({
+                    'countyID': county[0],
+                    'county': county[1] or f'County ID {county[0]}',
+                    'surnameID': None,
+                    'surname': ''
+                })
+                
+            for surname in surname_rows:
+                irish_connections.append({
+                    'countyID': None,
+                    'county': '',
+                    'surnameID': surname[0],
+                    'surname': surname[1] or f'Surname ID {surname[0]}'
+                })
+                    
+        except Exception as e:
+            print(f'DEBUG: Irish connections query failed: {e}')
+        
+        member_data['irishConnections'] = irish_connections
+
+        print(f'DEBUG: Successfully built member data for {member_id}')
         return jsonify(member_data)
 
     except Exception as e:
-        print('DEBUG ERROR in get_member:', e)
-        return jsonify({'error': f'Failed to fetch member: {str(e)}'}), 500
+        print(f'DEBUG ERROR in get_member: {e}')
+        return jsonify({'error': f'Failed to fetch member details: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -2231,6 +2257,21 @@ def create_member():
     try:
         cursor = conn.cursor()
 
+        # Helper function to convert empty strings to None
+        def convert_to_int_or_none(value):
+            if value is None or value == '' or value == 'null':
+                return None
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+
+        def convert_to_date_or_none(value):
+            if value is None or value == '' or value == 'null':
+                return None
+            return value
+
+        # Create member record
         cursor.execute("""
             INSERT INTO Members (
                 [FirstName], [LastName], [Email], [PhoneNumber],
@@ -2245,25 +2286,25 @@ def create_member():
             data.get('firstName'),
             data.get('lastName'),
             data.get('email'),
-            data.get('phoneNumber', None),
-            data.get('placeOfBirth', None),
-            data.get('dateOfBirth', None),
-            data.get('categoryId', None),
-            data.get('countyId', None),
-            data.get('surnameId', None),
-            data.get('occupationId', None),
-            data.get('notes', ''),
-            data.get('isActive', True),
-            data.get('otherSocieties', None),
-            data.get('dateJoined', None),
-            data.get('dateEnded', None),
-            data.get('applicationDate', None),
-            data.get('approvalDate', None),
-            data.get('approvedBy', None),
-            data.get('signedBy', None),
-            data.get('proposer', None),
-            data.get('seconder', None),
-            data.get('proposalDate', None)
+            data.get('phoneNumber') or None,
+            data.get('placeOfBirth') or None,
+            convert_to_date_or_none(data.get('dateOfBirth')),
+            convert_to_int_or_none(data.get('memberCategoryID')),
+            convert_to_int_or_none(data.get('countyID')),
+            convert_to_int_or_none(data.get('surnameID')),
+            convert_to_int_or_none(data.get('occupationID')),
+            data.get('notes') or '',
+            bool(data.get('isActive', True)),
+            data.get('otherSocieties') or None,
+            convert_to_date_or_none(data.get('dateJoined')),
+            convert_to_date_or_none(data.get('dateEnded')),
+            convert_to_date_or_none(data.get('applicationDate')),
+            convert_to_date_or_none(data.get('approvalDate')),
+            data.get('approvedBy') or None,
+            data.get('signedBy') or None,
+            data.get('proposer') or None,
+            data.get('seconder') or None,
+            convert_to_date_or_none(data.get('proposalDate'))
         ))
 
         conn.commit()
@@ -2273,6 +2314,56 @@ def create_member():
         member_id = row[0] if row is not None else None
         if member_id is None:
             return jsonify({'error': 'Failed to retrieve new member ID'}), 500
+
+        # Handle multiple addresses
+        if 'addresses' in data and data['addresses']:
+            for address in data['addresses']:
+                if address.get('street') or address.get('city'):  # Only if there's actual address data
+                    cursor.execute("""
+                        INSERT INTO MemberAddress (MemberID, Street, City, CountryID, PostalCode, FiscalYearID, IsCurrent)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        member_id,
+                        address.get('street') or None,
+                        address.get('city') or None,
+                        convert_to_int_or_none(address.get('countryID')),
+                        address.get('postalCode') or None,
+                        convert_to_int_or_none(address.get('fiscalYearID')),
+                        bool(address.get('isCurrent', True))
+                    ))
+
+        # Handle Irish connections by county
+        if 'irishConnections' in data and data['irishConnections']:
+            for connection in data['irishConnections']:
+                county_id = convert_to_int_or_none(connection.get('countyID'))
+                if county_id:
+                    cursor.execute("""
+                        INSERT INTO IrishConnectionByCounty (MemberID, CountyID)
+                        VALUES (?, ?)
+                    """, (member_id, county_id))
+
+        # Handle Irish connections by surname
+        if 'irishConnections' in data and data['irishConnections']:
+            for connection in data['irishConnections']:
+                surname_id = convert_to_int_or_none(connection.get('surnameID'))
+                if surname_id:
+                    cursor.execute("""
+                        INSERT INTO IrishConnectionBySurname (MemberID, SurnameID)
+                        VALUES (?, ?)
+                    """, (member_id, surname_id))
+
+        # Handle member roles for fiscal years
+        if 'roleFiscalYears' in data and data['roleFiscalYears']:
+            for role_assignment in data['roleFiscalYears']:
+                role_id = convert_to_int_or_none(role_assignment.get('roleID'))
+                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYearID'))
+                if role_id and fiscal_year_id:
+                    cursor.execute("""
+                        INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
+                        VALUES (?, ?, ?)
+                    """, (member_id, role_id, fiscal_year_id))
+
+        conn.commit()
 
         log_audit_event(
             session.get('user_id', 'unknown'),
@@ -2303,11 +2394,32 @@ def update_member(member_id):
         cursor = conn.cursor()
 
         # Check if member exists
-        cursor.execute(
-            "SELECT * FROM Members WHERE MemberID = ?", (member_id,))
+        cursor.execute("SELECT * FROM Members WHERE MemberID = ?", (member_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Member not found'}), 404
 
+        # Convert data types properly
+        def convert_to_int_or_none(value):
+            if value is None or value == '' or value == 'null':
+                return None
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+
+        def convert_to_date_or_none(value):
+            if value is None or value == '' or value == 'null':
+                return None
+            try:
+                if isinstance(value, str):
+                    # Handle various date formats
+                    from datetime import datetime
+                    return datetime.strptime(value, '%Y-%m-%d').date()
+                return value
+            except (ValueError, TypeError):
+                return None
+
+        # Update member record
         cursor.execute("""
             UPDATE Members SET
                 [FirstName] = ?,
@@ -2333,32 +2445,90 @@ def update_member(member_id):
                 [Seconder] = ?,
                 [ProposalDate] = ?
             WHERE [MemberID] = ?
-        """,
-        (
+        """, (
             data.get('firstName'),
             data.get('lastName'),
             data.get('email'),
             data.get('phoneNumber', None),
             data.get('placeOfBirth', None),
-            data.get('dateOfBirth', None),
-            data.get('categoryId', None),
-            data.get('countyId', None),
-            data.get('surnameId', None),
-            data.get('occupationId', None),
+            convert_to_date_or_none(data.get('dateOfBirth')),
+            convert_to_int_or_none(data.get('memberCategoryID')),
+            convert_to_int_or_none(data.get('countyID')),
+            convert_to_int_or_none(data.get('surnameID')),
+            convert_to_int_or_none(data.get('occupationID')),
             data.get('notes', ''),
             data.get('isActive', True),
             data.get('otherSocieties', None),
-            data.get('dateJoined', None),
-            data.get('dateEnded', None),
-            data.get('applicationDate', None),
-            data.get('approvalDate', None),
+            convert_to_date_or_none(data.get('dateJoined')),
+            convert_to_date_or_none(data.get('dateEnded')),
+            convert_to_date_or_none(data.get('applicationDate')),
+            convert_to_date_or_none(data.get('approvalDate')),
             data.get('approvedBy', None),
             data.get('signedBy', None),
             data.get('proposer', None),
             data.get('seconder', None),
-            data.get('proposalDate', None),
+            convert_to_date_or_none(data.get('proposalDate')),
             member_id
         ))
+
+        # Handle addresses - clear existing and add new
+        if 'addresses' in data:
+            # Delete existing addresses
+            cursor.execute("DELETE FROM MemberAddress WHERE MemberID = ?", (member_id,))
+            
+            # Add new addresses
+            for address in data['addresses']:
+                if address.get('street') or address.get('city'):  # Only if there's actual address data
+                    cursor.execute("""
+                        INSERT INTO MemberAddress (MemberID, Street, City, CountryID, PostalCode, FiscalYearID, IsCurrent)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        member_id,
+                        address.get('street') or None,
+                        address.get('city') or None,
+                        convert_to_int_or_none(address.get('countryID')),
+                        address.get('postalCode') or None,
+                        convert_to_int_or_none(address.get('fiscalYearID')),
+                        bool(address.get('isCurrent', True))
+                    ))
+
+        # Handle Irish connections - clear existing and add new
+        if 'irishConnections' in data:
+            # Delete existing Irish connections
+            cursor.execute("DELETE FROM IrishConnectionByCounty WHERE MemberID = ?", (member_id,))
+            cursor.execute("DELETE FROM IrishConnectionBySurname WHERE MemberID = ?", (member_id,))
+            
+            # Add new Irish connections
+            for connection in data['irishConnections']:
+                county_id = convert_to_int_or_none(connection.get('countyID'))
+                surname_id = convert_to_int_or_none(connection.get('surnameID'))
+                
+                if county_id:
+                    cursor.execute("""
+                        INSERT INTO IrishConnectionByCounty (MemberID, CountyID)
+                        VALUES (?, ?)
+                    """, (member_id, county_id))
+                    
+                if surname_id:
+                    cursor.execute("""
+                        INSERT INTO IrishConnectionBySurname (MemberID, SurnameID)
+                        VALUES (?, ?)
+                    """, (member_id, surname_id))
+
+        # Handle member roles - clear existing and add new
+        if 'roleFiscalYears' in data:
+            # Delete existing role assignments
+            cursor.execute("DELETE FROM MemberRole WHERE MemberID = ?", (member_id,))
+            
+            # Add new role assignments
+            for role_assignment in data['roleFiscalYears']:
+                role_id = convert_to_int_or_none(role_assignment.get('roleID'))
+                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYearID'))
+                if role_id and fiscal_year_id:
+                    cursor.execute("""
+                        INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
+                        VALUES (?, ?, ?)
+                    """, (member_id, role_id, fiscal_year_id))
 
         conn.commit()
 
@@ -3396,14 +3566,7 @@ def export_members_by_fiscal_year_pdf():
 
         pdf.set_font("Arial", size=10)
         for row in cursor.fetchall():
-            pdf.cell(
-                0, 10, f"{
-                    row[0]} {
-                    row[1]}, {
-                    row[2]}, {
-                    row[3]}, {
-                        row[4]}, FY: {
-                            row[5]}", ln=True)
+            pdf.cell(0, 10, f"{row[0]} {row[1]}, {row[2]}, {row[3]}, {row[4]}, FY: {row[5]}", ln=True)
 
         pdf_bytes = pdf.output(dest='S')
         if isinstance(pdf_bytes, bytearray):
@@ -3455,13 +3618,7 @@ def export_recognitions_by_fiscal_year_pdf():
 
         pdf.set_font("Arial", size=10)
         for row in cursor.fetchall():
-            pdf.cell(
-                0, 10, f"{
-                    row[0]} - {
-                    row[1]} | {
-                    row[2]} | FY: {
-                    row[3]} | Active: {
-                        'Yes' if row[4] else 'No'}", ln=True)
+            pdf.cell(0, 10, f"{row[0]} - {row[1]} | {row[2]} | FY: {row[3]} | Active: {'Yes' if row[4] else 'No'}", ln=True)
 
         pdf_bytes = pdf.output(dest='S')
         if isinstance(pdf_bytes, bytearray):
@@ -3512,7 +3669,7 @@ def export_member_csv(member_id):
         address_row = None
         try:
             cursor.execute("""
-                SELECT Street, City, Province, PostalCode 
+                SELECT Street, City, PostalCode 
                 FROM MemberAddress 
                 WHERE MemberID = ? AND IsCurrent = True
             """, (member_id,))
@@ -3550,8 +3707,7 @@ def export_member_csv(member_id):
         writer.writerow(['County', row[8] or ''])
         writer.writerow(['Street', address_row[0] if address_row else ''])
         writer.writerow(['City', address_row[1] if address_row else ''])
-        writer.writerow(['Province', address_row[2] if address_row else ''])
-        writer.writerow(['Postal Code', address_row[3] if address_row else ''])
+        writer.writerow(['Postal Code', address_row[2] if address_row else ''])
         writer.writerow(['Username', user_row[0] if user_row else ''])
         writer.writerow(['Role', user_row[1] if user_row else ''])
         writer.writerow(['Email', user_row[2] if user_row else ''])
@@ -3599,7 +3755,7 @@ def export_member_pdf(member_id):
         address_row = None
         try:
             cursor.execute("""
-                SELECT Street, City, Province, PostalCode 
+                SELECT Street, City, PostalCode 
                 FROM MemberAddress 
                 WHERE MemberID = ? AND IsCurrent = True
             """, (member_id,))
@@ -3640,8 +3796,7 @@ def export_member_pdf(member_id):
             ('County', row[8] or 'N/A'),
             ('Street Address', address_row[0] if address_row else 'N/A'),
             ('City', address_row[1] if address_row else 'N/A'),
-            ('Province', address_row[2] if address_row else 'N/A'),
-            ('Postal Code', address_row[3] if address_row else 'N/A'),
+            ('Postal Code', address_row[2] if address_row else 'N/A'),
             ('Username', user_row[0] if user_row else 'N/A'),
             ('Role', user_row[1] if user_row else 'N/A'),
             ('Email', user_row[2] if user_row else 'N/A')
@@ -3735,9 +3890,7 @@ def upload_profile_photo():
 
     try:
         filename = secure_filename(file.filename)
-        unique_filename = f"profile_{
-            session['user_id']}_{
-            uuid.uuid4()}_{filename}"
+        unique_filename = f"profile_{session['user_id']}_{uuid.uuid4()}_{filename}"
         file_path = os.path.join(PHOTO_FOLDER, unique_filename)
         file.save(file_path)
 
@@ -3913,30 +4066,75 @@ def get_lookups():
         cursor = conn.cursor()
         # Counties
         cursor.execute("SELECT [CountyID], [CountyName] FROM [IrishCounties] ORDER BY [CountyName]")
-        counties = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+        counties = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(counties)} counties')
+        
         # Categories
         cursor.execute("SELECT [CategoryID], [CategoryName] FROM [MemberCategory] ORDER BY [CategoryName]")
-        categories = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+        categories = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(categories)} categories')
+        
         # Fiscal Years
         cursor.execute("SELECT [FiscalYearID], [YearLabel] FROM [FiscalYear] ORDER BY [FiscalYearID] DESC")
-        fiscalYears = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+        fiscalYears = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(fiscalYears)} fiscal years')
+        
         # Societies
         cursor.execute("SELECT [SocietyID], [SocietyName] FROM [Society] ORDER BY [SocietyName]")
-        societies = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+        societies = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(societies)} societies')
+        
         # Roles
         cursor.execute("SELECT [RoleID], [RoleName] FROM [Role] ORDER BY [RoleName]")
-        roles = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
-        return jsonify({
+        roles = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(roles)} roles: {[r["label"] for r in roles]}')
+        
+        # Surnames for Irish connections
+        cursor.execute("SELECT [SurnameID], [Surname] FROM [IrishSurnames] ORDER BY [Surname]")
+        surnames = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(surnames)} surnames: {[s["label"] for s in surnames]}')
+        
+        # Occupations
+        cursor.execute("SELECT [OccupationID], [OccupationName] FROM [Occupation] ORDER BY [OccupationName]")
+        occupations = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(occupations)} occupations')
+        
+        response_data = {
             'counties': counties,
             'categories': categories,
             'fiscalYears': fiscalYears,
             'societies': societies,
-            'roles': roles
-        })
+            'roles': roles,
+            'surnames': surnames,
+            'occupations': occupations
+        }
+        
+        print(f'DEBUG: Returning lookups response with {len(response_data)} sections')
+        return jsonify(response_data)
     except Exception as e:
         return jsonify({'error': f'Failed to fetch lookups: {str(e)}'}), 500
     finally:
         conn.close()
+
+# Debug endpoint to show all surnames
+@app.route('/api/debug/surnames', methods=['GET'])
+def debug_surnames():
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'DB connection failed'}), 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT [SurnameID], [Surname] FROM [IrishSurnames] ORDER BY [Surname]")
+        surnames = cursor.fetchall()
+        return jsonify({
+            'count': len(surnames),
+            'surnames': [{'id': row[0], 'name': row[1]} for row in surnames]
+        })
+    except Exception as e:
+        return jsonify({'error': f'Failed to fetch surnames: {str(e)}'}), 500
+    finally:
+        conn.close()
+
 @app.route('/api/lookups/counties', methods=['GET'])
 def get_counties():
     conn = get_db_connection()
@@ -3967,6 +4165,411 @@ def get_categories():
     finally:
         conn.close()
 
+# --- Create Lookup Items ---
+@app.route('/api/lookups/fiscal-years', methods=['POST'])
+@admin_required
+def create_fiscal_year():
+    """Create new fiscal year (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('yearLabel'):
+        return jsonify({'error': 'Year label is required'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if fiscal year already exists
+        cursor.execute("SELECT FiscalYearID FROM FiscalYear WHERE YearLabel = ?", (data['yearLabel'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Fiscal year already exists'}), 409
+        
+        # Insert new fiscal year (simplified - only YearLabel)
+        cursor.execute("""
+            INSERT INTO FiscalYear (YearLabel)
+            VALUES (?)
+        """, (
+            data['yearLabel'],
+        ))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'yearLabel': data['yearLabel']
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create fiscal year: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/categories', methods=['POST'])
+@admin_required
+def create_category():
+    """Create new member category (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('categoryName'):
+        return jsonify({'error': 'Category name is required'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if category already exists
+        cursor.execute("SELECT CategoryID FROM MemberCategory WHERE CategoryName = ?", (data['categoryName'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Category already exists'}), 409
+        
+        # Insert new category
+        cursor.execute("""
+            INSERT INTO MemberCategory (CategoryName)
+            VALUES (?)
+        """, (data['categoryName'],))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'categoryName': data['categoryName']
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create category: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/roles', methods=['POST'])
+@admin_required
+def create_role():
+    """Create new role (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('roleName'):
+        return jsonify({'error': 'Role name is required'}), 400
+    
+    # Clean the role name
+    role_name = data['roleName'].strip()
+    if not role_name:
+        return jsonify({'error': 'Role name cannot be empty'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if role already exists (case insensitive comparison in Python)
+        cursor.execute("SELECT RoleID, RoleName FROM Role")
+        existing_roles = cursor.fetchall()
+        print(f'DEBUG: Checking role "{role_name}" against existing roles:')
+        for existing_role in existing_roles:
+            print(f'  Existing: "{existing_role[1]}" | Lower: "{existing_role[1].lower()}" | Input: "{role_name.lower()}"')
+            if existing_role[1].lower() == role_name.lower():
+                print(f'DEBUG: Found duplicate role match!')
+                return jsonify({'error': 'Role already exists'}), 409
+        
+        print(f'DEBUG: No duplicate found, inserting role "{role_name}"')
+        # Insert new role
+        cursor.execute("""
+            INSERT INTO Role (RoleName)
+            VALUES (?)
+        """, (role_name,))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'roleName': role_name
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create role: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/societies', methods=['POST'])
+@admin_required
+def create_society_lookup():
+    """Create new society lookup (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('societyName'):
+        return jsonify({'error': 'Society name is required'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if society already exists
+        cursor.execute("SELECT SocietyID FROM Society WHERE SocietyName = ?", (data['societyName'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Society already exists'}), 409
+        
+        # Insert new society
+        cursor.execute("""
+            INSERT INTO Society (SocietyName)
+            VALUES (?)
+        """, (data['societyName'],))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'societyName': data['societyName']
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create society: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/occupations', methods=['POST'])
+@admin_required
+def create_occupation():
+    """Create new occupation (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('occupationName'):
+        return jsonify({'error': 'Occupation name is required'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if occupation already exists
+        cursor.execute("SELECT OccupationID FROM Occupation WHERE OccupationName = ?", (data['occupationName'],))
+        if cursor.fetchone():
+            return jsonify({'error': 'Occupation already exists'}), 409
+        
+        # Insert new occupation
+        cursor.execute("""
+            INSERT INTO Occupation (OccupationName)
+            VALUES (?)
+        """, (data['occupationName'],))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'occupationName': data['occupationName']
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create occupation: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/surnames', methods=['POST'])
+@admin_required
+def create_surname():
+    """Create new Irish surname (Admin only)"""
+    data = request.get_json()
+    if not data or not data.get('surname'):
+        return jsonify({'error': 'Surname is required'}), 400
+    
+    # Clean the surname
+    surname = data['surname'].strip()
+    if not surname:
+        return jsonify({'error': 'Surname cannot be empty'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Check if surname already exists (case insensitive comparison in Python)
+        cursor.execute("SELECT SurnameID, Surname FROM IrishSurnames")
+        existing_surnames = cursor.fetchall()
+        print(f'DEBUG: Checking surname "{surname}" against existing surnames:')
+        for existing_surname in existing_surnames:
+            print(f'  Existing: "{existing_surname[1]}" | Lower: "{existing_surname[1].lower()}" | Input: "{surname.lower()}"')
+            if existing_surname[1].lower() == surname.lower():
+                print(f'DEBUG: Found duplicate surname match!')
+                return jsonify({'error': 'Surname already exists'}), 409
+        
+        print(f'DEBUG: No duplicate found, inserting surname "{surname}"')
+        # Insert new surname
+        cursor.execute("""
+            INSERT INTO IrishSurnames (Surname)
+            VALUES (?)
+        """, (surname,))
+        
+        conn.commit()
+        
+        # Get the new ID
+        cursor.execute("SELECT @@IDENTITY")
+        row = cursor.fetchone()
+        new_id = row[0] if row else None
+        
+        return jsonify({
+            'success': True,
+            'id': new_id,
+            'surname': surname
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to create surname: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+# --- Delete Lookup Items ---
+@app.route('/api/lookups/fiscal-years/<int:fiscal_year_id>', methods=['DELETE'])
+@admin_required
+def delete_fiscal_year(fiscal_year_id):
+    """Delete fiscal year (Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM FiscalYear WHERE FiscalYearID = ?", (fiscal_year_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Fiscal year not found'}), 404
+            
+        conn.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete fiscal year: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/categories/<int:category_id>', methods=['DELETE'])
+@admin_required
+def delete_category(category_id):
+    """Delete member category (Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM MemberCategory WHERE CategoryID = ?", (category_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Category not found'}), 404
+            
+        conn.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete category: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/roles/<int:role_id>', methods=['DELETE'])
+@admin_required
+def delete_role(role_id):
+    """Delete member role (Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM MemberRole WHERE RoleID = ?", (role_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Role not found'}), 404
+            
+        conn.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete role: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/occupations/<int:occupation_id>', methods=['DELETE'])
+@admin_required
+def delete_occupation(occupation_id):
+    """Delete occupation (Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM Occupation WHERE OccupationID = ?", (occupation_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Occupation not found'}), 404
+            
+        conn.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete occupation: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/lookups/surnames/<int:surname_id>', methods=['DELETE'])
+@admin_required
+def delete_surname(surname_id):
+    """Delete surname (Admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM IrishSurnames WHERE SurnameID = ?", (surname_id,))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Surname not found'}), 404
+            
+        conn.commit()
+        return jsonify({'success': True}), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete surname: {str(e)}'}), 500
+    finally:
+        conn.close()
 
 @app.route('/api/my-profile', methods=['GET'])
 @auth_required  # All logged-in users can see their own profile
@@ -4233,7 +4836,7 @@ def get_fiscal_years():
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT FiscalYearID, YearLabel FROM FiscalYear ORDER BY StartDate DESC")
+            "SELECT FiscalYearID, YearLabel FROM FiscalYear ORDER BY YearLabel DESC")
         years = [{'id': row[0], 'label': row[1]} for row in cursor.fetchall()]
         return jsonify(years)
     except Exception as e:
@@ -5810,6 +6413,68 @@ def debug_dbtest():
         results['User'] = [list(row) for row in cursor.fetchall()]
     except Exception as e:
         results['User'] = f"Error: {str(e)}"
+    conn.close()
+    return jsonify(results)
+
+
+@app.route('/api/debug/check-tables', methods=['GET'])
+def debug_check_tables():
+    """Debug endpoint to check what's actually in lookup tables."""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+    cursor = conn.cursor()
+    results = {}
+    
+    # Check FiscalYear table
+    try:
+        cursor.execute("SELECT FiscalYearID, FiscalYear FROM FiscalYear")
+        results['FiscalYear'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['FiscalYear'] = f"Error: {str(e)}"
+    
+    # Check MemberCategory table
+    try:
+        cursor.execute("SELECT CategoryID, CategoryName FROM MemberCategory")
+        results['MemberCategory'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['MemberCategory'] = f"Error: {str(e)}"
+    
+    # Check MemberRole table
+    try:
+        cursor.execute("SELECT RoleID, RoleName FROM MemberRole")
+        results['MemberRole'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['MemberRole'] = f"Error: {str(e)}"
+    
+    # Check Society table
+    try:
+        cursor.execute("SELECT SocietyID, SocietyName FROM Society")
+        results['Society'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['Society'] = f"Error: {str(e)}"
+    
+    # Check Occupation table
+    try:
+        cursor.execute("SELECT OccupationID, OccupationName FROM Occupation")
+        results['Occupation'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['Occupation'] = f"Error: {str(e)}"
+    
+    # Check Surname table
+    try:
+        cursor.execute("SELECT SurnameID, SurnameName FROM Surname")
+        results['Surname'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['Surname'] = f"Error: {str(e)}"
+    
+    # Check IrishCounties table
+    try:
+        cursor.execute("SELECT CountyID, CountyName FROM IrishCounties")
+        results['IrishCounties'] = [{'id': row[0], 'name': row[1]} for row in cursor.fetchall()]
+    except Exception as e:
+        results['IrishCounties'] = f"Error: {str(e)}"
+    
     conn.close()
     return jsonify(results)
 

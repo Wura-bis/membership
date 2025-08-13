@@ -71,9 +71,14 @@ export default function AddMember() {
       country: "",
       postalCode: "",
       dateInResidence: "",
-      isCurrent: false,
+      isCurrent: true, // Default address should be current
       fiscalYear: ""
-    }]
+    }],
+    roleFiscalYears: [{
+      role: "",
+      fiscalYear: ""
+    }],
+    irishConnections: [{ type: "", county: "", surname: "" }] // Default to one empty structured connection
   });
   const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [] });
   const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +118,7 @@ export default function AddMember() {
         country: "",
         postalCode: "",
         dateInResidence: "",
-        isCurrent: false,
+        isCurrent: false, // User sets this manually as needed
         fiscalYear: ""
       }]
     }));
@@ -122,6 +127,33 @@ export default function AddMember() {
     if (formData.addresses.length > 1) {
       const updated = formData.addresses.filter((_, i) => i !== index);
       setFormData((prev) => ({ ...prev, addresses: updated }));
+    }
+  };
+
+  // Role handling functions
+  const handleRoleChange = (index, field, value) => {
+    const updated = [...formData.roles];
+    updated[index][field] = value;
+    setFormData((prev) => ({ ...prev, roles: updated }));
+  };
+
+  const addRole = () => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: [...prev.roles, {
+        roleId: "",
+        societyId: "",
+        startDate: "",
+        endDate: "",
+        isActive: true
+      }]
+    }));
+  };
+
+  const removeRole = (index) => {
+    if (formData.roles.length > 1) {
+      const updated = formData.roles.filter((_, i) => i !== index);
+      setFormData((prev) => ({ ...prev, roles: updated }));
     }
   };
 
@@ -189,6 +221,111 @@ export default function AddMember() {
     }
   };
 
+  const handleCreateLookup = async (type, value) => {
+    try {
+      let endpoint = '';
+      let payload = {};
+      
+      switch (type) {
+        case 'fiscalYear':
+          endpoint = '/api/lookups/fiscal-years';
+          payload = { yearLabel: value };
+          break;
+        case 'category':
+          endpoint = '/api/lookups/categories';
+          payload = { categoryName: value };
+          break;
+        case 'role':
+          endpoint = '/api/lookups/roles';
+          payload = { roleName: value };
+          break;
+        case 'society':
+          endpoint = '/api/lookups/societies';
+          payload = { societyName: value };
+          break;
+        case 'occupation':
+          endpoint = '/api/lookups/occupations';
+          payload = { occupationName: value };
+          break;
+        case 'surname':
+          endpoint = '/api/lookups/surnames';
+          payload = { surname: value };
+          break;
+        case 'otherSocieties':
+          // These might not have specific endpoints yet, just add to local state
+          console.log('Creating local lookup for:', type, value);
+          setLookups(prev => ({
+            ...prev,
+            [type]: [...(prev[type] || []), { id: Date.now(), name: value, label: value, value: value }]
+          }));
+          return { value, label: value };
+        default:
+          console.log('Unknown lookup type:', type);
+          return { value, label: value };
+      }
+      
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        credentials: 'include'
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Update local lookups state
+        const newItem = { 
+          id: result.id, 
+          name: value,
+          label: value,
+          value: value
+        };
+        
+        const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 
+                         type === 'occupation' ? 'occupations' :
+                         type === 'surname' ? 'surnames' :
+                         type + 's';
+        
+        setLookups(prev => ({
+          ...prev,
+          [lookupKey]: [...(prev[lookupKey] || []), newItem]
+        }));
+        
+        return newItem;
+      } else {
+        // If the item already exists (409 conflict), find it in existing lookups
+        if (response.status === 409) {
+          const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 
+                           type === 'occupation' ? 'occupations' :
+                           type === 'surname' ? 'surnames' :
+                           type + 's';
+          
+          const existingItem = (lookups[lookupKey] || []).find(item => 
+            item.name === value || item.label === value
+          );
+          
+          if (existingItem) {
+            return existingItem;
+          }
+        }
+        
+        console.error('Failed to create lookup:', result.error);
+        // Don't show error for "already exists" - just use the value
+        if (response.status !== 409) {
+          setError(`Failed to create ${type}: ${result.error}`);
+        }
+        return { value, label: value };
+      }
+    } catch (error) {
+      console.error('Error creating lookup:', error);
+      setError(`Error creating ${type}: ${error.message}`);
+      return { value, label: value };
+    }
+  };
+
   return (
     <MainLayout>
       <div className="dashboard-container">
@@ -207,6 +344,7 @@ export default function AddMember() {
             success={success}
             onSubmit={handleSubmit}
             submitLabel="Add Member"
+            onCreateLookup={handleCreateLookup}
           />
         </div>
       </div>

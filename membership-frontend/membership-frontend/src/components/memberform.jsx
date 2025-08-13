@@ -1,7 +1,7 @@
 import React from "react";
 import CreatableSelect from "./creatableselect";
 
-export default function MemberForm({ formData, lookups, onChange, onAddressChange, addAddress, removeAddress, isLoading, error, success, onSubmit, submitLabel }) {
+export default function MemberForm({ formData, lookups, onChange, onAddressChange, addAddress, removeAddress, isLoading, error, success, onSubmit, submitLabel, onCreateLookup }) {
   return (
     <form onSubmit={onSubmit} aria-label="Member Form">
       {/* Personal Information */}
@@ -16,49 +16,69 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
 
       {/* Irish Connections (multiple) */}
       <h2 className="font-semibold mt-6 mb-2">Irish Connections</h2>
-      {(formData.irishConnections || [""]).map((ic, idx) => (
-        <div key={idx} className="grid grid-cols-3 gap-4 mb-2">
-          <div>
-            <label>Irish Connection</label>
-            <CreatableSelect
-              label=""
-              name={`irishConnections[${idx}]`}
-              value={ic || ""}
-              options={lookups.irishConnections || []}
-              onChange={e => {
-                const arr = [...(formData.irishConnections || [])];
-                arr[idx] = e.target.value;
-                onChange({ target: { name: "irishConnections", value: arr } });
-              }}
-              onCreate={val => onCreateLookup('irishConnection', val)}
-              placeholder="Type or select..."
-            />
-          </div>
-          {idx === 0 && (
+      {(formData.irishConnections || [{ type: "", county: "", surname: "" }]).map((ic, idx) => (
+        <div key={idx} className="border p-4 mb-4 rounded">
+          <div className="grid grid-cols-3 gap-4 mb-2">
             <div>
-              <label htmlFor="countyId">County Name</label>
-              <select name="countyId" id="countyId" value={formData.countyId || ""} onChange={onChange} className="form-input">
-                <option value="">Select County</option>
-                {lookups.counties && lookups.counties.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <label>Irish Connection Type</label>
+              <select 
+                name={`irishConnections[${idx}].type`}
+                value={ic.type || ""}
+                onChange={e => {
+                  const arr = [...(formData.irishConnections || [])];
+                  arr[idx] = { ...arr[idx], type: e.target.value };
+                  onChange({ target: { name: "irishConnections", value: arr } });
+                }}
+                className="form-input"
+              >
+                <option value="">Select Connection Type</option>
+                <option value="Paternal">Paternal</option>
+                <option value="Maternal">Maternal</option>
               </select>
             </div>
-          )}
-          {idx === 0 && (
             <div>
-              <label htmlFor="surnameId">Surname</label>
-              <CreatableSelect label="" name="surnameId" value={formData.surnameId || ""} options={lookups.surnames || []} onChange={onChange} onCreate={val => onCreateLookup('surname', val)} placeholder="Type or select..." />
+              <label>County Name</label>
+              <select 
+                name={`irishConnections[${idx}].county`}
+                value={ic.county || ""}
+                onChange={e => {
+                  const arr = [...(formData.irishConnections || [])];
+                  arr[idx] = { ...arr[idx], county: e.target.value };
+                  onChange({ target: { name: "irishConnections", value: arr } });
+                }}
+                className="form-input"
+              >
+                <option value="">Select County</option>
+                {lookups.counties && lookups.counties.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
             </div>
-          )}
+            <div>
+              <label>Surname</label>
+              <CreatableSelect 
+                label=""
+                name={`irishConnections[${idx}].surname`}
+                value={ic.surname || ""}
+                options={lookups.surnames || []}
+                onChange={e => {
+                  const arr = [...(formData.irishConnections || [])];
+                  arr[idx] = { ...arr[idx], surname: e.target.value };
+                  onChange({ target: { name: "irishConnections", value: arr } });
+                }}
+                onCreate={val => onCreateLookup('surname', val)}
+                placeholder="Type or select..."
+              />
+            </div>
+          </div>
           {idx > 0 && (
             <button type="button" className="text-red-600" onClick={() => {
               const arr = [...(formData.irishConnections || [])];
               arr.splice(idx, 1);
               onChange({ target: { name: "irishConnections", value: arr } });
-            }}>Remove</button>
+            }}>Remove Irish Connection</button>
           )}
         </div>
       ))}
-      <button type="button" className="text-blue-600 mt-2" onClick={() => onChange({ target: { name: "irishConnections", value: [...(formData.irishConnections || [""]), ""] } })}>+ Add another Irish Connection</button>
+      <button type="button" className="text-blue-600 mt-2" onClick={() => onChange({ target: { name: "irishConnections", value: [...(formData.irishConnections || [{ type: "", county: "", surname: "" }]), { type: "", county: "", surname: "" }] } })}>+ Add another Irish Connection</button>
 
       {/* Contact Information */}
       <h2 className="font-semibold mt-6 mb-2">Contact Information</h2>
@@ -71,7 +91,9 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
       {/* Address Information */}
       <h2 className="font-semibold mt-6 mb-2">Address Information</h2>
       {/* Dynamic Province/State options based on country */}
-      {(formData.addresses || []).map((addr, idx) => {
+      {(formData.addresses && formData.addresses.length > 0 ? formData.addresses : [{
+        addressLine1: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true
+      }]).map((addr, idx) => {
         const getProvinceOptions = (country) => {
           switch (country) {
             case "Canada":
@@ -166,7 +188,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
 
       {/* Roles & Fiscal Years (multiple pairs) */}
       <h2 className="font-semibold mt-6 mb-2">Roles & Fiscal Year</h2>
-      {(formData.roleFiscalYears || [{ role: "", fiscalYear: "" }]).map((rf, idx) => (
+      {(formData.roleFiscalYears && formData.roleFiscalYears.length > 0 ? formData.roleFiscalYears : [{ role: "", fiscalYear: "" }]).map((rf, idx) => (
         <div key={idx} className="grid grid-cols-3 gap-4 mb-2">
           <div>
             <label>Role</label>

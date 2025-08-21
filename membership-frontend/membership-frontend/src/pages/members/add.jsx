@@ -39,47 +39,32 @@ export default function AddMember() {
     );
   }
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-    placeOfBirth: "",
-    dateOfBirth: "",
-    categoryId: "",
-    countyId: "",
-    surnameId: "",
-    occupationId: "",
-    notes: "",
-    isActive: true,
-    otherSocieties: "",
-    dateJoined: "",
-    dateEnded: "",
-    applicationDate: "",
-    approvalDate: "",
-    approvedBy: "",
-    signedBy: "",
-    proposer: "",
-    seconder: "",
-    proposalDate: "",
-    photo: null,
-    addresses: [{
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      province: "",
-      country: "",
-      postalCode: "",
-      dateInResidence: "",
-      isCurrent: true, // Default address should be current
-      fiscalYear: ""
-    }],
-    roleFiscalYears: [{
-      role: "",
-      fiscalYear: ""
-    }],
-    irishConnections: [{ type: "", county: "", surname: "" }] // Default to one empty structured connection
-  });
+    const [formData, setFormData] = useState({
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      placeOfBirth: "",
+      occupationId: "",
+      irishConnections: [{ type: "", countyId: "", surnameId: "" }],
+      email: "",
+      phoneNumber: "",
+      addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+      otherSocieties: "",
+      categoryId: "",
+      dateJoined: "",
+      dateEnded: "",
+      applicationDate: "",
+      approvalDate: "",
+      approvedBy: "",
+      signedBy: "",
+      proposer: "",
+      seconder: "",
+      proposalDate: "",
+      roleFiscalYears: [{ role: "", fiscalYear: "" }],
+      notes: "",
+      isActive: true,
+      photo: null
+    });
   const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -111,7 +96,7 @@ export default function AddMember() {
     setFormData((prev) => ({
       ...prev,
       addresses: [...prev.addresses, {
-        addressLine1: "",
+        street: "",
         addressLine2: "",
         city: "",
         province: "",
@@ -332,20 +317,23 @@ export default function AddMember() {
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
           <h1 className="dashboard-title">➕ Add New Member</h1>
           <p className="dashboard-subtitle">Create a new member record in the database</p>
-          <MemberForm
-            formData={formData}
-            lookups={lookups}
-            onChange={handleChange}
-            onAddressChange={handleAddressChange}
-            addAddress={addAddress}
-            removeAddress={removeAddress}
-            isLoading={isLoading}
-            error={error}
-            success={success}
-            onSubmit={handleSubmit}
-            submitLabel="Add Member"
-            onCreateLookup={handleCreateLookup}
-          />
+            <div className="dashboard-card" style={{ maxWidth: '900px', margin: '32px auto', padding: '32px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 24px rgba(20,184,166,0.08)', border: '1px solid #e5e7eb' }}>
+              <h2 className="dashboard-card-title" style={{ marginBottom: '24px', fontSize: '2rem', fontWeight: '700', color: '#14b8a6', letterSpacing: '0.5px' }}>Add New Member</h2>
+              <MemberForm
+                formData={formData}
+                lookups={lookups}
+                onChange={handleChange}
+                onAddressChange={handleAddressChange}
+                addAddress={addAddress}
+                removeAddress={removeAddress}
+                isLoading={isLoading}
+                error={error}
+                success={success}
+                onSubmit={handleSubmit}
+                submitLabel="Add Member"
+                onCreateLookup={handleCreateLookup}
+              />
+            </div>
         </div>
       </div>
     </MainLayout>

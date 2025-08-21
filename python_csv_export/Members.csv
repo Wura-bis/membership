@@ -1,0 +1,4 @@
+MemberID,FirstName,LastName,Email,PhoneNumber,Place of Birth,Date of Birth,MemberCategoryID,CountyID,SurnameID,OccupationID,Photos,Notes,IsActive,OtherSocieties,DateJoined,DateEnded,ApplicationDate,Approval Date,ApprovedBy,SignedBy,Proposer,Seconder,ProposalDate
+5,Henry,Callaghan,callhenry@yahoo.com,902-213-2065,Prince Edward Island,1948-12-18 00:00:00,,,,,,,False,,2016-03-01 00:00:00,2017-03-01 00:00:00,2016-03-01 00:00:00,2016-03-01 00:00:00,,,,,
+6,John - Patrick,Callaghan,,892-1881,Prince Edward Island,1946-07-28 00:00:00,,,,,,,False,,1989-11-21 00:00:00,2012-04-02 00:00:00,1989-09-28 00:00:00,1989-11-21 00:00:00,,,George O'Connor,Pius Callaghan,1989-11-21 00:00:00
+7,Denise ,Carriere,carrieredenise@gmail.com,902-887-2106,"Froquois Falls, Ontario",1945-08-12 00:00:00,,,,,,,True,,2023-02-20 00:00:00,,2023-01-22 00:00:00,2023-02-20 00:00:00,,,,,

@@ -7,30 +7,51 @@ export default function AdminDashboard() {
   const [activities, setActivities] = useState([]);
   const [error, setError] = useState("");
   const [user, setUser] = useState({ firstName: "Admin", lastName: "" });
+  // Filter state
+  const [filters, setFilters] = useState({
+    startDate: "",
+    endDate: "",
+    category: ""
+  });
 
   useEffect(() => {
     // Fetch dashboard stats and recent activities
+    // Build query string for filters
+    const params = [];
+    if (filters.startDate) params.push(`startDate=${encodeURIComponent(filters.startDate)}`);
+    if (filters.endDate) params.push(`endDate=${encodeURIComponent(filters.endDate)}`);
+    if (filters.category) params.push(`category=${encodeURIComponent(filters.category)}`);
+    const query = params.length ? `?${params.join("&")}` : "";
+    fetch(`http://localhost:5000/api/stats${query}`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setStats(data);
+        // Optionally fetch activities if needed
+      })
+      .catch(() => {
+        setStats({
+          activeMembers: 'Coming Soon',
+          inactiveMembers: 'Coming Soon'
+        });
+      });
+    // Activities fetch (unchanged)
     fetch("http://localhost:5000/api/admin/dashboard", {
       credentials: "include",
     })
       .then((res) => res.json())
       .then((data) => {
-        setStats(data.stats);
         setActivities(data.recentActivities);
         setUser(data.adminUser || { firstName: "Admin", lastName: "" });
       })
       .catch(() => {
-        // Use mock data when backend is unavailable
-        setStats({
-          activeMembers: 'Coming Soon',
-          inactiveMembers: 'Coming Soon'
-        });
         setActivities([
           { name: 'Demo User', date: new Date().toISOString().split('T')[0] }
         ]);
         setUser({ firstName: "Admin", lastName: "Demo" });
       });
-  }, []);
+  }, [filters]);
 
   return (
     <MainLayout>
@@ -69,6 +90,62 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Analytics & Reports Filters */}
+          <div className="dashboard-card" style={{ marginBottom: '24px', marginTop: '24px', padding: '24px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(20,184,166,0.06)', border: '1px solid #e5e7eb' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#14b8a6', marginBottom: '16px' }}>Analytics & Reports</h2>
+            <form
+              style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}
+              onSubmit={e => { e.preventDefault(); setFilters(filters); }}
+              aria-label="Analytics Filters"
+            >
+              <div>
+                <label htmlFor="startDate">Start Date</label>
+                <input
+                  type="date"
+                  id="startDate"
+                  name="startDate"
+                  value={filters.startDate}
+                  onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                  style={{ marginRight: '8px' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate">End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={filters.endDate}
+                  onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                  style={{ marginRight: '8px' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="category">Category</label>
+                <select
+                  id="category"
+                  name="category"
+                  value={filters.category}
+                  onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
+                  style={{ marginRight: '8px' }}
+                >
+                  <option value="">All Categories</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Deceased">Deceased</option>
+                </select>
+              </div>
+              <button type="submit" className="btn-primary" style={{ minWidth: '140px' }}>Apply Filters</button>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ minWidth: '120px', background: '#f1f5f9', color: '#0f766e', border: '1px solid #14b8a6', fontWeight: '600', marginLeft: '8px' }}
+                onClick={() => setFilters({ startDate: '', endDate: '', category: '' })}
+              >
+                Reset Filters
+              </button>
+            </form>
+          </div>
           {/* Dashboard Cards */}
           <div className="dashboard-grid">
             {/* Member Summary */}
@@ -93,6 +170,50 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Membership Breakdown Pie Chart */}
+            <div className="dashboard-card">
+              <h2 className="dashboard-card-title">Membership Breakdown</h2>
+              {stats && stats.breakdown && Object.values(stats.breakdown).reduce((a, b) => a + b, 0) > 0 ? (
+                // ...existing pie chart code...
+                <div>{/* Pie chart component here */}</div>
+              ) : (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '32px',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontSize: '16px',
+                  margin: '16px 0'
+                }}>
+                  <span role="img" aria-label="No data">📉</span> No data available for the selected filters.
+                </div>
+              )}
+            </div>
+
+            {/* Yearly Membership Growth */}
+            <div className="dashboard-card">
+              <h2 className="dashboard-card-title">Yearly Membership Growth</h2>
+              {stats && stats.yearly && Object.values(stats.yearly).reduce((a, b) => a + b, 0) > 0 ? (
+                // ...existing growth graph code...
+                <div>{/* Growth graph component here */}</div>
+              ) : (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '32px',
+                  textAlign: 'center',
+                  color: '#64748b',
+                  fontSize: '16px',
+                  margin: '16px 0'
+                }}>
+                  <span role="img" aria-label="No data">📉</span> No data available for the selected filters.
+                </div>
+              )}
+            </div>
+
             {/* Recent Activities */}
             <div className="dashboard-card">
               <h2 className="dashboard-card-title">🔔 Recent Activities</h2>
@@ -108,43 +229,41 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>
-                      Latest Signup:
-                    </div>
-                    {activities.slice(0, 1).map((item, i) => (
+                    {activities.slice(0, 5).map((item, i) => (
                       <div key={i} style={{ 
                         padding: '12px',
                         background: '#f8fafc',
                         borderRadius: '8px',
                         border: '1px solid #e2e8f0'
                       }}>
-                        <div style={{ fontWeight: '600', color: '#0f172a' }}>{item.name}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>on {item.date}</div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'space-between',
+                          marginBottom: '4px'
+                        }}>
+                          <div style={{ fontWeight: '600', color: '#0f172a' }}>
+                            {item.type === 'member_added' ? '👤' : '🔑'} {item.name}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                            {item.date}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#64748b' }}>
+                          {item.description || (item.type === 'member_added' ? 'New member added' : 'User registered')}
+                        </div>
                       </div>
                     ))}
                     
-                    {activities.length > 1 && (
-                      <>
-                        <div style={{ 
-                          fontSize: '14px', 
-                          fontWeight: '600', 
-                          color: '#64748b',
-                          marginTop: '8px'
-                        }}>
-                          Recent Signups:
-                        </div>
-                        {activities.slice(1, 3).map((item, i) => (
-                          <div key={i} style={{ 
-                            padding: '8px 12px',
-                            background: '#f8fafc',
-                            borderRadius: '6px',
-                            fontSize: '14px'
-                          }}>
-                            <div style={{ fontWeight: '500', color: '#0f172a' }}>{item.name}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>on {item.date}</div>
-                          </div>
-                        ))}
-                      </>
+                    {activities.length > 5 && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        padding: '8px',
+                        fontSize: '12px',
+                        color: '#64748b'
+                      }}>
+                        And {activities.length - 5} more activities...
+                      </div>
                     )}
                   </div>
                 )}

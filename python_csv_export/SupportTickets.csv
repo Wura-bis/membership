@@ -1,0 +1,2 @@
+TicketID,UserID,Subject,Message,Priority,Status,DateCreated,DateUpdated,AdminResponse,AdminID
+2,3,Test,Just testing the support ticket system...,high,resolved,2025-07-31 15:44:05,2025-07-31 16:00:37,Confirmed.,2

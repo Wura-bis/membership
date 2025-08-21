@@ -36,6 +36,14 @@ export default function CreatableSelect({ label, name, value, options, onChange,
     }
   };
 
+  // Find the label for the current value
+  const getDisplayValue = () => {
+    if (isMulti) return "";
+    if (!singleValue) return input;
+    const selectedOption = safeOptions.find(opt => opt.value == singleValue);
+    return selectedOption ? selectedOption.label : input;
+  };
+
   return (
     <div style={{ position: "relative" }}>
       <label htmlFor={name}>{label}</label>
@@ -55,7 +63,7 @@ export default function CreatableSelect({ label, name, value, options, onChange,
       <input
         id={name}
         name={name}
-        value={input || (isMulti ? "" : singleValue) || ""}
+        value={getDisplayValue()}
         placeholder={placeholder}
         className="form-input"
         autoComplete="off"

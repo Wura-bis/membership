@@ -1,0 +1,2 @@
+AdminID,UserID,PasswordHash,Email,LastLogin,IsApproved
+1,1,39346dcae04b4db4c02617633c967ce7824f90eac53bfb434901de802a5feac3,bis.wura.ola@gmail.com,,True

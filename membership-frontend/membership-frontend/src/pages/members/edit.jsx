@@ -37,49 +37,32 @@ export default function EditMember() {
     );
   }
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
-    placeOfBirthCity: "",
-    placeOfBirthProvince: "",
-    placeOfBirthCountry: "",
-    occupation: "",
-    email: "",
-    homePhone: "",
-    cellPhone: "",
-    county: "",
-    surname: "",
-    irishConnection: "",
-    userId: "",
-    category: "",
-    societies: [],
-    roles: [],
-    fiscalYears: [],
-    membershipStartDate: "",
-    membershipEndDate: "",
-    applicationDate: "",
-    dateApproved: "",
-    approvedBy: "",
-    signedBy: "",
-    proposer: "",
-    seconder: "",
-    proposalDate: "",
-    photo: null,
-    irishConnections: [{ type: "", county: "", surname: "" }], // Add default structured Irish connection
-    roleFiscalYears: [{ role: "", fiscalYear: "" }], // Add default role/fiscal year
-    addresses: [{
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      province: "",
-      country: "",
-      postalCode: "",
-      dateInResidence: "",
-      isCurrent: true, // Default to current address
-      fiscalYear: ""
-    }]
-  });
+    const [formData, setFormData] = useState({
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      placeOfBirth: "",
+      occupationId: "",
+      irishConnections: [{ type: "", countyId: "", surnameId: "" }],
+      email: "",
+      phoneNumber: "",
+      addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+      otherSocieties: "",
+      categoryId: "",
+      dateJoined: "",
+      dateEnded: "",
+      applicationDate: "",
+      approvalDate: "",
+      approvedBy: "",
+      signedBy: "",
+      proposer: "",
+      seconder: "",
+      proposalDate: "",
+      roleFiscalYears: [{ role: "", fiscalYear: "" }],
+      notes: "",
+      isActive: true,
+      photo: null
+    });
   const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -89,16 +72,57 @@ export default function EditMember() {
     fetch(`http://localhost:5000/api/members/${id}`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
-        // Ensure we preserve the structure for form fields that might not be in API response
-        setFormData(prev => ({ 
-          ...prev,
-          ...data, 
-          photo: null,
-          // Ensure these arrays exist and have at least one default item
-          irishConnections: data.irishConnections && data.irishConnections.length > 0 ? data.irishConnections : [{ type: "", county: "", surname: "" }],
-          roleFiscalYears: data.roleFiscalYears && data.roleFiscalYears.length > 0 ? data.roleFiscalYears : [{ role: "", fiscalYear: "" }],
-          addresses: data.addresses && data.addresses.length > 0 ? data.addresses : prev.addresses
-        }));
+        // Sanitize all fields to ensure controlled inputs
+        const safe = {
+          firstName: data.firstName ?? "",
+          lastName: data.lastName ?? "",
+          dateOfBirth: data.dateOfBirth ?? "",
+          placeOfBirth: data.placeOfBirth ?? "",
+          occupationId: data.occupationID ?? "",
+          email: data.email ?? "",
+          phoneNumber: data.phoneNumber ?? "",
+          cellPhone: "", // Not in DB
+          irishConnections: Array.isArray(data.irishConnections) && data.irishConnections.length > 0
+            ? data.irishConnections.map(ic => ({
+                type: ic.type ?? "",
+                countyId: ic.countyId ?? "",
+                surnameId: ic.surnameId ?? ""
+              }))
+            : [{ type: "", countyId: "", surnameId: "" }],
+          addresses: Array.isArray(data.addresses) && data.addresses.length > 0
+            ? data.addresses.map(addr => ({
+                street: addr.street ?? "",
+                addressLine2: addr.addressLine2 ?? "",
+                city: addr.city ?? "",
+                province: addr.province ?? "",
+                country: addr.country ?? "",
+                postalCode: addr.postalCode ?? "",
+                dateInResidence: addr.dateInResidence ?? "",
+                isCurrent: typeof addr.isCurrent === "boolean" ? addr.isCurrent : true
+              }))
+            : [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+          otherSocieties: data.otherSocieties ?? "",
+          categoryId: data.memberCategoryID ?? "",
+          dateJoined: data.dateJoined ?? "",
+          dateEnded: data.dateEnded ?? "",
+          applicationDate: data.applicationDate ?? "",
+          approvalDate: data.approvalDate ?? "",
+          approvedBy: data.approvedBy ?? "",
+          signedBy: data.signedBy ?? "",
+          proposer: data.proposer ?? "",
+          seconder: data.seconder ?? "",
+          proposalDate: data.proposalDate ?? "",
+          roleFiscalYears: Array.isArray(data.roleFiscalYears) && data.roleFiscalYears.length > 0
+            ? data.roleFiscalYears.map(rf => ({
+                role: rf.roleID ? rf.roleID.toString() : "",
+                fiscalYear: rf.fiscalYearID ? rf.fiscalYearID.toString() : ""
+              }))
+            : [{ role: "", fiscalYear: "" }],
+          notes: data.notes ?? "",
+          isActive: typeof data.isActive === "boolean" ? data.isActive : true,
+          photo: null
+        };
+        setFormData(safe);
         setIsLoading(false);
       })
       .catch(() => {
@@ -114,6 +138,47 @@ export default function EditMember() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    // For array fields, sanitize each item
+    if (name === "irishConnections") {
+      const arr = Array.isArray(value) ? value : [];
+      setFormData(prev => ({
+        ...prev,
+        irishConnections: arr.map(ic => ({
+          type: ic.type ?? "",
+          countyId: ic.countyId ?? "",
+          surnameId: ic.surnameId ?? ""
+        }))
+      }));
+      return;
+    }
+    if (name === "addresses") {
+      const arr = Array.isArray(value) ? value : [];
+      setFormData(prev => ({
+        ...prev,
+        addresses: arr.map(addr => ({
+          street: addr.street ?? "",
+          addressLine2: addr.addressLine2 ?? "",
+          city: addr.city ?? "",
+          province: addr.province ?? "",
+          country: addr.country ?? "",
+          postalCode: addr.postalCode ?? "",
+          dateInResidence: addr.dateInResidence ?? "",
+          isCurrent: typeof addr.isCurrent === "boolean" ? addr.isCurrent : true
+        }))
+      }));
+      return;
+    }
+    if (name === "roleFiscalYears") {
+      const arr = Array.isArray(value) ? value : [];
+      setFormData(prev => ({
+        ...prev,
+        roleFiscalYears: arr.map(rf => ({
+          role: rf.role ?? "",
+          fiscalYear: rf.fiscalYear ?? ""
+        }))
+      }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
   const handleAddressChange = (index, field, value) => {
@@ -125,7 +190,7 @@ export default function EditMember() {
     setFormData((prev) => ({
       ...prev,
       addresses: [...prev.addresses, {
-        addressLine1: "",
+        street: "",
         addressLine2: "",
         city: "",
         province: "",
@@ -152,6 +217,15 @@ export default function EditMember() {
     try {
       // Remove photo from payload if not needed for JSON
       const { photo, ...jsonData } = formData;
+      
+      // Transform roleFiscalYears from {role, fiscalYear} to {roleID, fiscalYearID}
+      if (jsonData.roleFiscalYears && jsonData.roleFiscalYears.length > 0) {
+        jsonData.roleFiscalYears = jsonData.roleFiscalYears.map(item => ({
+          roleID: parseInt(item.role),
+          fiscalYearID: parseInt(item.fiscalYear)
+        }));
+      }
+      
       const res = await fetch(`http://localhost:5000/api/members/${id}`, {
         method: "PUT",
         headers: {
@@ -284,24 +358,48 @@ export default function EditMember() {
   return (
     <MainLayout>
       <div className="dashboard-container">
-        <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-          <h1 className="dashboard-title">✏️ Edit Member</h1>
-          <p className="dashboard-subtitle">Update member record in the database</p>
-          <MemberForm
-            formData={formData}
-            lookups={lookups}
-            onChange={handleChange}
-            onAddressChange={handleAddressChange}
-            addAddress={addAddress}
-            removeAddress={removeAddress}
-            isLoading={isLoading}
-            error={error}
-            success={success}
-            onSubmit={handleSubmit}
-            submitLabel="Save Changes"
-            onCreateLookup={handleCreateLookup}
-          />
-        </div>
+          <main style={{ maxWidth: '700px', margin: '0 auto' }} aria-label="Edit Member Form">
+            <section
+              className="dashboard-card"
+              style={{ maxWidth: '900px', margin: '32px auto', padding: '32px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 24px rgba(20,184,166,0.08)', border: '1px solid #e5e7eb' }}
+              role="form"
+              aria-labelledby="edit-member-title"
+            >
+              <h2
+                id="edit-member-title"
+                className="dashboard-card-title"
+                style={{ marginBottom: '24px', fontSize: '2rem', fontWeight: '700', color: '#14b8a6', letterSpacing: '0.5px' }}
+                tabIndex={0}
+              >
+                Edit Member
+              </h2>
+              {/* Accessibility: Announce error/success messages to screen readers */}
+              {error && (
+                <div role="alert" aria-live="assertive" style={{ color: '#dc2626', marginBottom: '16px' }}>
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div role="status" aria-live="polite" style={{ color: '#14b8a6', marginBottom: '16px' }}>
+                  {success}
+                </div>
+              )}
+              <MemberForm
+                formData={formData}
+                lookups={lookups}
+                onChange={handleChange}
+                onAddressChange={handleAddressChange}
+                addAddress={addAddress}
+                removeAddress={removeAddress}
+                isLoading={isLoading}
+                error={error}
+                success={success}
+                onSubmit={handleSubmit}
+                submitLabel="Save Changes"
+                onCreateLookup={handleCreateLookup}
+              />
+            </section>
+          </main>
       </div>
     </MainLayout>
   );

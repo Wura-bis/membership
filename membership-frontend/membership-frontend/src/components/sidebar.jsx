@@ -4,7 +4,6 @@ import { useAuth } from "../hooks/useauth";
 const linksByRole = {
   admin: [
     { to: "/dashboard", label: "Dashboard", icon: "📊" },
-    { to: "/admin/stats", label: "Statistics", icon: "📈" },
     { to: "/admin/users", label: "User Management", icon: "👥" },
     { to: "/admin/approvals", label: "User Approvals", icon: "🔍" },
     { to: "/admin/support-tickets", label: "Support Tickets", icon: "🎫" },
@@ -15,7 +14,6 @@ const linksByRole = {
   private: [
     { to: "/dashboard/private", label: "Dashboard", icon: "📊" },
     { to: "/members", label: "Member Directory", icon: "📋" },
-    { to: "/recognitions", label: "Recognitions", icon: "🏆" },
     { to: "/support", label: "Support", icon: "🎧" },
     { to: "/my-profile", label: "My Profile", icon: "👤" },
   ],
@@ -40,7 +38,7 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="sidebar-nav">
-        {links.map((link) => (
+            {links.filter(link => link.label !== "Recognitions").map((link) => (
           <Link key={link.to} to={link.to} className={`sidebar-link ${location.pathname === link.to ? 'active' : ''}`}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '16px' }}>{link.icon}</span>

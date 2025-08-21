@@ -14,6 +14,17 @@ export default function Recognitions() {
     // Load recognitions data
     const loadData = async () => {
       try {
+        // Fetch recognition types for categories
+        const typesRes = await fetch("http://localhost:5000/api/recognition-types", {
+          credentials: "include"
+        });
+        if (typesRes.ok) {
+          const typesData = await typesRes.json();
+          const categoryNames = ["all", ...typesData.map(type => type.name)];
+          setCategories(categoryNames);
+        }
+
+        // Fetch actual recognitions/awards
         const res = await fetch("http://localhost:5000/api/recognitions", {
           credentials: "include"
         });
@@ -21,8 +32,6 @@ export default function Recognitions() {
           const data = await res.json();
           console.log("Backend recognitions data:", data); // Debug log
           setRecognitions(data || []);
-          // Set categories from backend or use defaults
-          setCategories(["all", "Service", "Culture", "Leadership", "Youth", "Lifetime Achievement"]);
         }
       } catch (err) {
         console.log("Could not load recognitions:", err.message);

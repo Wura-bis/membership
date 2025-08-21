@@ -1,0 +1,18 @@
+SettingID,SettingKey,SettingValue
+1,systemName,BIS Membership System
+2,adminEmail,
+3,maxUploadSize,10
+4,autoApproval,0
+5,emailNotifications,-1
+6,maintenanceMode,0
+7,publicRegistration,-1
+8,defaultRole,public
+9,sessionTimeout,240
+10,backupFrequency,daily
+11,allowRegistration,true
+12,defaultAccess,public
+13,enableAuditLog,true
+14,enableNotifications,true
+15,maxMembers,1000
+16,orgName,BIS Organization
+17,requireApproval,false

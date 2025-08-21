@@ -1,0 +1,2 @@
+MemberAddressID,MemberID,Street,City,ProvinceID,CountryID,PostalCode,FiscalYearID,IsCurrent
+5,5,,Charlottetown,0,0,C1E 2V8,,False

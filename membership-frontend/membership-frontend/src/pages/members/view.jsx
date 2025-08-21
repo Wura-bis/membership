@@ -167,17 +167,15 @@ export default function ViewMember() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                     <thead>
                       <tr style={{ background: '#e5e7eb' }}>
-                        <th style={{ textAlign: 'left', padding: 8 }}>Role Title</th>
-                        <th style={{ textAlign: 'left', padding: 8 }}>From</th>
-                        <th style={{ textAlign: 'left', padding: 8 }}>To</th>
+                        <th style={{ textAlign: 'left', padding: 8, width: '50%' }}>Role Title</th>
+                        <th style={{ textAlign: 'left', padding: 8, width: '50%' }}>Fiscal Year</th>
                       </tr>
                     </thead>
                     <tbody>
                       {member.roleFiscalYears.map((rf, idx) => (
                         <tr key={idx}>
-                          <td style={{ padding: 8 }}>{rf.role}</td>
-                          <td style={{ padding: 8 }}>{rf.from ? new Date(rf.from).toLocaleDateString() : '—'}</td>
-                          <td style={{ padding: 8 }}>{rf.to ? new Date(rf.to).toLocaleDateString() : '—'}</td>
+                          <td style={{ padding: 8, border: '1px solid #ddd' }}>{rf.role || '—'}</td>
+                          <td style={{ padding: 8, border: '1px solid #ddd' }}>{rf.fiscalYear || rf.fiscalYearLabel || '—'}</td>
                         </tr>
                       ))}
                     </tbody>

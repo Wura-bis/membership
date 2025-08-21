@@ -77,9 +77,17 @@ export default function MemberProfile() {
               {/* Irish Connection */}
               <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
                 <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Irish Connection</h2>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>IRISH CONNECTION</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{(Array.isArray(member.irishConnection) && member.irishConnection.counties && member.irishConnection.counties.length > 0) ? member.irishConnection.counties.join(', ') : (member.irishConnection || '—')}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>COUNTY NAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.county || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>SURNAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.surname || '—'}</div></div>
+                {Array.isArray(member.irishConnections) && member.irishConnections.length > 0 ? (
+                  member.irishConnections.map((connection, idx) => (
+                    <div key={idx} style={{ marginBottom: idx < member.irishConnections.length - 1 ? 16 : 0, padding: idx > 0 ? '16px 0 0 0' : 0, borderTop: idx > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>COUNTY NAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.county || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>SURNAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.surname || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CONNECTION TYPE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.type || '—'}</div></div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>IRISH CONNECTION</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>—</div></div>
+                )}
               </div>
             </div>
             {/* Right Column */}
@@ -134,16 +142,14 @@ export default function MemberProfile() {
                     <thead>
                       <tr style={{ background: '#e5e7eb' }}>
                         <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>Role Title</th>
-                        <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>From</th>
-                        <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>To</th>
+                        <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>Fiscal Year</th>
                       </tr>
                     </thead>
                     <tbody>
                       {member.roleFiscalYears.map((rf, idx) => (
                         <tr key={idx}>
                           <td style={{ padding: 8, fontSize: 14 }}>{rf.role}</td>
-                          <td style={{ padding: 8, fontSize: 14 }}>{rf.from ? new Date(rf.from).toLocaleDateString() : '—'}</td>
-                          <td style={{ padding: 8, fontSize: 14 }}>{rf.to ? new Date(rf.to).toLocaleDateString() : '—'}</td>
+                          <td style={{ padding: 8, fontSize: 14 }}>{rf.fiscalYear || rf.fiscalYearLabel || '—'}</td>
                         </tr>
                       ))}
                     </tbody>

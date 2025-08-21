@@ -165,7 +165,18 @@ export default function PublicDashboard() {
                       First Member Registered
                     </div>
                     <div style={{ fontSize: '18px', fontWeight: '700', color: '#134e4a' }}>
-                      {stats.historical.firstRegistered}
+                      {(() => {
+                        const d = stats.historical.firstRegistered;
+                        if (!d) return "-";
+                        try {
+                          const dateObj = new Date(d);
+                          return dateObj.toLocaleDateString('en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric'
+                          });
+                        } catch {
+                          return d;
+                        }
+                      })()}
                     </div>
                   </div>
                   

@@ -88,22 +88,56 @@ export default function Settings() {
       <div className="dashboard-container">
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           {/* Header */}
-          <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
               <div>
-                <h1 className="dashboard-title">⚙️ System Settings</h1>
-                <p className="dashboard-subtitle">
+                <h1 style={{ 
+                  fontSize: '38px', 
+                  fontWeight: '700', 
+                  color: '#0f766e', 
+                  marginBottom: '12px',
+                  margin: 0 
+                }}>
+                  🔧 System Settings
+                </h1>
+                <p style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '600', 
+                  color: '#64748b',
+                  margin: 0 
+                }}>
                   Configure system preferences and global settings
                 </p>
               </div>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="btn-primary"
                 style={{ 
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '10px',
+                  padding: '14px 32px',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  borderRadius: '12px',
+                  background: isSaving ? '#9ca3af' : 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+                  color: 'white',
+                  border: '2px solid ' + (isSaving ? '#6b7280' : '#0f766e'),
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  boxShadow: isSaving ? 'none' : '0 2px 8px rgba(20, 184, 166, 0.3)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSaving) {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSaving) {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
+                  }
                 }}
               >
                 {isSaving ? (
@@ -121,20 +155,63 @@ export default function Settings() {
           </div>
 
           {error && (
-            <div className="alert alert-error" style={{ marginBottom: '24px' }}>
+            <div style={{ 
+              marginBottom: '32px',
+              padding: '20px 28px',
+              background: '#fff1f2',
+              border: '2px solid #fecaca',
+              borderRadius: '12px',
+              color: '#dc2626',
+              fontSize: '16px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
               {error}
             </div>
           )}
 
           {success && (
-            <div className="alert alert-success" style={{ marginBottom: '24px' }}>
+            <div style={{ 
+              marginBottom: '32px',
+              padding: '20px 28px',
+              background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+              border: '2px solid #059669',
+              borderRadius: '12px',
+              color: '#065f46',
+              fontSize: '16px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
+            }}>
+              <span style={{ fontSize: '24px' }}>✅</span>
               {success}
             </div>
           )}
 
           {/* General Settings */}
-          <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-            <h2 className="dashboard-card-title">🏢 General Settings</h2>
+          <div style={{ 
+            marginBottom: '32px',
+            padding: '36px',
+            background: '#f0fdfa',
+            borderRadius: '16px',
+            border: '2px solid #5eead4',
+            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px',
+              margin: 0,
+              marginBottom: '28px'
+            }}>
+              🏢 General Settings
+            </h2>
             <div style={{ display: 'grid', gap: '20px' }}>
               <div>
                 <label className="form-label">System Name</label>
@@ -187,23 +264,39 @@ export default function Settings() {
           </div>
 
           {/* User Management Settings */}
-          <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-            <h2 className="dashboard-card-title">👥 User Management</h2>
+          <div style={{ 
+            marginBottom: '32px',
+            padding: '36px',
+            background: 'white',
+            borderRadius: '16px',
+            border: '2px solid #5eead4',
+            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px',
+              margin: 0,
+              marginBottom: '28px'
+            }}>
+              👥 User Management
+            </h2>
             <div style={{ display: 'grid', gap: '20px' }}>
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
+                padding: '20px 24px',
+                background: '#f0fdfa',
+                borderRadius: '12px',
+                border: '2px solid #ccfbf1'
               }}>
                 <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
                     🌐 Public Registration
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     Allow new users to register accounts
                   </div>
                 </div>
@@ -212,26 +305,27 @@ export default function Settings() {
                     type="checkbox"
                     checked={settings.publicRegistration}
                     onChange={(e) => handleChange('publicRegistration', e.target.checked)}
-                    style={{ marginRight: '8px' }}
+                    style={{ display: 'none' }}
                   />
                   <div style={{
-                    width: '48px',
-                    height: '24px',
-                    background: settings.publicRegistration ? '#14b8a6' : '#e2e8f0',
-                    borderRadius: '12px',
+                    width: '56px',
+                    height: '28px',
+                    background: settings.publicRegistration ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
+                    borderRadius: '14px',
                     position: 'relative',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    border: '2px solid ' + (settings.publicRegistration ? '#0f766e' : '#94a3b8')
                   }}>
                     <div style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '22px',
+                      height: '22px',
                       background: 'white',
                       borderRadius: '50%',
                       position: 'absolute',
-                      top: '2px',
-                      left: settings.publicRegistration ? '26px' : '2px',
+                      top: '1px',
+                      left: settings.publicRegistration ? '29px' : '1px',
                       transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}></div>
                   </div>
                 </label>
@@ -241,16 +335,16 @@ export default function Settings() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
+                padding: '20px 24px',
+                background: '#f0fdfa',
+                borderRadius: '12px',
+                border: '2px solid #ccfbf1'
               }}>
                 <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
                     ⚡ Auto-Approval
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     Automatically approve new user registrations
                   </div>
                 </div>
@@ -259,26 +353,27 @@ export default function Settings() {
                     type="checkbox"
                     checked={settings.autoApproval}
                     onChange={(e) => handleChange('autoApproval', e.target.checked)}
-                    style={{ marginRight: '8px' }}
+                    style={{ display: 'none' }}
                   />
                   <div style={{
-                    width: '48px',
-                    height: '24px',
-                    background: settings.autoApproval ? '#14b8a6' : '#e2e8f0',
-                    borderRadius: '12px',
+                    width: '56px',
+                    height: '28px',
+                    background: settings.autoApproval ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
+                    borderRadius: '14px',
                     position: 'relative',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    border: '2px solid ' + (settings.autoApproval ? '#0f766e' : '#94a3b8')
                   }}>
                     <div style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '22px',
+                      height: '22px',
                       background: 'white',
                       borderRadius: '50%',
                       position: 'absolute',
-                      top: '2px',
-                      left: settings.autoApproval ? '26px' : '2px',
+                      top: '1px',
+                      left: settings.autoApproval ? '29px' : '1px',
                       transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}></div>
                   </div>
                 </label>
@@ -287,8 +382,24 @@ export default function Settings() {
           </div>
 
           {/* System Configuration */}
-          <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-            <h2 className="dashboard-card-title">🔧 System Configuration</h2>
+          <div style={{ 
+            marginBottom: '32px',
+            padding: '36px',
+            background: '#f0fdfa',
+            borderRadius: '16px',
+            border: '2px solid #5eead4',
+            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+          }}>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px',
+              margin: 0,
+              marginBottom: '28px'
+            }}>
+              🔧 System Configuration
+            </h2>
             <div style={{ display: 'grid', gap: '20px' }}>
               <div>
                 <label className="form-label">Maximum Upload Size (MB)</label>
@@ -320,16 +431,16 @@ export default function Settings() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px',
-                background: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0'
+                padding: '20px 24px',
+                background: '#f0fdfa',
+                borderRadius: '12px',
+                border: '2px solid #ccfbf1'
               }}>
                 <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
                     📧 Email Notifications
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     Send system notifications via email
                   </div>
                 </div>
@@ -338,26 +449,27 @@ export default function Settings() {
                     type="checkbox"
                     checked={settings.emailNotifications}
                     onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                    style={{ marginRight: '8px' }}
+                    style={{ display: 'none' }}
                   />
                   <div style={{
-                    width: '48px',
-                    height: '24px',
-                    background: settings.emailNotifications ? '#14b8a6' : '#e2e8f0',
-                    borderRadius: '12px',
+                    width: '56px',
+                    height: '28px',
+                    background: settings.emailNotifications ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
+                    borderRadius: '14px',
                     position: 'relative',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    border: '2px solid ' + (settings.emailNotifications ? '#0f766e' : '#94a3b8')
                   }}>
                     <div style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '22px',
+                      height: '22px',
                       background: 'white',
                       borderRadius: '50%',
                       position: 'absolute',
-                      top: '2px',
-                      left: settings.emailNotifications ? '26px' : '2px',
+                      top: '1px',
+                      left: settings.emailNotifications ? '29px' : '1px',
                       transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}></div>
                   </div>
                 </label>
@@ -367,20 +479,21 @@ export default function Settings() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px',
-                background: settings.maintenanceMode ? '#fef3f2' : '#f8fafc',
-                borderRadius: '8px',
-                border: settings.maintenanceMode ? '1px solid #fecaca' : '1px solid #e2e8f0'
+                padding: '20px 24px',
+                background: settings.maintenanceMode ? '#fff1f2' : '#f0fdfa',
+                borderRadius: '12px',
+                border: '2px solid ' + (settings.maintenanceMode ? '#fecaca' : '#ccfbf1')
               }}>
                 <div>
                   <div style={{ 
-                    fontWeight: '600', 
-                    marginBottom: '4px',
-                    color: settings.maintenanceMode ? '#dc2626' : '#374151'
+                    fontSize: '17px',
+                    fontWeight: '700', 
+                    marginBottom: '6px',
+                    color: settings.maintenanceMode ? '#dc2626' : '#0f766e'
                   }}>
                     🚧 Maintenance Mode
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     Temporarily disable public access to the system
                   </div>
                 </div>
@@ -389,26 +502,27 @@ export default function Settings() {
                     type="checkbox"
                     checked={settings.maintenanceMode}
                     onChange={(e) => handleChange('maintenanceMode', e.target.checked)}
-                    style={{ marginRight: '8px' }}
+                    style={{ display: 'none' }}
                   />
                   <div style={{
-                    width: '48px',
-                    height: '24px',
-                    background: settings.maintenanceMode ? '#dc2626' : '#e2e8f0',
-                    borderRadius: '12px',
+                    width: '56px',
+                    height: '28px',
+                    background: settings.maintenanceMode ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : '#cbd5e1',
+                    borderRadius: '14px',
                     position: 'relative',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    border: '2px solid ' + (settings.maintenanceMode ? '#dc2626' : '#94a3b8')
                   }}>
                     <div style={{
-                      width: '20px',
-                      height: '20px',
+                      width: '22px',
+                      height: '22px',
                       background: 'white',
                       borderRadius: '50%',
                       position: 'absolute',
-                      top: '2px',
-                      left: settings.maintenanceMode ? '26px' : '2px',
+                      top: '1px',
+                      left: settings.maintenanceMode ? '29px' : '1px',
                       transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                     }}></div>
                   </div>
                 </label>
@@ -417,25 +531,38 @@ export default function Settings() {
           </div>
 
           {/* Danger Zone */}
-          <div className="dashboard-card" style={{ border: '2px solid #fecaca', background: '#fef2f2' }}>
-            <h2 style={{ color: '#dc2626', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
+          <div style={{ 
+            padding: '36px',
+            border: '3px solid #fecaca', 
+            background: '#fff1f2',
+            borderRadius: '16px',
+            boxShadow: '0 6px 20px rgba(220, 38, 38, 0.15)'
+          }}>
+            <h2 style={{ 
+              color: '#dc2626', 
+              fontSize: '24px', 
+              fontWeight: '700', 
+              marginBottom: '24px',
+              margin: 0,
+              marginBottom: '24px'
+            }}>
               ⚠️ Danger Zone
             </h2>
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div style={{ display: 'grid', gap: '20px' }}>
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between',
-                padding: '16px',
+                padding: '20px 24px',
                 background: 'white',
-                borderRadius: '8px',
-                border: '1px solid #fecaca'
+                borderRadius: '12px',
+                border: '2px solid #fecaca'
               }}>
                 <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#dc2626' }}>
                     🗄️ Export All Data
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     Download a complete backup of all system data
                   </div>
                 </div>
@@ -444,15 +571,25 @@ export default function Settings() {
                   style={{
                     background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                     color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
+                    border: '2px solid #d97706',
+                    padding: '10px 24px',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
                   }}
                 >
-                  Export Data
+                  📥 Export Data
                 </button>
               </div>
               
@@ -460,16 +597,16 @@ export default function Settings() {
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'space-between',
-                padding: '16px',
+                padding: '20px 24px',
                 background: 'white',
-                borderRadius: '8px',
-                border: '1px solid #fecaca'
+                borderRadius: '12px',
+                border: '2px solid #fecaca'
               }}>
                 <div>
-                  <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#dc2626' }}>
                     🗑️ Reset System
                   </div>
-                  <div style={{ fontSize: '14px', color: '#64748b' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
                     This will permanently delete all data and reset the system
                   </div>
                 </div>
@@ -482,15 +619,25 @@ export default function Settings() {
                   style={{
                     background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                     color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
+                    border: '2px solid #b91c1c',
+                    padding: '10px 24px',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
                   }}
                 >
-                  Reset System
+                  💣 Reset System
                 </button>
               </div>
             </div>

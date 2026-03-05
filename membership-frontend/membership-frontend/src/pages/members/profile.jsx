@@ -35,140 +35,197 @@ export default function MemberProfile() {
 
   return (
     <MainLayout>
-      <div className="dashboard-container" style={{ background: '#f8fafc', minHeight: '100vh', padding: '32px 0' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', background: 'white', borderRadius: 16, boxShadow: '0 2px 8px #e0e7ef', padding: 32 }}>
+      <div className="dashboard-container" style={{ background: '#f8fafc', minHeight: '100vh', padding: '40px 24px' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', background: 'white', borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', padding: '40px 48px', border: '2px solid #14b8a6' }}>
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, borderBottom: '1px solid #e5e7eb', paddingBottom: 24, marginBottom: 32, position: 'relative' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#38bdf8', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32, borderBottom: '3px solid #14b8a6', paddingBottom: 36, marginBottom: 40, position: 'relative' }}>
+            <div style={{ width: 120, height: 120, borderRadius: '50%', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, color: '#14b8a6', flexShrink: 0, border: '4px solid #14b8a6', boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)' }}>
               {member.photo ? (
-                <img src={`http://localhost:5000/uploads/${member.photo}`} alt="Member" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
+                <img src={`http://localhost:5000/uploads/${member.photo}`} alt="Member" style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
               ) : (
-                <span className="material-icons" style={{ fontSize: 56 }}>account_circle</span>
+                <span style={{ fontSize: 72 }}>👤</span>
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2, wordBreak: 'break-word' }}>{member.firstName} {member.lastName}</div>
-              <div style={{ fontSize: 14, color: '#64748b', marginTop: 2 }}>UID: {member.id?.toString().padStart(4, '0')}</div>
+              <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.2, wordBreak: 'break-word', color: '#0f172a' }}>{member.firstName} {member.lastName}</div>
+              <div style={{ fontSize: 18, color: '#64748b', marginTop: 8, fontWeight: 600 }}>Member ID: #{member.id?.toString().padStart(4, '0')}</div>
               <span style={{
                 display: 'inline-block',
-                padding: '4px 14px',
-                fontSize: '12px',
-                fontWeight: '600',
-                borderRadius: '16px',
-                background: member.isActive ? '#10b981' : '#f1f5f9',
+                padding: '10px 24px',
+                fontSize: '17px',
+                fontWeight: '700',
+                borderRadius: '12px',
+                background: member.isActive 
+                  ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                  : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
                 color: member.isActive ? 'white' : '#64748b',
-                border: member.isActive ? 'none' : '1.5px solid #e2e8f0',
-                marginTop: 8
-              }}>{member.isActive ? 'Active Member' : 'Inactive Member'}</span>
+                border: member.isActive ? '2px solid #059669' : '2px solid #cbd5e1',
+                marginTop: 16,
+                boxShadow: member.isActive ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none'
+              }}>{member.category || (member.isActive ? 'Active' : 'Inactive')}</span>
             </div>
           </div>
 
           {/* Main Info Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
             {/* Left Column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               {/* Personal Information */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Personal Information</h2>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>DATE OF BIRTH</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.dateOfBirth || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>OCCUPATION</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.occupation || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PLACE OF BIRTH</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.placeOfBirth || '—'}</div></div>
+              <div className="dashboard-card" style={{ background: '#f0fdfa', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>👤</span> Personal Information
+                </h2>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>DATE OF BIRTH</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.dateOfBirth || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>OCCUPATION</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.occupation || '—'}</div></div>
+                <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>PLACE OF BIRTH</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.placeOfBirth || '—'}</div></div>
               </div>
               {/* Irish Connection */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Irish Connection</h2>
+              <div className="dashboard-card" style={{ background: 'white', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>🍀</span> Irish Connection
+                </h2>
                 {Array.isArray(member.irishConnections) && member.irishConnections.length > 0 ? (
                   member.irishConnections.map((connection, idx) => (
-                    <div key={idx} style={{ marginBottom: idx < member.irishConnections.length - 1 ? 16 : 0, padding: idx > 0 ? '16px 0 0 0' : 0, borderTop: idx > 0 ? '1px solid #e5e7eb' : 'none' }}>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>COUNTY NAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.county || '—'}</div></div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>SURNAME</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.surname || '—'}</div></div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CONNECTION TYPE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{connection.type || '—'}</div></div>
+                    <div key={idx} style={{ marginBottom: idx < member.irishConnections.length - 1 ? 24 : 0, padding: idx > 0 ? '24px 0 0 0' : 0, borderTop: idx > 0 ? '3px solid #f0fdfa' : 'none' }}>
+                      <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>COUNTY NAME</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{connection.county || '—'}</div></div>
+                      <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>SURNAME</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{connection.surname || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>CONNECTION TYPE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{connection.type || '—'}</div></div>
                     </div>
                   ))
                 ) : (
-                  <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>IRISH CONNECTION</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>—</div></div>
+                  <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>IRISH CONNECTION</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>—</div></div>
                 )}
               </div>
             </div>
             {/* Right Column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
               {/* Contact Information */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Contact Information</h2>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>EMAIL</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.email || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PHONE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.phoneNumber || member.cellPhone || member.homePhone || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>HOME PHONE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.homePhone || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CELL PHONE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.cellPhone || '—'}</div></div>
+              <div className="dashboard-card" style={{ background: 'white', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>📞</span> Contact Information
+                </h2>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>EMAIL</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', wordBreak: 'break-word' }}>{member.email || '—'}</div></div>
+                {Array.isArray(member.phoneNumbers) && member.phoneNumbers.length > 0 ? (
+                  <div>
+                    <div style={{ fontSize: 16, color: '#14b8a6', fontWeight: 700, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      📱 PHONE NUMBERS
+                    </div>
+                    {member.phoneNumbers.map((phone, idx) => (
+                      <div key={idx} style={{ marginBottom: idx < member.phoneNumbers.length - 1 ? 16 : 0 }}>
+                        <div className="info-item">
+                          <div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>
+                            {phone.type || 'OTHER'}{phone.isPreferred ? ' (PRIMARY)' : ''}
+                          </div>
+                          <div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>
+                            {phone.number || '—'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>PHONE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>—</div></div>
+                )}
               </div>
               {/* Address Information */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Address Information</h2>
+              <div className="dashboard-card" style={{ background: '#f0fdfa', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>📍</span> Address Information
+                </h2>
                 {Array.isArray(member.addresses) && member.addresses.length > 0 ? (
                   member.addresses.map((addr, idx) => (
-                    <div key={idx} style={{ marginBottom: idx < member.addresses.length - 1 ? 16 : 0, padding: idx > 0 ? '16px 0 0 0' : 0, borderTop: idx > 0 ? '1px solid #e5e7eb' : 'none' }}>
-                      <div style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600, marginBottom: 8 }}>
-                        {addr.isCurrent ? 'CURRENT ADDRESS' : `${addr.yearLabel || 'HISTORICAL'} ADDRESS`}
+                    <div key={idx} style={{ marginBottom: idx < member.addresses.length - 1 ? 24 : 0, padding: idx > 0 ? '24px 0 0 0' : 0, borderTop: idx > 0 ? '3px solid #ccfbf1' : 'none' }}>
+                      <div style={{ fontSize: 16, color: '#14b8a6', fontWeight: 700, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {addr.isCurrent ? '📌 CURRENT ADDRESS' : `📅 ${addr.yearLabel || 'HISTORICAL'} ADDRESS`}
                       </div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>STREET</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.street || '—'}</div></div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>CITY</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.city || '—'}</div></div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PROVINCE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.province || '—'}</div></div>
-                      <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>POSTAL CODE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{addr.postalCode || '—'}</div></div>
+                      <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>STREET</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{addr.street || '—'}</div></div>
+                      <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>CITY</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{addr.city || '—'}</div></div>
+                      <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>PROVINCE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{addr.province || '—'}</div></div>
+                      <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>POSTAL CODE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{addr.postalCode || '—'}</div></div>
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>No address information available</p>
+                  <p style={{ color: '#64748b', fontSize: '18px', fontWeight: '500', margin: 0 }}>No address information available</p>
                 )}
               </div>
               {/* Membership Details */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Membership Details</h2>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>OTHER SOCIETIES AFFILIATED WITH</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.otherSocieties || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>MEMBER CATEGORY</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.memberCategory || member.category || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>MEMBERSHIP START YEAR</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.dateJoined || member.membershipStartDate || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>MEMBERSHIP END YEAR</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.dateEnded || member.membershipEndDate || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>APPLICATION DATE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.applicationDate || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>DATE APPROVED</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.approvalDate || member.dateApproved || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>APPROVED BY</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.approvedBy || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>SIGNED BY</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.signedBy || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PROPOSER</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.proposer || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>SECONDER(S)</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.seconder || '—'}</div></div>
-                <div className="info-item"><div className="info-label" style={{ fontSize: 11, color: '#64748b', fontWeight: 500 }}>PROPOSAL DATE</div><div className="info-value" style={{ fontSize: 14, fontWeight: 500 }}>{member.proposalDate || '—'}</div></div>
+              <div className="dashboard-card" style={{ background: 'white', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>📋</span> Membership Details
+                </h2>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>OTHER SOCIETIES AFFILIATED WITH</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.otherSocieties || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>MEMBER CATEGORY</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.memberCategory || member.category || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>MEMBERSHIP START YEAR</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.dateJoined || member.membershipStartDate || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>MEMBERSHIP END YEAR</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.dateEnded || member.membershipEndDate || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>APPLICATION DATE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.applicationDate || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>DATE APPROVED</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.approvalDate || member.dateApproved || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>APPROVED BY</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.approvedBy || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>SIGNED BY</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.signedBy || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>PROPOSER</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.proposer || '—'}</div></div>
+                <div className="info-item" style={{ marginBottom: 20 }}><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>SECONDER(S)</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.seconder || '—'}</div></div>
+                <div className="info-item"><div className="info-label" style={{ fontSize: 15, color: '#64748b', fontWeight: 700, marginBottom: 8 }}>PROPOSAL DATE</div><div className="info-value" style={{ fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{member.proposalDate || '—'}</div></div>
               </div>
               {/* Roles Held */}
-              <div className="dashboard-card" style={{ background: '#f6faff', borderRadius: 10, padding: 18, marginBottom: 2, boxShadow: '0 1px 2px #e0e7ef33' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, color: '#22223b' }}>Role(s) Held</h2>
+              <div className="dashboard-card" style={{ background: '#f0fdfa', borderRadius: 12, padding: 36, boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)', border: '2px solid #14b8a6' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 24, color: '#0f766e', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>🏆</span> Role(s) Held
+                </h2>
                 {Array.isArray(member.roleFiscalYears) && member.roleFiscalYears.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, marginTop: 8 }}>
                     <thead>
-                      <tr style={{ background: '#e5e7eb' }}>
-                        <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>Role Title</th>
-                        <th style={{ textAlign: 'left', padding: 8, fontSize: 12, color: '#64748b' }}>Fiscal Year</th>
+                      <tr style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', borderBottom: '3px solid #14b8a6' }}>
+                        <th style={{ textAlign: 'left', padding: '16px 20px', fontSize: 17, color: '#0f766e', fontWeight: 700 }}>Role Title</th>
+                        <th style={{ textAlign: 'left', padding: '16px 20px', fontSize: 17, color: '#0f766e', fontWeight: 700 }}>Fiscal Year</th>
                       </tr>
                     </thead>
                     <tbody>
                       {member.roleFiscalYears.map((rf, idx) => (
-                        <tr key={idx}>
-                          <td style={{ padding: 8, fontSize: 14 }}>{rf.role}</td>
-                          <td style={{ padding: 8, fontSize: 14 }}>{rf.fiscalYear || rf.fiscalYearLabel || '—'}</td>
+                        <tr key={idx} style={{ borderBottom: idx < member.roleFiscalYears.length - 1 ? '2px solid #f0fdfa' : 'none' }}>
+                          <td style={{ padding: '16px 20px', fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{rf.role}</td>
+                          <td style={{ padding: '16px 20px', fontSize: 18, fontWeight: 600, color: '#0f172a' }}>{rf.fiscalYear || rf.fiscalYearLabel || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>No roles assigned</p>
+                  <p style={{ color: '#64748b', fontSize: '18px', fontWeight: '500', margin: 0 }}>No roles assigned</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 40, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 48, justifyContent: 'center', paddingTop: 40, borderTop: '3px solid #14b8a6' }}>
             <Link 
               to={user && user.role === "public" ? "/members/deceased" : "/members"} 
               className="btn-primary" 
-              style={{ background: '#f1f5f9', color: '#22223b', border: '1.5px solid #e2e8f0', fontWeight: 600, minWidth: 120, textAlign: 'center', textDecoration: 'none' }}
+              style={{ 
+                background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)', 
+                color: '#1e293b', 
+                border: '2px solid #cbd5e1', 
+                fontWeight: 700, 
+                minWidth: 160, 
+                fontSize: 17, 
+                height: 56, 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                textAlign: 'center', 
+                textDecoration: 'none', 
+                borderRadius: 10,
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+              }}
             >
-              ← Back to Members
+              ← Back to Directory
             </Link>
             
             {/* Export buttons for admin and private users */}
@@ -176,17 +233,57 @@ export default function MemberProfile() {
               <>
                 <button 
                   className="btn-primary" 
-                  style={{ background: '#22c55e', color: 'white', fontWeight: 600, minWidth: 120 }}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
+                    color: 'white', 
+                    fontWeight: 700, 
+                    minWidth: 160, 
+                    fontSize: 17, 
+                    height: 56, 
+                    borderRadius: 10, 
+                    border: '2px solid #16a34a',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)'
+                  }}
                   onClick={() => window.open(`http://localhost:5000/api/export/member/${member.id}/csv`, '_blank')}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
+                  }}
                 >
-                  Export CSV
+                  📄 Export CSV
                 </button>
                 <button 
                   className="btn-primary" 
-                  style={{ background: '#3b82f6', color: 'white', fontWeight: 600, minWidth: 120 }}
+                  style={{ 
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
+                    color: 'white', 
+                    fontWeight: 700, 
+                    minWidth: 160, 
+                    fontSize: 17, 
+                    height: 56, 
+                    borderRadius: 10, 
+                    border: '2px solid #2563eb',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)'
+                  }}
                   onClick={() => window.open(`http://localhost:5000/api/export/member/${member.id}/pdf`, '_blank')}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+                  }}
                 >
-                  Export PDF
+                  📑 Export PDF
                 </button>
               </>
             )}
@@ -194,9 +291,103 @@ export default function MemberProfile() {
             {/* Admin-only controls */}
             {user && user.role === "admin" && (
               <>
-                <Link to={`/members/edit/${member.id}`} className="btn-primary" style={{ background: '#38bdf8', color: 'white', fontWeight: 600, minWidth: 120, textAlign: 'center', textDecoration: 'none' }}>Edit Member</Link>
-                <button className="btn-primary" style={{ background: '#10b981', color: 'white', fontWeight: 600, minWidth: 120 }} onClick={() => setShowReinstate(true)} disabled={member.isActive || actionLoading}>Reinstate</button>
-                <button className="btn-primary" style={{ background: '#f87171', color: 'white', fontWeight: 600, minWidth: 120 }} onClick={() => setShowDeactivate(true)} disabled={!member.isActive || actionLoading}>Deactivate</button>
+                <Link 
+                  to={`/members/edit/${member.id}`} 
+                  className="btn-primary" 
+                  style={{ 
+                    background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', 
+                    color: 'white', 
+                    fontWeight: 700, 
+                    minWidth: 160, 
+                    fontSize: 17, 
+                    height: 56, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    textAlign: 'center', 
+                    textDecoration: 'none', 
+                    borderRadius: 10, 
+                    border: '2px solid #0f766e',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-2px)';
+                    e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
+                  }}
+                >
+                  ✏️ Edit Member
+                </Link>
+                <button 
+                  className="btn-primary" 
+                  style={{ 
+                    background: member.isActive || actionLoading ? '#cbd5e1' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+                    color: 'white', 
+                    fontWeight: 700, 
+                    minWidth: 160, 
+                    fontSize: 17, 
+                    height: 56, 
+                    borderRadius: 10, 
+                    border: member.isActive || actionLoading ? '2px solid #94a3b8' : '2px solid #059669',
+                    cursor: member.isActive || actionLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: member.isActive || actionLoading ? 'none' : '0 2px 8px rgba(16, 185, 129, 0.3)',
+                    opacity: member.isActive || actionLoading ? 0.5 : 1
+                  }} 
+                  onClick={() => setShowReinstate(true)} 
+                  disabled={member.isActive || actionLoading}
+                  onMouseEnter={(e) => {
+                    if (!member.isActive && !actionLoading) {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!member.isActive && !actionLoading) {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+                    }
+                  }}
+                >
+                  ✅ Reinstate
+                </button>
+                <button 
+                  className="btn-primary" 
+                  style={{ 
+                    background: !member.isActive || actionLoading ? '#cbd5e1' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', 
+                    color: 'white', 
+                    fontWeight: 700, 
+                    minWidth: 160, 
+                    fontSize: 17, 
+                    height: 56, 
+                    borderRadius: 10, 
+                    border: !member.isActive || actionLoading ? '2px solid #94a3b8' : '2px solid #dc2626',
+                    cursor: !member.isActive || actionLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: !member.isActive || actionLoading ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)',
+                    opacity: !member.isActive || actionLoading ? 0.5 : 1
+                  }} 
+                  onClick={() => setShowDeactivate(true)} 
+                  disabled={!member.isActive || actionLoading}
+                  onMouseEnter={(e) => {
+                    if (member.isActive && !actionLoading) {
+                      e.target.style.transform = 'translateY(-2px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (member.isActive && !actionLoading) {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
+                    }
+                  }}
+                >
+                  ❌ Deactivate
+                </button>
               </>
             )}
           </div>

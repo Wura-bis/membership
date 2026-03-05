@@ -47,7 +47,7 @@ export default function AddMember() {
       occupationId: "",
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
       email: "",
-      phoneNumber: "",
+      phoneNumbers: [{ type: "", number: "", isPreferred: true }],
       addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
       otherSocieties: "",
       categoryId: "",
@@ -61,11 +61,12 @@ export default function AddMember() {
       seconder: "",
       proposalDate: "",
       roleFiscalYears: [{ role: "", fiscalYear: "" }],
+      volunteeringInterests: [],
       notes: "",
       isActive: true,
       photo: null
     });
-  const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [] });
+  const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [], occupations: [], volunteeringInterests: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");

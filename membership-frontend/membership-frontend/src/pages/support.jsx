@@ -149,10 +149,10 @@ export default function Support() {
           {/* Header */}
           <div style={{ marginBottom: '32px', textAlign: 'center' }}>
             <h1 style={{
-              fontSize: '32px',
+              fontSize: '38px',
               fontWeight: '700',
-              color: '#134e4a',
-              marginBottom: '8px',
+              color: '#0f766e',
+              marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -161,7 +161,8 @@ export default function Support() {
               🎧 Support Center
             </h1>
             <p style={{
-              fontSize: '16px',
+              fontSize: '20px',
+              fontWeight: '600',
               color: '#64748b',
               margin: '0'
             }}>
@@ -171,17 +172,20 @@ export default function Support() {
 
           {/* Tab Navigation */}
           <div style={{
-            background: 'white',
+            background: '#f0fdfa',
             borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '24px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            padding: '36px',
+            marginBottom: '28px',
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)',
+            border: '2px solid #5eead4'
           }}>
             <div style={{
               display: 'flex',
-              gap: '8px',
-              marginBottom: '24px',
-              borderBottom: '1px solid #e2e8f0'
+              gap: '12px',
+              marginBottom: '32px',
+              borderBottom: '3px solid #ccfbf1',
+              paddingBottom: '16px',
+              flexWrap: 'wrap'
             }}>
               {[
                 { id: 'faq', label: '❓ FAQ', icon: '❓' },
@@ -193,11 +197,13 @@ export default function Support() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={{
-                    padding: '12px 20px',
-                    border: 'none',
-                    background: activeTab === tab.id ? '#14b8a6' : 'transparent',
+                    padding: '16px 28px',
+                    border: activeTab === tab.id ? '2px solid #14b8a6' : '2px solid transparent',
+                    background: activeTab === tab.id ? '#14b8a6' : '#ffffff',
                     color: activeTab === tab.id ? 'white' : '#64748b',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '700',
                     fontSize: '14px',
                     fontWeight: '500',
                     cursor: 'pointer',
@@ -214,34 +220,36 @@ export default function Support() {
             {activeTab === 'faq' && (
               <div>
                 <h3 style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '600', 
-                  color: '#1e293b', 
-                  marginBottom: '20px' 
+                  fontSize: '24px', 
+                  fontWeight: '700', 
+                  color: '#0f766e', 
+                  marginBottom: '24px' 
                 }}>
                   Frequently Asked Questions
                 </h3>
-                <div style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ display: 'grid', gap: '20px' }}>
                   {faqData.map((faq, index) => (
                     <div key={index} style={{
-                      background: '#f8fafc',
-                      padding: '16px',
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0'
+                      background: '#ffffff',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      border: '2px solid #ccfbf1',
+                      boxShadow: '0 1px 3px rgba(20,184,166,0.1)'
                     }}>
                       <h4 style={{
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        marginBottom: '8px'
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        marginBottom: '12px'
                       }}>
                         {faq.question}
                       </h4>
                       <p style={{
-                        fontSize: '14px',
-                        color: '#64748b',
+                        fontSize: '17px',
+                        fontWeight: '500',
+                        color: '#475569',
                         margin: '0',
-                        lineHeight: '1.5'
+                        lineHeight: '1.6'
                       }}>
                         {faq.answer}
                       </p>
@@ -255,22 +263,22 @@ export default function Support() {
             {activeTab === 'contact' && (
               <div>
                 <h3 style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '600', 
-                  color: '#1e293b', 
-                  marginBottom: '20px' 
+                  fontSize: '24px', 
+                  fontWeight: '700', 
+                  color: '#0f766e', 
+                  marginBottom: '24px' 
                 }}>
                   Contact Support
                 </h3>
                 
                 <form onSubmit={handleContactSubmit}>
-                  <div style={{ marginBottom: '16px' }}>
+                  <div style={{ marginBottom: '20px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#1e293b',
-                      marginBottom: '8px'
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      marginBottom: '10px'
                     }}>
                       Subject
                     </label>
@@ -281,22 +289,23 @@ export default function Support() {
                       required
                       style={{
                         width: '100%',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '14px'
+                        padding: '16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500'
                       }}
                       placeholder="Brief description of your issue"
                     />
                   </div>
 
-                  <div style={{ marginBottom: '16px' }}>
+                  <div style={{ marginBottom: '20px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#1e293b',
-                      marginBottom: '8px'
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      marginBottom: '10px'
                     }}>
                       Priority
                     </label>
@@ -305,10 +314,11 @@ export default function Support() {
                       onChange={(e) => setContactForm(prev => ({...prev, priority: e.target.value}))}
                       style={{
                         width: '100%',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '14px'
+                        padding: '16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500'
                       }}
                     >
                       <option value="low">Low</option>
@@ -318,13 +328,13 @@ export default function Support() {
                     </select>
                   </div>
 
-                  <div style={{ marginBottom: '20px' }}>
+                  <div style={{ marginBottom: '24px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#1e293b',
-                      marginBottom: '8px'
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      marginBottom: '10px'
                     }}>
                       Message
                     </label>
@@ -332,14 +342,16 @@ export default function Support() {
                       value={contactForm.message}
                       onChange={(e) => setContactForm(prev => ({...prev, message: e.target.value}))}
                       required
-                      rows={6}
+                      rows={8}
                       style={{
                         width: '100%',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        resize: 'vertical'
+                        padding: '16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500',
+                        resize: 'vertical',
+                        lineHeight: '1.6'
                       }}
                       placeholder="Please describe your issue in detail..."
                     />
@@ -349,17 +361,18 @@ export default function Support() {
                     type="submit"
                     disabled={isSubmitting}
                     style={{
-                      background: isSubmitting ? '#94a3b8' : 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                      background: isSubmitting ? '#94a3b8' : '#14b8a6',
                       color: 'white',
-                      border: 'none',
-                      padding: '12px 24px',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                      border: '2px solid ' + (isSubmitting ? '#94a3b8' : '#0f766e'),
+                      padding: '18px 32px',
+                      borderRadius: '10px',
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    {isSubmitting ? 'Submitting...' : 'Submit Support Request'}
+                    {isSubmitting ? '⏳ Submitting...' : '📨 Submit Support Request'}
                   </button>
                 </form>
               </div>
@@ -369,10 +382,10 @@ export default function Support() {
             {activeTab === 'my-tickets' && (
               <div>
                 <h3 style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '600', 
-                  color: '#1e293b', 
-                  marginBottom: '20px' 
+                  fontSize: '24px', 
+                  fontWeight: '700', 
+                  color: '#0f766e', 
+                  marginBottom: '24px' 
                 }}>
                   My Support Tickets
                 </h3>

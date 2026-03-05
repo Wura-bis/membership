@@ -1,7 +1,3 @@
-
-
-# --- Create & Get Fiscal Years Lookup ---
-# Place this after app = Flask(__name__)
 import re
 import json
 from flask import request, jsonify
@@ -86,7 +82,7 @@ ALLOWED_EXTENSIONS = {
 }
 PHOTO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx'}
-SESSION_TIMEOUT = 7200  # 2 hours (instead of 30 minutes)
+SESSION_TIMEOUT = 7200  # 2 hours default (will be overridden by database setting)
 EMAIL_CONFIG = {
     'smtp_server': 'smtp.gmail.com',
     'smtp_port': 587,
@@ -106,21 +102,44 @@ from db_config import get_db_connection
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
 # Configure session to be persistent
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['SESSION_COOKIE_SECURE'] = True  # Must be True for cross-origin and HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Must be None for cross-origin
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour sessions
 CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:5173'])
 
 # Helper Functions
+def get_session_timeout_seconds():
+    """Get session timeout from database settings, with fallback to default"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT SettingValue FROM Settings WHERE SettingKey = 'sessionTimeout'")
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result and result[0]:
+            # Result is in minutes, convert to seconds
+            timeout_minutes = int(result[0])
+            return timeout_minutes * 60
+        else:
+            # Use default if not set (2 hours)
+            return SESSION_TIMEOUT
+    except Exception as e:
+        logger.warning(f"Could not load session timeout from database: {e}, using default")
+        return SESSION_TIMEOUT
+
 def check_session_timeout():
-    """Check if session has timed out - optimized"""
+    """Check if session has timed out - uses database-configured timeout"""
     if 'last_activity' not in session:
         return True
     
-    # Check timeout less frequently for better performance
+    # Get timeout from database (caches result for performance)
+    timeout_seconds = get_session_timeout_seconds()
+    
+    # Check timeout
     now = datetime.now().timestamp()
-    if now - session['last_activity'] > SESSION_TIMEOUT:
+    if now - session['last_activity'] > timeout_seconds:
         session.clear()
         return True
     
@@ -174,6 +193,41 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/fix-province-data', methods=['GET'])
+def fix_province_data():
+    """Temporary endpoint to fix provincial data in SQLite"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Find Prince Edward Island ID
+        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = 'Prince Edward Island'")
+        pe = cursor.fetchone()
+        if not pe:
+            return jsonify({'error': 'Prince Edward Island not found'}), 404
+        
+        pe_id = pe[0]
+        
+        # Update Charlottetown address
+        cursor.execute("""
+            UPDATE MemberAddress 
+            SET ProvinceID = ?, IsCurrent = 1
+            WHERE City = 'Charlottetown'
+        """, (pe_id,))
+        
+        rows_affected = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Updated {rows_affected} addresses',
+            'prince_edward_island_id': pe_id
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/dashboard-stats', methods=['GET'])
 def dashboard_stats():
     """Get dashboard statistics for the private dashboard - cached version"""
@@ -190,20 +244,30 @@ def dashboard_stats():
         # Get total members count
         cursor.execute("SELECT COUNT(*) FROM Members")
         total_members = cursor.fetchone()[0]
-        
-        # Get active members 
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1")
-        active_members = cursor.fetchone()[0]
-        
+
+        # Get counts for each category
+        categories = ['Active', 'Inactive', 'Honorary', 'Historical']
+        category_counts = {}
+        for cat in categories:
+            cursor.execute("""
+                SELECT COUNT(*) FROM Members m
+                INNER JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+                WHERE mc.CategoryName = ?
+            """, (cat,))
+            category_counts[cat] = cursor.fetchone()[0]
+
         # Get new members this month
         cursor.execute("SELECT COUNT(*) FROM Members WHERE DateJoined >= ?", (datetime.now().replace(day=1).strftime('%Y-%m-%d'),))
         new_this_month = cursor.fetchone()[0]
-        
+
         conn.close()
-        
+
         stats = {
             'totalMembers': total_members,
-            'activeMembers': active_members,
+            'activeMembers': category_counts['Active'],
+            'inactiveMembers': category_counts['Inactive'],
+            'honoraryMembers': category_counts['Honorary'],
+            'deceasedMembers': category_counts['Deceased'],
             'newThisMonth': new_this_month
         }
         
@@ -250,13 +314,13 @@ def submit_support_request():
         
         cursor.execute("""
             INSERT INTO SupportTickets (UserID, Subject, Message, Priority, Status, DateCreated)
-            VALUES (?, ?, ?, ?, 'open', NOW())
+            VALUES (?, ?, ?, ?, 'open', datetime('now'))
         """, (user_id, subject, message, priority))
         
         conn.commit()
         
-        # Get the auto-generated TicketID using @@IDENTITY (Access equivalent)
-        cursor.execute("SELECT @@IDENTITY")
+        # Get the auto-generated TicketID using LAST_INSERT_ROWID (SQLite equivalent)
+        cursor.execute("SELECT LAST_INSERT_ROWID()")
         ticket_id = cursor.fetchone()[0]
         
         # Get user details for email
@@ -427,7 +491,7 @@ def update_support_ticket(ticket_id):
         # Use the correct column names from the actual table structure
         query = """
             UPDATE SupportTickets 
-            SET Status = ?, AdminResponse = ?, AdminID = ?, DateUpdated = ?
+            SET Status = ?, AdminResponse = ?, AdminUserID = ?, DateUpdated = ?
             WHERE TicketID = ?
         """
         
@@ -518,19 +582,20 @@ def create_support_table():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Create the SupportTickets table
+        # Create the SupportTickets table with SQLite syntax
         create_table_sql = """
-        CREATE TABLE SupportTickets (
-            TicketID AUTOINCREMENT PRIMARY KEY,
-            UserID INTEGER,
-            Subject TEXT(255) NOT NULL,
-            Message MEMO NOT NULL,
-            Priority TEXT(50) DEFAULT 'normal',
-            Status TEXT(50) DEFAULT 'open',
-            DateCreated DATETIME DEFAULT NOW(),
+        CREATE TABLE IF NOT EXISTS SupportTickets (
+            TicketID INTEGER PRIMARY KEY AUTOINCREMENT,
+            UserID INTEGER NOT NULL,
+            Subject TEXT NOT NULL,
+            Message TEXT NOT NULL,
+            Priority TEXT DEFAULT 'normal',
+            Status TEXT DEFAULT 'open',
+            DateCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
             DateUpdated DATETIME,
-            AdminResponse MEMO,
-            AdminUserID INTEGER
+            AdminResponse TEXT,
+            AdminUserID INTEGER,
+            FOREIGN KEY (UserID) REFERENCES User(UserID)
         )
         """
         
@@ -687,6 +752,21 @@ def change_password_me():
     conn = get_db_connection()
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
+
+    # Ensure development test users exist (safe no-op if already present)
+    try:
+        # Only create lightweight test users for local development environments
+        dev_users = {
+            'admin': ('admin123', 'Admin'),
+            'private': ('private123', 'Private'),
+            'public': ('public123', 'Public')
+        }
+        for u, (pw, role) in dev_users.items():
+            # create_test_user is idempotent and will return True if user exists
+            create_test_user(u, pw, role, f"{u}@test.com")
+    except Exception:
+        # Do not fail login if test user provisioning errors occur
+        pass
 
     try:
         cursor = conn.cursor()
@@ -847,10 +927,15 @@ def export_my_data():
                 pdf.cell(200, 5, line, ln=True, align='L')
             
             # Generate PDF output
-            pdf_output = pdf.output(dest='S').encode('latin1')
-            
+            pdf_output = pdf.output(dest='S')
+            # FPDF >= 2.7.8 returns bytearray, older versions may return bytes or str
+            if isinstance(pdf_output, (bytearray, bytes)):
+                pdf_bytes = bytes(pdf_output)
+            else:
+                pdf_bytes = pdf_output.encode('latin1')
+
             response = Response(
-                pdf_output,
+                pdf_bytes,
                 mimetype='application/pdf',
                 headers={
                     'Content-Disposition': f'attachment; filename=my-personal-data-{datetime.now().strftime("%Y%m%d")}.pdf',
@@ -882,7 +967,7 @@ def download_user_guide():
                 
                 # Get basic stats with error handling for each query
                 try:
-                    cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1")
+                    cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '1' OR IsActive = 1")
                     row = cursor.fetchone()
                     active_members = row[0] if row else 0
                 except:
@@ -1007,7 +1092,7 @@ def download_user_guide():
             "THREE MAIN USER ROLES:",
             "",
             "PUBLIC USERS:",
-            "- View deceased member directories",
+            "- View historical member directories",
             "- Access public statistics",
             "- Submit support requests",
             "",
@@ -1089,10 +1174,15 @@ def download_user_guide():
         pdf.cell(200, 6, "For latest information, please refer to the live system.", ln=True, align='C')
         
         # Generate PDF output
-        pdf_output = pdf.output(dest='S').encode('latin1')
-        
+        pdf_output = pdf.output(dest='S')
+        # FPDF >= 2.7.8 returns bytearray, older versions may return bytes or str
+        if isinstance(pdf_output, (bytearray, bytes)):
+            pdf_bytes = bytes(pdf_output)
+        else:
+            pdf_bytes = pdf_output.encode('latin1')
+
         response = Response(
-            pdf_output,
+            pdf_bytes,
             mimetype='application/pdf',
             headers={
                 'Content-Disposition': f'attachment; filename=user-guide-{datetime.now().strftime("%Y%m%d")}.pdf',
@@ -1139,7 +1229,7 @@ def download_user_guide():
         
         roles = [
             ("Public Users", [
-                "• View deceased/inactive member records only",
+                "• View inactive/historical member records only",
                 "• Access public dashboard and statistics", 
                 "• Submit support tickets",
                 "• No registration approval required"
@@ -1439,20 +1529,7 @@ def login():
     if not username or not password:
         return jsonify({'error': 'Username and password required'}), 400
 
-    # Auto-create test users for development
-    if username in ['admin', 'private', 'public']:
-        test_passwords = {
-            'admin': 'admin123',
-            'private': 'private123',
-            'public': 'public123'
-        }
-        if password == test_passwords.get(username):
-            role_map = {
-                'admin': 'Admin',
-                'private': 'Private',
-                'public': 'Public'
-            }
-            create_test_user(username, password, role_map[username], f"{username}@test.com")
+    # Development helper: test users will be ensured after DB connection (do not create here)
 
     conn = get_db_connection()
     if not conn:
@@ -1468,8 +1545,64 @@ def login():
         cursor.execute("""
             SELECT UserID, Username, Email, Role, IsApproved, FirstName, "Last Name"
             FROM User
-            WHERE (Username = ? OR Email = ?) AND PasswordHash = ? AND IsApproved = 1
+            WHERE (Username = ? OR Email = ?) AND PasswordHash = ?
         """, (username, username, hashed_password))
+
+        user = cursor.fetchone()
+
+        # Allow login for:
+        # - Role is 'public' (case-insensitive), regardless of IsApproved
+        # - Role is 'private' and IsApproved == 1
+        # - Role is 'private' and IsApproved == 0, but treat as 'public' for login
+        # - Role is 'admin' and IsApproved == 1
+        if user:
+            role = str(user[3]).lower() if user[3] else ''
+            is_approved = int(user[4]) if user[4] is not None else 0
+            effective_role = role
+            if role == 'private' and is_approved == 0:
+                effective_role = 'public'  # treat as public until approved
+            if effective_role == 'public' or (role == 'private' and is_approved == 1) or (role == 'admin' and is_approved == 1):
+                logger.info(f"User {user[1]} logged in successfully (effective role: {effective_role})")
+                cursor.execute("""
+                    UPDATE User
+                    SET LastLogin = ?
+                    WHERE UserID = ?
+                """, (datetime.now(), user[0]))
+                conn.commit()
+                # Ensure user_id is set and not None
+                if user[0] is not None:
+                    session['user_id'] = user[0]
+                else:
+                    # Try to fetch user ID by username/email if missing (should not happen)
+                    cursor.execute("SELECT UserID FROM User WHERE Username = ? OR Email = ?", (user[1], user[2]))
+                    user_id_row = cursor.fetchone()
+                    session['user_id'] = user_id_row[0] if user_id_row else None
+                session['username'] = user[1]
+                session['email'] = user[2]
+                session['user_role'] = effective_role
+                session['first_name'] = user[5]
+                session['last_name'] = user[6]
+                session['last_activity'] = datetime.now().timestamp()
+                session.permanent = True
+                try:
+                    log_audit_event_async(user[0], 'LOGIN', 'User', user[0], f'User {username} logged in')
+                except Exception:
+                    pass  # Don't fail login if audit logging fails
+                return jsonify({
+                    'success': True,
+                    'user': {
+                        'id': user[0],
+                        'username': user[1],
+                        'email': user[2],
+                        'role': effective_role,
+                        'firstName': user[5],
+                        'lastName': user[6]
+                    }
+                })
+            else:
+                return jsonify({'error': 'Account not approved for private/admin access'}), 403
+        else:
+            return jsonify({'error': 'Invalid credentials'}), 401
 
         user = cursor.fetchone()
 
@@ -1537,7 +1670,8 @@ def logout():
 
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
-
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
     return jsonify({'success': True, 'message': 'Session refreshed'})
 
 # Enhanced Dashboard Routes
@@ -1555,11 +1689,11 @@ def get_dashboard():
         cursor = conn.cursor()
 
         # Basic stats
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '1' OR IsActive = 1")
         row = cursor.fetchone()
         active_members = row[0] if row is not None else 0
 
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 0")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '0' OR IsActive = 0")
         row = cursor.fetchone()
         inactive_members = row[0] if row is not None else 0
 
@@ -1571,7 +1705,7 @@ def get_dashboard():
             # Society table doesn't exist, set to 0
             total_societies = 0
 
-        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = 1")
+        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = '1' OR IsApproved = 1")
         row = cursor.fetchone()
         active_users = row[0] if row is not None else 0
 
@@ -1584,7 +1718,7 @@ def get_dashboard():
         recent_members = row[0] if row is not None else 0
 
         # Pending approvals
-        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = 0")
+        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = '0' OR IsApproved = 0")
         row = cursor.fetchone()
         pending_approvals = row[0] if row is not None else 0
 
@@ -1600,19 +1734,31 @@ def get_dashboard():
         categories = [{'name': row[0], 'count': row[1]}
                       for row in cursor.fetchall()]
 
-        # Members by province (from addresses) - Province column doesn't exist, so count by city instead
+        # Members by province/state and country (using Provinces table)
         cursor.execute("""
-            SELECT ma.City, COUNT(DISTINCT m.MemberID) as Count
-            FROM MemberAddress ma, Members m
-            WHERE ma.MemberID = m.MemberID 
-            AND ma.IsCurrent = 1
-            AND m.IsActive = 1
-            AND ma.City IS NOT NULL
-            GROUP BY ma.City
+            SELECT
+                p.ProvinceName,
+                p.CountryName,
+                p.CountryCode,
+                COUNT(DISTINCT m.MemberID) as Count
+            FROM MemberAddress ma
+            JOIN Members m ON ma.MemberID = m.MemberID
+            JOIN Provinces p ON ma.ProvinceID = p.ProvinceID
+            WHERE ma.IsCurrent = 1
+              AND m.IsActive = 1
+              AND ma.ProvinceID IS NOT NULL
+            GROUP BY p.ProvinceName, p.CountryName, p.CountryCode
             ORDER BY Count DESC
         """)
-        counties = [{'name': row[0], 'count': row[1]}
-                    for row in cursor.fetchall()]
+        provinces = [
+            {
+                'province': row[0],
+                'country': row[1],
+                'countryCode': row[2],
+                'count': row[3]
+            }
+            for row in cursor.fetchall()
+        ]
 
         # Membership growth over time (last 12 months)
         cursor.execute("""
@@ -1676,6 +1822,7 @@ def get_dashboard():
             reverse=True)
         recent_activity = recent_activity[:10]
 
+
         dashboard_data = {
             'stats': {
                 'activeMembers': active_members,
@@ -1687,7 +1834,7 @@ def get_dashboard():
             },
             'charts': {
                 'membersByCategory': categories,
-                'membersByCounty': counties,
+                'membersByProvince': provinces,
                 'membershipGrowth': growth_data
             },
             'recentActivity': recent_activity
@@ -1713,7 +1860,7 @@ def get_pending_users():
         cursor.execute("""
             SELECT UserID, Username, FirstName, "Last Name", Email, Role, CreatedAt
             FROM User
-            WHERE IsApproved = 0
+            WHERE IsApproved = '0' OR IsApproved = 0
         """)
         
         users = []
@@ -1756,9 +1903,9 @@ def update_user_approval():
                 UPDATE User SET IsApproved = 1 WHERE UserID = ?
             """, (user_id,))
         elif action == "reject":
-            # Delete the unapproved user
+            # Revert user to public status and not approved
             cursor.execute("""
-                DELETE FROM User WHERE UserID = ?
+                UPDATE User SET Role = 'public', IsApproved = 0 WHERE UserID = ?
             """, (user_id,))
         else:
             return jsonify({"error": "Invalid action"}), 400
@@ -1953,23 +2100,21 @@ def get_members():
     try:
         cursor = conn.cursor()
 
-        # Base query using MS Access JOIN syntax - back to original working version
+        # Base query - get county from IrishConnectionByCounty table (where actual county data is stored)
         query = """
             SELECT 
                 m.MemberID, m.FirstName, m.LastName, 
                 m.[Place of Birth], m.[Date of Birth],
-                m.IsActive, mc.CategoryName, ic.CountyName,
+                m.IsActive, mc.CategoryName, 
                 m.DateJoined, m.DateEnded
-            FROM 
-                (Members AS m 
-                LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
-                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            FROM Members AS m 
+            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
         """
 
         # Role-based filtering - all users must be logged in
         if user_role == 'public':
-            # Public users - only show inactive/deceased members
-            query += " WHERE m.IsActive = False"
+            # Public users - only show historical members (CategoryID = 2)
+            query += " WHERE mc.CategoryID = 2"
         elif user_role in ['private', 'admin']:
             # Private/Admin - show all members
             pass
@@ -1983,13 +2128,29 @@ def get_members():
         for row in cursor.fetchall():
             member_id = row[0]
             
+            # Get county from IrishConnectionByCounty table (primary Irish ancestry link)
+            county_name = ""
+            try:
+                cursor.execute("""
+                    SELECT ic.CountyName
+                    FROM IrishConnectionByCounty AS iconn
+                    LEFT JOIN IrishCounties AS ic ON iconn.CountyID = ic.CountyID
+                    WHERE iconn.MemberID = ?
+                    LIMIT 1
+                """, (str(member_id),))
+                county_row = cursor.fetchone()
+                if county_row and county_row[0]:
+                    county_name = county_row[0]
+            except:
+                county_name = ""
+            
             # Get address info with simple query
             address_info = ""
             try:
                 cursor.execute("""
                     SELECT Street, City 
                     FROM MemberAddress 
-                    WHERE MemberID = ? AND IsCurrent = True
+                    WHERE MemberID = ? AND IsCurrent = 1
                 """, (member_id,))
                 addr_row = cursor.fetchone()
                 if addr_row:
@@ -1998,18 +2159,21 @@ def get_members():
             except:
                 address_info = ""
                 
-            # Get role info with simple query
+            # Get role info from MemberRole and Role tables
             role_info = ""
             try:
                 cursor.execute("""
-                    SELECT Role 
-                    FROM Users 
-                    WHERE MemberID = ?
+                    SELECT r.RoleName
+                    FROM MemberRole mr
+                    LEFT JOIN Role r ON mr.RoleID = r.RoleID
+                    WHERE mr.MemberID = ?
+                    ORDER BY mr.FiscalYearID DESC
                 """, (member_id,))
                 role_row = cursor.fetchone()
                 if role_row:
                     role_info = role_row[0]
-            except:
+            except Exception as e:
+                print(f"DEBUG: Role query failed for member {member_id}: {e}")
                 role_info = ""
             
             member_data = {
@@ -2020,10 +2184,10 @@ def get_members():
                 'dateOfBirth': row[4].strftime('%Y-%m-%d') if row[4] and hasattr(row[4], 'strftime') else str(row[4]) if row[4] else None,
                 'isActive': row[5] == 1 or row[5] == '1' or row[5] == 'True',
                 'category': row[6],
-                'county': row[7],
-                'dateJoined': row[8].strftime('%Y-%m-%d') if row[8] and hasattr(row[8], 'strftime') else str(row[8]) if row[8] else None,
-                'dateEnded': row[9].strftime('%Y-%m-%d') if row[9] and hasattr(row[9], 'strftime') else str(row[9]) if row[9] else None,
-                'membershipYears': calculate_membership_years(row[8], row[9]) if row[8] else None,
+                'county': county_name,  # Fetched from IrishConnectionByCounty table
+                'dateJoined': row[7].strftime('%Y-%m-%d') if row[7] and hasattr(row[7], 'strftime') else str(row[7]) if row[7] else None,
+                'dateEnded': row[8].strftime('%Y-%m-%d') if row[8] and hasattr(row[8], 'strftime') else str(row[8]) if row[8] else None,
+                'membershipYears': calculate_membership_years(row[7], row[8]) if row[7] else None,
                 'address': address_info,
                 'role': role_info
             }
@@ -2040,32 +2204,33 @@ def calculate_membership_years(date_joined, date_ended):
     """Calculate the number of years between join and end dates"""
     if not date_joined:
         return None
-    
-    # Convert string dates to datetime objects if needed
-    if isinstance(date_joined, str):
-        try:
-            date_joined = datetime.fromisoformat(date_joined.replace('Z', ''))
-        except (ValueError, AttributeError):
-            try:
-                date_joined = datetime.strptime(date_joined, '%Y-%m-%d')
-            except (ValueError, AttributeError):
-                return None
-    
-    if date_ended:
-        if isinstance(date_ended, str):
-            try:
-                date_ended = datetime.fromisoformat(date_ended.replace('Z', ''))
-            except (ValueError, AttributeError):
+
+    def to_datetime(d):
+        if d is None:
+            return None
+        if isinstance(d, datetime):
+            return d
+        if hasattr(d, 'year') and not isinstance(d, datetime):
+            # It's a date object — convert to datetime
+            return datetime(d.year, d.month, d.day)
+        if isinstance(d, str):
+            for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
                 try:
-                    date_ended = datetime.strptime(date_ended, '%Y-%m-%d')
-                except (ValueError, AttributeError):
-                    date_ended = datetime.now()
-        end_date = date_ended
-    else:
+                    return datetime.strptime(d[:19], fmt)
+                except ValueError:
+                    continue
+        return None
+
+    date_joined = to_datetime(date_joined)
+    if not date_joined:
+        return None
+
+    end_date = to_datetime(date_ended) if date_ended else datetime.now()
+    if not end_date:
         end_date = datetime.now()
-    
+
     delta = end_date - date_joined
-    return round(delta.days / 365.25)  # Account for leap years
+    return round(delta.days / 365.25)
 
 
 
@@ -2155,10 +2320,12 @@ def get_member(member_id):
         address_query = """
             SELECT 
                 ma.MemberAddressID, ma.Street, ma.City, 
-                ma.ProvinceID, ma.CountryID, ma.PostalCode, 
+                ma.ProvinceID, p.ProvinceName,
+                ma.CountryID, ma.PostalCode, 
                 ma.FiscalYearID, fy.YearLabel, ma.IsCurrent
             FROM MemberAddress AS ma
             LEFT JOIN FiscalYear AS fy ON ma.FiscalYearID = fy.FiscalYearID
+            LEFT JOIN Provinces AS p ON ma.ProvinceID = p.ProvinceID
             WHERE ma.MemberID = ?
             ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC
         """
@@ -2168,15 +2335,12 @@ def get_member(member_id):
         
         addresses = []
         for addr in address_rows:
-            # Handle province and country with fallbacks for common cases
-            province_name = ''
+            # Get province name from database
+            province_name = addr[4] or ''
+            
+            # Handle country - 0 typically means Canada for historical data
             country_name = ''
-            
-            # Add fallbacks for common Canadian addresses
-            if addr[2] == 'Charlottetown':  # PEI capital
-                province_name = 'Prince Edward Island'
-            
-            if addr[4] == '0' or addr[4] == 0:  # Country ID 0 likely means Canada
+            if addr[5] == '0' or addr[5] == 0:
                 country_name = 'Canada'
             
             addresses.append({
@@ -2186,14 +2350,14 @@ def get_member(member_id):
                 'addressLine2': '',  # Not in database
                 'city': addr[2] or '',
                 'provinceID': addr[3],
-                'province': province_name,  # Province name from fallback logic
-                'countryID': addr[4], 
+                'province': province_name,  # Province name from database
+                'countryID': addr[5], 
                 'country': country_name,  # Country name from fallback logic
-                'postalCode': addr[5] or '',
-                'fiscalYearID': addr[6],
-                'yearLabel': addr[7] or '',  # Frontend expects yearLabel
-                'fiscalYear': addr[7] or '',  # Keep both for compatibility
-                'isCurrent': bool(addr[8])
+                'postalCode': addr[6] or '',
+                'fiscalYearID': addr[7],
+                'yearLabel': addr[8] or '',  # Frontend expects yearLabel
+                'fiscalYear': addr[8] or '',  # Keep both for compatibility
+                'isCurrent': bool(addr[9])
             })
         
         member_data['addresses'] = addresses
@@ -2274,12 +2438,60 @@ def get_member(member_id):
         
         member_data['irishConnections'] = irish_connections
 
+        # 5. GET PHONE NUMBERS
+        cursor.execute("""
+            SELECT PhoneID, PhoneType, PhoneNumber, IsPreferred
+            FROM MemberPhoneNumbers
+            WHERE MemberID = ?
+            ORDER BY IsPreferred DESC, PhoneType ASC
+        """, (member_id,))
+        
+        phone_rows = cursor.fetchall()
+        phones = []
+        for phone in phone_rows:
+            phones.append({
+                'phoneId': phone[0],
+                'type': phone[1],
+                'number': phone[2],
+                'isPreferred': bool(phone[3])
+            })
+        
+        member_data['phoneNumbers'] = phones
+
+        # 6. GET VOLUNTEERING INTERESTS
+        cursor.execute("""
+            SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'
+        """)
+        field_result = cursor.fetchone()
+        volunteering_interests = []
+        
+        if field_result:
+            field_id = field_result[0]
+            cursor.execute("""
+                SELECT ValueText FROM UserDefinedFieldValue
+                WHERE FieldID = ? AND MemberID = ?
+                ORDER BY ValueText ASC
+            """, (field_id, member_id))
+            
+            interest_rows = cursor.fetchall()
+            for interest in interest_rows:
+                if interest[0]:
+                    volunteering_interests.append(interest[0])
+        
+        member_data['volunteeringInterests'] = volunteering_interests
+
         print(f'DEBUG: Successfully built member data for {member_id}')
         print(f'DEBUG: Member county: {member_data.get("county")}')
         print(f'DEBUG: Member surname: {member_data.get("surname")}')
         print(f'DEBUG: Member addresses count: {len(member_data.get("addresses", []))}')
         print(f'DEBUG: Irish connections count: {len(irish_connections)}')
+        print(f'DEBUG: Phone numbers count: {len(phones)}')
+        print(f'DEBUG: Volunteering interests count: {len(volunteering_interests)}')
         print(f'DEBUG: Role fiscal years count: {len(member_data.get("roleFiscalYears", []))}')
+        
+        # Add category alias for frontend compatibility
+        member_data['category'] = member_data.get('memberCategory', '')
+        
         return jsonify(member_data)
 
     except Exception as e:
@@ -2366,11 +2578,9 @@ def create_member():
             datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         ))
 
+        member_id = cursor.lastrowid
         conn.commit()
 
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        member_id = row[0] if row is not None else None
         if member_id is None:
             return jsonify({'error': 'Failed to retrieve new member ID'}), 500
 
@@ -2440,6 +2650,34 @@ def create_member():
                         INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
                         VALUES (?, ?, ?)
                     """, (member_id, role_id, fiscal_year_id))
+
+        # Handle multiple phone numbers
+        if 'phoneNumbers' in data and data['phoneNumbers']:
+            for phone in data['phoneNumbers']:
+                phone_type = phone.get('type', 'Other')
+                phone_number = phone.get('number')
+                is_preferred = phone.get('isPreferred', False)
+                
+                if phone_number and phone_type in ['Home', 'Cell', 'Work', 'Other']:
+                    cursor.execute("""
+                        INSERT INTO MemberPhoneNumbers (MemberID, PhoneType, PhoneNumber, IsPreferred)
+                        VALUES (?, ?, ?, ?)
+                    """, (member_id, phone_type, phone_number, is_preferred))
+
+        # Handle volunteering interests
+        if 'volunteeringInterests' in data and data['volunteeringInterests']:
+            cursor.execute("""
+                SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'
+            """)
+            field_result = cursor.fetchone()
+            if field_result:
+                field_id = field_result[0]
+                for interest in data['volunteeringInterests']:
+                    if interest:  # Only insert non-empty interests
+                        cursor.execute("""
+                            INSERT INTO UserDefinedFieldValue (FieldID, MemberID, ValueText)
+                            VALUES (?, ?, ?)
+                        """, (field_id, member_id, interest))
 
         conn.commit()
 
@@ -2658,6 +2896,44 @@ def update_member(member_id):
                     print(f"DEBUG: Skipped role assignment - missing role_id or fiscal_year_id")
         else:
             print("DEBUG: No roleFiscalYears in data")
+
+        # Handle phone numbers - clear existing and add new
+        if 'phoneNumbers' in data:
+            # Delete existing phone numbers
+            cursor.execute("DELETE FROM MemberPhoneNumbers WHERE MemberID = ?", (member_id,))
+            
+            # Add new phone numbers
+            for phone in data['phoneNumbers']:
+                phone_type = phone.get('type', 'Other')
+                phone_number = phone.get('number')
+                is_preferred = phone.get('isPreferred', False)
+                
+                if phone_number and phone_type in ['Home', 'Cell', 'Work', 'Other']:
+                    cursor.execute("""
+                        INSERT INTO MemberPhoneNumbers (MemberID, PhoneType, PhoneNumber, IsPreferred)
+                        VALUES (?, ?, ?, ?)
+                    """, (member_id, phone_type, phone_number, is_preferred))
+
+        # Handle volunteering interests - clear existing and add new
+        if 'volunteeringInterests' in data:
+            cursor.execute("""
+                SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'
+            """)
+            field_result = cursor.fetchone()
+            if field_result:
+                field_id = field_result[0]
+                # Delete existing interests
+                cursor.execute("""
+                    DELETE FROM UserDefinedFieldValue WHERE FieldID = ? AND MemberID = ?
+                """, (field_id, member_id))
+                
+                # Add new interests
+                for interest in data['volunteeringInterests']:
+                    if interest:
+                        cursor.execute("""
+                            INSERT INTO UserDefinedFieldValue (FieldID, MemberID, ValueText)
+                            VALUES (?, ?, ?)
+                        """, (field_id, member_id, interest))
 
         # Log audit event (before commit, but don't let it fail the transaction)
         try:
@@ -3433,7 +3709,7 @@ def get_notifications():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT NotificationID, Message, DateCreated, IsRead
-            FROM Notifications
+            FROM Notification
             WHERE UserID = ?
             ORDER BY DateCreated DESC
         """, (user_id,))
@@ -3489,8 +3765,8 @@ def create_notification(user_id, message, notif_type="system"):
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Notifications (UserID, Message, Type, DateCreated, IsRead)
-            VALUES (?, ?, ?, ?, False)
+            INSERT INTO Notification (UserID, Message, Type, DateCreated, IsRead)
+            VALUES (?, ?, ?, ?, 0)
         """, (user_id, message, notif_type, datetime.now()))
         conn.commit()
     except Exception as e:
@@ -3508,26 +3784,58 @@ def export_members_csv():
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT m.FirstName, m.LastName, m.Email, m.PhoneNumber, 
+            SELECT m.MemberID, m.FirstName, m.LastName, m.Email, 
                    m.[Place of Birth], m.[Date of Birth], m.DateJoined, m.IsActive, 
                    mc.CategoryName, ic.CountyName 
             FROM (Members m 
             LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID) 
             LEFT JOIN IrishCounties ic ON m.CountyID = ic.CountyID
+            ORDER BY m.FirstName, m.LastName
         """)
+        
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(['First Name',
                          'Last Name',
                          'Email',
-                         'Phone',
+                         'Phone (Primary)',
+                         'Phone (Cell)',
+                         'Phone (Home)',
+                         'Phone (Work)',
+                         'Phone (Other)',
                          'Place of Birth',
                          'Date of Birth',
                          'Date Joined',
                          'Active',
                          'Category',
                          'County'])
+        
         for row in cursor.fetchall():
+            member_id = row[0]
+            
+            # Get all phone numbers for this member
+            cursor.execute("""
+                SELECT PhoneType, PhoneNumber, IsPreferred
+                FROM MemberPhoneNumbers
+                WHERE MemberID = ?
+                ORDER BY IsPreferred DESC, PhoneType ASC
+            """, (member_id,))
+            
+            phones = cursor.fetchall()
+            phone_dict = {}
+            primary_phone = ''
+            
+            for phone in phones:
+                phone_type = phone[0]
+                phone_number = phone[1]
+                is_preferred = phone[2]
+                
+                if is_preferred:
+                    primary_phone = phone_number
+                
+                if phone_type not in phone_dict:
+                    phone_dict[phone_type] = phone_number
+            
             # Helper function to format dates safely
             def format_date_safe(date_value):
                 if not date_value:
@@ -3538,10 +3846,14 @@ def export_members_csv():
                     return str(date_value)
             
             writer.writerow([
-                row[0] or '',  # FirstName
-                row[1] or '',  # LastName
-                row[2] or '',  # Email
-                row[3] or '',  # PhoneNumber
+                row[1] or '',  # FirstName
+                row[2] or '',  # LastName
+                row[3] or '',  # Email
+                primary_phone or '',  # Phone (Primary)
+                phone_dict.get('Cell', ''),  # Phone (Cell)
+                phone_dict.get('Home', ''),  # Phone (Home)
+                phone_dict.get('Work', ''),  # Phone (Work)
+                phone_dict.get('Other', ''),  # Phone (Other)
                 row[4] or '',  # Place of Birth
                 format_date_safe(row[5]),  # Date of Birth
                 format_date_safe(row[6]),  # DateJoined
@@ -3549,6 +3861,7 @@ def export_members_csv():
                 row[8] or '',  # CategoryName
                 row[9] or ''   # CountyName
             ])
+        
         output.seek(0)
         return Response(output, mimetype='text/csv', headers={
             "Content-Disposition": "attachment;filename=members.csv"
@@ -3569,12 +3882,13 @@ def export_members_pdf():
     try:
         cursor = conn.cursor()
         query = """
-            SELECT m.FirstName, m.LastName, m.Email, m.PhoneNumber, 
-                   m.Place of Birth, m.Date of Birth, m.DateJoined, m.IsActive, 
+            SELECT m.MemberID, m.FirstName, m.LastName, m.Email,
+                   m.[Place of Birth], m.[Date of Birth], m.DateJoined, m.IsActive, 
                    mc.CategoryName, ic.CountyName 
             FROM (Members m 
             LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID) 
             LEFT JOIN IrishCounties ic ON m.CountyID = ic.CountyID
+            ORDER BY m.FirstName, m.LastName
         """
         values = []
         if category_filter:
@@ -3611,13 +3925,33 @@ def export_members_pdf():
                 
                 pdf.set_font("Arial", size=10)
                 for i, row in enumerate(all_rows, 1):
-                    full_name = f"{row[0] or ''} {row[1] or ''}".strip()
-                    email = row[2] or 'No email'
-                    phone = row[3] or 'No phone'
+                    member_id = row[0]
+                    full_name = f"{row[1] or ''} {row[2] or ''}".strip()
+                    email = row[3] or 'No email'
                     category = row[8] or 'No category'
                     county = row[9] or 'No county'
                     active_status = 'Active' if row[7] else 'Inactive'
-                    joined = row[6].strftime('%Y-%m-%d') if row[6] else 'Unknown'
+                    joined = row[6] if row[6] else 'Unknown'
+                    
+                    # Get all phone numbers for this member
+                    cursor.execute("""
+                        SELECT PhoneType, PhoneNumber, IsPreferred
+                        FROM MemberPhoneNumbers
+                        WHERE MemberID = ?
+                        ORDER BY IsPreferred DESC, PhoneType ASC
+                    """, (member_id,))
+                    
+                    phones = cursor.fetchall()
+                    phone_display = 'No phone'
+                    if phones:
+                        phone_strs = []
+                        for phone in phones:
+                            phone_type = phone[0]
+                            phone_num = phone[1]
+                            is_pref = phone[2]
+                            pref_marker = ' (Primary)' if is_pref else ''
+                            phone_strs.append(f"{phone_type}: {phone_num}{pref_marker}")
+                        phone_display = ', '.join(phone_strs)
                     
                     # Member entry
                     pdf.set_font("Arial", 'B', 11)
@@ -3625,7 +3959,7 @@ def export_members_pdf():
                     
                     pdf.set_font("Arial", size=9)
                     pdf.cell(200, 5, f"   Email: {email}", ln=True, align='L')
-                    pdf.cell(200, 5, f"   Phone: {phone}", ln=True, align='L')
+                    pdf.cell(200, 5, f"   Phone: {phone_display}", ln=True, align='L')
                     pdf.cell(200, 5, f"   Category: {category} | County: {county}", ln=True, align='L')
                     pdf.cell(200, 5, f"   Status: {active_status} | Joined: {joined}", ln=True, align='L')
                     pdf.ln(3)
@@ -3866,12 +4200,11 @@ def export_member_csv(member_id):
         # Get member details with simple query
         cursor.execute("""
             SELECT 
-                m.FirstName, m.LastName, m.Place of Birth, m.Date of Birth,
+                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
                 m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
-            FROM 
-                (Members AS m 
-                LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
-                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            FROM Members AS m 
+            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
             WHERE m.MemberID = ?
         """, (member_id,))
         
@@ -3891,6 +4224,19 @@ def export_member_csv(member_id):
         except:
             pass
 
+        # Get phone numbers
+        phone_rows = []
+        try:
+            cursor.execute("""
+                SELECT PhoneType, PhoneNumber, IsPreferred
+                FROM MemberPhoneNumbers
+                WHERE MemberID = ?
+                ORDER BY IsPreferred DESC, PhoneType ASC
+            """, (member_id,))
+            phone_rows = cursor.fetchall()
+        except:
+            pass
+
         # Get user account info with simple query
         user_row = None
         try:
@@ -3906,6 +4252,15 @@ def export_member_csv(member_id):
         output = io.StringIO()
         writer = csv.writer(output)
         
+        # Helper function to format dates safely
+        def format_date_safe(date_value):
+            if not date_value:
+                return ''
+            if hasattr(date_value, 'strftime'):
+                return date_value.strftime('%Y-%m-%d')
+            else:
+                return str(date_value)
+        
         # Write header
         writer.writerow(['Field', 'Value'])
         
@@ -3913,12 +4268,26 @@ def export_member_csv(member_id):
         writer.writerow(['First Name', row[0] or ''])
         writer.writerow(['Last Name', row[1] or ''])
         writer.writerow(['Place of Birth', row[2] or ''])
-        writer.writerow(['Date of Birth', row[3].strftime('%Y-%m-%d') if row[3] else ''])
-        writer.writerow(['Date Joined', row[4].strftime('%Y-%m-%d') if row[4] else ''])
-        writer.writerow(['Date Ended', row[5].strftime('%Y-%m-%d') if row[5] else ''])
+        writer.writerow(['Date of Birth', format_date_safe(row[3])])
+        writer.writerow(['Date Joined', format_date_safe(row[4])])
+        writer.writerow(['Date Ended', format_date_safe(row[5])])
         writer.writerow(['Active', 'Yes' if row[6] else 'No'])
         writer.writerow(['Category', row[7] or ''])
         writer.writerow(['County', row[8] or ''])
+        
+        # Write phone numbers
+        if phone_rows:
+            writer.writerow(['', ''])  # Blank row
+            writer.writerow(['Phone Numbers', ''])
+            for phone in phone_rows:
+                phone_type = phone[0]
+                phone_num = phone[1]
+                is_pref = ' (Primary)' if phone[2] else ''
+                writer.writerow([f'  {phone_type}', f'{phone_num}{is_pref}'])
+        else:
+            writer.writerow(['Phone Numbers', 'None'])
+        
+        writer.writerow(['', ''])  # Blank row
         writer.writerow(['Street', address_row[0] if address_row else ''])
         writer.writerow(['City', address_row[1] if address_row else ''])
         writer.writerow(['Postal Code', address_row[2] if address_row else ''])
@@ -3952,12 +4321,11 @@ def export_member_pdf(member_id):
         # Get member details with simple query
         cursor.execute("""
             SELECT 
-                m.FirstName, m.LastName, m.Place of Birth, m.Date of Birth,
+                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
                 m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
-            FROM 
-                (Members AS m 
-                LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID)
-                LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
+            FROM Members AS m 
+            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
             WHERE m.MemberID = ?
         """, (member_id,))
         
@@ -3977,6 +4345,19 @@ def export_member_pdf(member_id):
         except:
             pass
 
+        # Get phone numbers
+        phone_rows = []
+        try:
+            cursor.execute("""
+                SELECT PhoneType, PhoneNumber, IsPreferred
+                FROM MemberPhoneNumbers
+                WHERE MemberID = ?
+                ORDER BY IsPreferred DESC, PhoneType ASC
+            """, (member_id,))
+            phone_rows = cursor.fetchall()
+        except:
+            pass
+
         # Get user account info with simple query
         user_row = None
         try:
@@ -3991,44 +4372,101 @@ def export_member_pdf(member_id):
 
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font('Arial', 'B', 16)
-        pdf.cell(0, 10, f'Member Information: {row[0]} {row[1]}', ln=True, align='C')
+        pdf.set_font('Helvetica', 'B', 16)
+        title = f'Member Information: {row[0] or ""} {row[1] or ""}'
+        pdf.cell(0, 10, title, ln=True, align='C')
         pdf.ln(10)
         
-        pdf.set_font('Arial', '', 12)
+        pdf.set_font('Helvetica', '', 12)
+        
+        # Helper function to format dates safely
+        def format_date_safe(date_value):
+            if not date_value:
+                return 'N/A'
+            if hasattr(date_value, 'strftime'):
+                return date_value.strftime('%Y-%m-%d')
+            else:
+                return str(date_value)
         
         # Member details
         fields = [
             ('First Name', row[0]),
             ('Last Name', row[1]), 
             ('Place of Birth', row[2]),
-            ('Date of Birth', row[3].strftime('%Y-%m-%d') if row[3] else 'N/A'),
-            ('Date Joined', row[4].strftime('%Y-%m-%d') if row[4] else 'N/A'),
-            ('Date Ended', row[5].strftime('%Y-%m-%d') if row[5] else 'N/A'),
+            ('Date of Birth', format_date_safe(row[3])),
+            ('Date Joined', format_date_safe(row[4])),
+            ('Date Ended', format_date_safe(row[5])),
             ('Status', 'Active' if row[6] else 'Inactive'),
             ('Category', row[7] or 'N/A'),
             ('County', row[8] or 'N/A'),
-            ('Street Address', address_row[0] if address_row else 'N/A'),
-            ('City', address_row[1] if address_row else 'N/A'),
-            ('Postal Code', address_row[2] if address_row else 'N/A'),
-            ('Username', user_row[0] if user_row else 'N/A'),
-            ('Role', user_row[1] if user_row else 'N/A'),
-            ('Email', user_row[2] if user_row else 'N/A')
         ]
         
         for field, value in fields:
             pdf.cell(50, 8, f'{field}:', 0, 0)
             pdf.cell(0, 8, str(value or 'N/A'), 0, 1)
+        
+        # Phone numbers
+        pdf.ln(5)
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, 'Phone Numbers:', 0, 1)
+        pdf.set_font('Helvetica', '', 11)
+        
+        if phone_rows:
+            for phone in phone_rows:
+                phone_type = phone[0]
+                phone_num = phone[1]
+                is_pref = ' (Primary)' if phone[2] else ''
+                pdf.cell(50, 7, f'  {phone_type}:', 0, 0)
+                pdf.cell(0, 7, f'{phone_num}{is_pref}', 0, 1)
+        else:
+            pdf.cell(0, 7, '  No phone numbers', 0, 1)
+        
+        # Address info
+        pdf.ln(5)
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 8, 'Address:', 0, 1)
+        pdf.set_font('Helvetica', '', 11)
+        address_fields = [
+            ('Street', address_row[0] if address_row else 'N/A'),
+            ('City', address_row[1] if address_row else 'N/A'),
+            ('Postal Code', address_row[2] if address_row else 'N/A'),
+        ]
+        for field, value in address_fields:
+            pdf.cell(50, 7, f'  {field}:', 0, 0)
+            pdf.cell(0, 7, str(value or 'N/A'), 0, 1)
+        
+        # User account info
+        if user_row:
+            pdf.ln(5)
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.cell(0, 8, 'Account Information:', 0, 1)
+            pdf.set_font('Helvetica', '', 11)
+            user_fields = [
+                ('Username', user_row[0]),
+                ('Role', user_row[1]),
+                ('Email', user_row[2])
+            ]
+            for field, value in user_fields:
+                pdf.cell(50, 7, f'  {field}:', 0, 0)
+                pdf.cell(0, 7, str(value or 'N/A'), 0, 1)
             
-        pdf_bytes = pdf.output(dest='S')
-        if isinstance(pdf_bytes, bytearray):
-            pdf_bytes = bytes(pdf_bytes)
+        # Generate PDF and get bytes
+        pdf_output = pdf.output(dest='S')
+        if isinstance(pdf_output, str):
+            pdf_bytes = pdf_output.encode('latin-1')
+        else:
+            pdf_bytes = pdf_output
         
         filename = f"member_{row[0]}_{row[1]}.pdf".replace(' ', '_')
-        response = Response(pdf_bytes)
-        response.headers.set('Content-Disposition', 'attachment', filename=filename)
-        response.headers.set('Content-Type', 'application/pdf')
-        return response
+        
+        # Use BytesIO for Flask send_file
+        pdf_io = io.BytesIO(pdf_bytes)
+        return send_file(
+            pdf_io,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
         
     except Exception as e:
         return jsonify({'error': f'Failed to export member PDF: {str(e)}'}), 500
@@ -4255,8 +4693,11 @@ def get_search_filters():
 
         def fetch_table(query):
             cursor.execute(query)
-            return [{'id': row[0], 'label': row[1]}
-                    for row in cursor.fetchall()]
+            # Use 'value' for categories, 'id' for others
+            if 'MemberCategory' in query:
+                return [{'value': int(row[0]), 'label': row[1]} for row in cursor.fetchall() if row[0] is not None]
+            else:
+                return [{'id': row[0], 'label': row[1]} for row in cursor.fetchall()]
 
         return jsonify({
             'categories': fetch_table("SELECT CategoryID, CategoryName FROM MemberCategory ORDER BY CategoryName"),
@@ -4282,47 +4723,79 @@ def get_lookups():
         cursor.execute("SELECT CountyID, CountyName FROM IrishCounties ORDER BY CountyName")
         counties = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(counties)} counties')
-        
+
+        # Provinces (global, with country info)
+        cursor.execute("SELECT ProvinceID, ProvinceName, CountryCode, CountryName FROM Provinces ORDER BY CountryName, ProvinceName")
+        provinces = [
+            {
+                'value': row[0],
+                'label': row[1],
+                'countryCode': row[2],
+                'countryName': row[3]
+            }
+            for row in cursor.fetchall()
+        ]
+        print(f'DEBUG: Found {len(provinces)} provinces')
         # Categories
-        cursor.execute("SELECT CategoryID, CategoryName FROM MemberCategory ORDER BY CategoryName")
-        categories = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        cursor.execute("SELECT CategoryID, CategoryName FROM MemberCategory ORDER BY CategoryID")
+        categories = []
+        for row in cursor.fetchall():
+            if row[0] is None:
+                print(f'WARNING: Skipping category with null ID: {row}')
+                continue
+            try:
+                categories.append({'value': int(row[0]), 'label': row[1]})
+            except Exception as e:
+                print(f'ERROR: Failed to process category row {row}: {e}')
         print(f'DEBUG: Found {len(categories)} categories')
-        
+
         # Fiscal Years
         cursor.execute("SELECT FiscalYearID, YearLabel FROM FiscalYear ORDER BY FiscalYearID DESC")
         fiscalYears = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall() if row[0] is not None]
         print(f'DEBUG: Found {len(fiscalYears)} fiscal years')
-        
+
         # Societies
         cursor.execute("SELECT SocietyID, SocietyName FROM Society ORDER BY SocietyName")
         societies = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(societies)} societies')
-        
+
         # Roles
         cursor.execute("SELECT RoleID, RoleName FROM Role ORDER BY RoleName")
         roles = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(roles)} roles: {[r["label"] for r in roles]}')
-        
+
         # Surnames for Irish connections
         cursor.execute("SELECT SurnameID, Surname FROM IrishSurnames ORDER BY Surname")
         surnames = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(surnames)} surnames: {[s["label"] for s in surnames]}')
-        
+
         # Occupations
         cursor.execute("SELECT OccupationID, OccupationName FROM Occupation ORDER BY OccupationName")
         occupations = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(occupations)} occupations')
-        
+
+        # Volunteering Interests (all unique values that have been used)
+        cursor.execute("""
+            SELECT DISTINCT ValueText FROM UserDefinedFieldValue 
+            WHERE FieldID = (SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests')
+            AND ValueText IS NOT NULL
+            ORDER BY ValueText ASC
+        """)
+        volunteering_interests = [row[0] for row in cursor.fetchall()]
+        print(f'DEBUG: Found {len(volunteering_interests)} unique volunteering interests')
+
         response_data = {
             'counties': counties,
             'categories': categories,
             'fiscalYears': fiscalYears,
             'societies': societies,
+                'provinces': provinces,
             'roles': roles,
             'surnames': surnames,
-            'occupations': occupations
+            'occupations': occupations,
+            'volunteeringInterests': volunteering_interests
         }
-        
+
         print(f'DEBUG: Returning lookups response with {len(response_data)} sections')
         return jsonify(response_data)
     except Exception as e:
@@ -4372,7 +4845,22 @@ def get_categories():
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT CategoryID, CategoryName FROM MemberCategory ORDER BY CategoryName")
-        categories = [{'id': row[0], 'label': row[1]} for row in cursor.fetchall()]
+        rows = cursor.fetchall()
+        print(f"DEBUG: Raw MemberCategory rows: {rows}")
+        categories = []
+        for row in rows:
+            try:
+                cat_id = row['CategoryID'] if isinstance(row, sqlite3.Row) else row[0]
+                cat_name = row['CategoryName'] if isinstance(row, sqlite3.Row) else row[1]
+                print(f"DEBUG: Row: {row}, ID: {cat_id!r}, Name: {cat_name}, ID type: {type(cat_id)}")
+                try:
+                    int_id = int(cat_id)
+                    categories.append({'value': int_id, 'label': cat_name})
+                except Exception as e:
+                    print(f"WARNING: Skipping category with non-integer ID: {cat_id!r}, error: {e}")
+            except Exception as e:
+                print(f"ERROR: Failed to process category row {row}: {e}")
+        print(f"DEBUG: Filtered categories: {categories}")
         return jsonify(categories)
     except Exception as e:
         return jsonify({'error': f'Failed to fetch categories: {str(e)}'}), 500
@@ -4795,32 +5283,53 @@ def get_my_profile():
         return jsonify({'error': 'Database connection failed'}), 500
 
     try:
+        # Debug: Print session contents for troubleshooting
+        print("DEBUG /api/my-profile session:", dict(session))
         cursor = conn.cursor()
         cursor.execute("""
             SELECT UserID, Username, Email, Role, IsApproved, CreatedAt, LastLogin,
                    FirstName, "Last Name"
             FROM User
             WHERE UserID = ?
-        """, (session['user_id'],))
+        """, (session.get('user_id'),))
 
         user = cursor.fetchone()
         if not user:
-            logger.error(f"No user found for UserID: {session['user_id']}")
-            return jsonify({'error': 'User not found'}), 404
+            logger.error(f"No user found for UserID: {session.get('user_id')}")
+            return jsonify({'error': 'User not found', 'session': dict(session)}), 404
 
+        # If private and not approved, revert to public and add notification
+        role = str(user[3]).lower() if user[3] else ''
+        is_approved = bool(user[4])
+        effective_role = role
+        notification = None
+        # Always show correct role for admin, private, public
+        if role == 'admin':
+            effective_role = 'admin'
+        elif role == 'private' and not is_approved:
+            effective_role = 'public'
+            notification = 'Your private account request was rejected or is pending. You have been reverted to public status.'
+        elif role == 'private' and is_approved:
+            effective_role = 'private'
+        elif role == 'public':
+            effective_role = 'public'
+        else:
+            effective_role = role or 'public'
         return jsonify({
             'id': user[0],
             'username': user[1],
             'email': user[2],
-            'role': user[3],
-            'isApproved': bool(user[4]),
+            'role': effective_role,
+            'isApproved': is_approved,
             'createdDate': user[5].strftime('%Y-%m-%d') if user[5] and hasattr(user[5], 'strftime') else str(user[5]) if user[5] else None,
             'lastLogin': user[6].strftime('%Y-%m-%d %H:%M') if user[6] and hasattr(user[6], 'strftime') else str(user[6]) if user[6] else None,
             'firstName': user[7],
-            'lastName': user[8]
+            'lastName': user[8],
+            'session': dict(session),
+            'notification': notification
         })
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch profile: {str(e)}'}), 500
+        return jsonify({'error': f'Failed to fetch profile: {str(e)}', 'session': dict(session)}), 500
     finally:
         conn.close()
 
@@ -5239,7 +5748,7 @@ def submit_support_message():
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Support (UserID, Subject, MessageBody, DateSubmitted, Status)
+            INSERT INTO SupportMessage (UserID, Subject, MessageBody, DateSubmitted, Status)
             VALUES (?, ?, ?, ?, ?)
         """, (
             session['user_id'],
@@ -5250,10 +5759,7 @@ def submit_support_message():
         ))
         conn.commit()
 
-        # Get ID for audit log
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        support_id = row[0] if row is not None else None
+        support_id = cursor.lastrowid
         if support_id is None:
             return jsonify({'error': 'Failed to retrieve new support ID'}), 500
 
@@ -5263,7 +5769,7 @@ def submit_support_message():
             'Support',
             support_id,
             f'Submitted support message: {subject}')
-        return jsonify({'success': True, 'support_id': support_id})
+        return jsonify({'success': True, 'support_id': support_id}), 201
     except Exception as e:
         return jsonify(
             {'error': f'Failed to submit support message: {str(e)}'}), 500
@@ -5284,25 +5790,190 @@ def get_support_messages():
         cursor.execute("""
             SELECT s.SupportID, s.UserID, u.Username, s.Subject, s.MessageBody,
                    s.DateSubmitted, s.Status
-            FROM Support s
+            FROM SupportMessage s
             LEFT JOIN User u ON s.UserID = u.UserID
             ORDER BY s.DateSubmitted DESC
         """)
         messages = []
         for row in cursor.fetchall():
+            raw_date = row[5]
+            date_str = raw_date.strftime('%Y-%m-%d %H:%M:%S') if hasattr(raw_date, 'strftime') else (str(raw_date)[:19] if raw_date else None)
             messages.append({
                 'id': row[0],
                 'userId': row[1],
                 'username': row[2],
                 'subject': row[3],
                 'message': row[4],
-                'submitted': row[5].strftime('%Y-%m-%d %H:%M:%S') if row[5] else None,
+                'submitted': date_str,
                 'status': row[6]
             })
         return jsonify(messages)
     except Exception as e:
         return jsonify(
             {'error': f'Failed to fetch support messages: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/members/<int:member_id>/phone-numbers', methods=['GET'])
+@auth_required
+def get_member_phone_numbers(member_id):
+    """Get all phone numbers for a member"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT PhoneID, PhoneType, PhoneNumber, IsPreferred, CreatedAt
+            FROM MemberPhoneNumbers
+            WHERE MemberID = ?
+            ORDER BY IsPreferred DESC, CreatedAt ASC
+        """, (member_id,))
+        
+        phones = []
+        for row in cursor.fetchall():
+            phones.append({
+                'phoneId': row[0],
+                'type': row[1],
+                'number': row[2],
+                'isPreferred': row[3],
+                'createdAt': row[4]
+            })
+        
+        return jsonify(phones)
+    except Exception as e:
+        return jsonify({'error': f'Failed to fetch phone numbers: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/members/<int:member_id>/phone-numbers', methods=['POST'])
+@admin_required
+def add_member_phone_number(member_id):
+    """Add a new phone number for a member"""
+    data = request.get_json()
+    phone_type = data.get('type')
+    phone_number = data.get('number')
+    
+    if not phone_type or not phone_number:
+        return jsonify({'error': 'Phone type and number are required'}), 400
+    
+    if phone_type not in ['Home', 'Cell', 'Work', 'Other']:
+        return jsonify({'error': 'Invalid phone type. Must be: Home, Cell, Work, or Other'}), 400
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        is_preferred = data.get('isPreferred', 0)
+        
+        cursor.execute("""
+            INSERT INTO MemberPhoneNumbers 
+            (MemberID, PhoneType, PhoneNumber, IsPreferred)
+            VALUES (?, ?, ?, ?)
+        """, (member_id, phone_type, phone_number, is_preferred))
+        
+        # Get the auto-generated PhoneID
+        phone_id = cursor.lastrowid
+        
+        conn.commit()
+        return jsonify({
+            'phoneId': phone_id,
+            'type': phone_type,
+            'number': phone_number,
+            'isPreferred': is_preferred
+        }), 201
+    except Exception as e:
+        return jsonify({'error': f'Failed to add phone number: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/members/<int:member_id>/phone-numbers/<phone_id>', methods=['PUT'])
+@admin_required
+def update_member_phone_number(member_id, phone_id):
+    """Update a phone number"""
+    data = request.get_json()
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        
+        # Check if phone exists
+        cursor.execute("""
+            SELECT PhoneID FROM MemberPhoneNumbers 
+            WHERE PhoneID = ? AND MemberID = ?
+        """, (phone_id, member_id))
+        
+        if not cursor.fetchone():
+            return jsonify({'error': 'Phone number not found'}), 404
+        
+        # Update fields
+        updates = []
+        params = []
+        
+        if 'type' in data:
+            phone_type = data['type']
+            if phone_type not in ['Home', 'Cell', 'Work', 'Other']:
+                return jsonify({'error': 'Invalid phone type'}), 400
+            updates.append('PhoneType = ?')
+            params.append(phone_type)
+        
+        if 'number' in data:
+            updates.append('PhoneNumber = ?')
+            params.append(data['number'])
+        
+        if 'isPreferred' in data:
+            updates.append('IsPreferred = ?')
+            params.append(data['isPreferred'])
+        
+        if not updates:
+            return jsonify({'error': 'No fields to update'}), 400
+        
+        updates.append('UpdatedAt = CURRENT_TIMESTAMP')
+        params.extend([phone_id, member_id])
+        
+        query = f"UPDATE MemberPhoneNumbers SET {', '.join(updates)} WHERE PhoneID = ? AND MemberID = ?"
+        cursor.execute(query, params)
+        conn.commit()
+        
+        return jsonify({'message': 'Phone number updated successfully'})
+    except Exception as e:
+        return jsonify({'error': f'Failed to update phone number: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/members/<int:member_id>/phone-numbers/<phone_id>', methods=['DELETE'])
+@admin_required
+def delete_member_phone_number(member_id, phone_id):
+    """Delete a phone number"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            DELETE FROM MemberPhoneNumbers 
+            WHERE PhoneID = ? AND MemberID = ?
+        """, (phone_id, member_id))
+        
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'Phone number not found'}), 404
+        
+        conn.commit()
+        return jsonify({'message': 'Phone number deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': f'Failed to delete phone number: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -5412,6 +6083,8 @@ def get_member_fiscal_years(member_id):
                    for row in cursor.fetchall()]
         return jsonify(fy_data)
     except Exception as e:
+        if 'no such table' in str(e):
+            return jsonify([])  # Table not yet created — return empty list
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -5578,12 +6251,13 @@ def submit_support():
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO Support (UserID, Subject, MessageBody, DateSubmitted, Status)
+            INSERT INTO SupportMessage (UserID, Subject, MessageBody, DateSubmitted, Status)
             VALUES (?, ?, ?, ?, ?)
         """, (session['user_id'], subject, message, datetime.now(), "Open"))
         conn.commit()
-        return jsonify({'success': True,
-                        'message': 'Support request submitted'})
+        new_id = cursor.lastrowid
+        return jsonify({'success': True, 'support_id': new_id,
+                        'message': 'Support request submitted'}), 201
     except Exception as e:
         return jsonify(
             {'error': f'Failed to submit support request: {str(e)}'}), 500
@@ -5602,18 +6276,20 @@ def get_all_support_messages():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT s.SupportID, u.Username, s.Subject, s.MessageBody, s.DateSubmitted, s.Status
-            FROM Support s
+            FROM SupportMessage s
             LEFT JOIN User u ON s.UserID = u.UserID
             ORDER BY s.DateSubmitted DESC
         """)
         results = []
         for row in cursor.fetchall():
+            raw_date = row[4]
+            date_str = raw_date.strftime('%Y-%m-%d %H:%M') if hasattr(raw_date, 'strftime') else (str(raw_date)[:16] if raw_date else None)
             results.append({
                 'id': row[0],
                 'username': row[1],
                 'subject': row[2],
                 'messageBody': row[3],
-                'dateSubmitted': row[4].strftime('%Y-%m-%d %H:%M') if row[4] else None,
+                'dateSubmitted': date_str,
                 'status': row[5]
             })
         return jsonify(results)
@@ -5635,17 +6311,19 @@ def get_my_support_messages():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT SupportID, Subject, MessageBody, DateSubmitted, Status
-            FROM Support
+            FROM SupportMessage
             WHERE UserID = ?
             ORDER BY DateSubmitted DESC
         """, (session['user_id'],))
         results = []
         for row in cursor.fetchall():
+            raw_date = row[3]
+            date_str = raw_date.strftime('%Y-%m-%d %H:%M') if hasattr(raw_date, 'strftime') else (str(raw_date)[:16] if raw_date else None)
             results.append({
                 'id': row[0],
                 'subject': row[1],
                 'messageBody': row[2],
-                'dateSubmitted': row[3].strftime('%Y-%m-%d %H:%M') if row[3] else None,
+                'dateSubmitted': date_str,
                 'status': row[4]
             })
         return jsonify(results)
@@ -5676,12 +6354,12 @@ def update_support_status(support_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT SupportID FROM Support WHERE SupportID = ?", (support_id,))
+            "SELECT SupportID FROM SupportMessage WHERE SupportID = ?", (support_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Support message not found'}), 404
 
         cursor.execute("""
-            UPDATE Support
+            UPDATE SupportMessage
             SET Status = ?
             WHERE SupportID = ?
         """, (new_status, support_id))
@@ -5690,7 +6368,7 @@ def update_support_status(support_id):
         log_audit_event(
             session['user_id'],
             'UPDATE_SUPPORT',
-            'Support',
+            'SupportMessage',
             support_id,
             f'Changed status to {new_status}')
 
@@ -5859,6 +6537,7 @@ def import_members_preview():
         reader = csv.DictReader(stream)
         preview_data = []
         errors = []
+        seen_in_csv = set()  # Track duplicates within the CSV file itself
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -5880,13 +6559,64 @@ def import_members_preview():
                     except ValueError:
                         row_errors.append(f"{date_field} must be YYYY-MM-DD")
 
-            # Duplicate check
-            cursor.execute("""
-                SELECT MemberID FROM Members
-                WHERE FirstName = ? AND LastName = ? AND (Email = ? OR Email IS NULL)
-            """, (row['FirstName'], row['LastName'], row.get('Email')))
-            if cursor.fetchone():
-                row_errors.append("Duplicate: already exists in database")
+            # Check for duplicates within CSV file
+            csv_key = (row.get('FirstName', '').strip().lower(), 
+                       row.get('LastName', '').strip().lower(), 
+                       row.get('Email', '').strip().lower() if row.get('Email') else '')
+            if csv_key in seen_in_csv:
+                row_errors.append("Duplicate: appears multiple times in this CSV file")
+            else:
+                seen_in_csv.add(csv_key)
+
+            # Duplicate check against database - check by name + email, or name + phone, or name + DOB
+            # This catches duplicates even if email is missing
+            first_name = row['FirstName'].strip()
+            last_name = row['LastName'].strip()
+            email = row.get('Email', '').strip() if row.get('Email') else None
+            phone = row.get('PhoneNumber', '').strip() if row.get('PhoneNumber') else None
+            dob = row.get('Date of Birth', '').strip() if row.get('Date of Birth') else None
+            
+            is_duplicate = False
+            
+            # Check 1: Match by name + email (most reliable)
+            if email and not is_duplicate:
+                cursor.execute("""
+                    SELECT MemberID FROM Members
+                    WHERE FirstName = ? AND LastName = ? AND Email = ?
+                """, (first_name, last_name, email))
+                if cursor.fetchone():
+                    row_errors.append("Duplicate: already exists in database (by name + email)")
+                    is_duplicate = True
+            
+            # Check 2: Match by name + phone (if email not provided)
+            if not email and phone and not is_duplicate:
+                cursor.execute("""
+                    SELECT MemberID FROM Members
+                    WHERE FirstName = ? AND LastName = ? AND PhoneNumber = ?
+                """, (first_name, last_name, phone))
+                if cursor.fetchone():
+                    row_errors.append("Duplicate: already exists in database (by name + phone)")
+                    is_duplicate = True
+            
+            # Check 3: Match by name + DOB (catches cases with different emails/phones)
+            if dob and not is_duplicate:
+                cursor.execute("""
+                    SELECT MemberID FROM Members
+                    WHERE FirstName = ? AND LastName = ? AND 'Date of Birth' = ?
+                """, (first_name, last_name, dob))
+                if cursor.fetchone():
+                    row_errors.append("Duplicate: already exists in database (by name + date of birth)")
+                    is_duplicate = True
+            
+            # Check 4: Match by name only (if no other identifiers)
+            if not email and not phone and not dob and not is_duplicate:
+                cursor.execute("""
+                    SELECT MemberID FROM Members
+                    WHERE FirstName = ? AND LastName = ?
+                """, (first_name, last_name))
+                if cursor.fetchone():
+                    row_errors.append("Duplicate: already exists in database (by name). Please provide email or phone to disambiguate.")
+                    is_duplicate = True
 
             # Lookup conversion
             category_id = get_lookup_id(
@@ -5906,23 +6636,24 @@ def import_members_preview():
             if row.get('Society') and not society_id:
                 row_errors.append("Unknown Society")
 
-            preview_data.append({
-                'FirstName': row['FirstName'],
-                'LastName': row['LastName'],
-                'Email': row.get('Email'),
-                'PhoneNumber': row.get('PhoneNumber'),
-                'PlaceOfBirth': row.get('PlaceOfBirth'),
-                'DateOfBirth': row.get('DateOfBirth'),
-                'DateJoined': row.get('DateJoined'),
-                'DateEnded': row.get('DateEnded'),
-                'MemberCategoryID': category_id,
-                'CountyID': county_id,
-                'SocietyID': society_id,
-                'IsActive': (row.get('IsActive') or '').strip().lower() == 'true'
-            })
-
+            # Only add to preview if there are NO errors
             if row_errors:
                 errors.append(f"Row {i}: " + "; ".join(row_errors))
+            else:
+                preview_data.append({
+                    'FirstName': row['FirstName'],
+                    'LastName': row['LastName'],
+                    'Email': row.get('Email'),
+                    'PhoneNumber': row.get('PhoneNumber'),
+                    'PlaceOfBirth': row.get('PlaceOfBirth'),
+                    'DateOfBirth': row.get('DateOfBirth'),
+                    'DateJoined': row.get('DateJoined'),
+                    'DateEnded': row.get('DateEnded'),
+                    'MemberCategoryID': category_id,
+                    'CountyID': county_id,
+                    'SocietyID': society_id,
+                    'IsActive': (row.get('IsActive') or '').strip().lower() == 'true'
+                })
 
         conn.close()
         return jsonify({'preview': preview_data, 'errors': errors})
@@ -5949,31 +6680,39 @@ def import_members_confirm():
 
     try:
         cursor = conn.cursor()
+        
+        # Get the next available MemberID (numeric IDs only)
+        cursor.execute("SELECT MAX(CAST(MemberID AS INTEGER)) FROM Members WHERE MemberID NOT NULL AND INSTR(MemberID, '.') = 0")
+        result = cursor.fetchone()
+        next_id = (result[0] + 1) if result and result[0] else 1
+        
         for i, row in enumerate(rows, start=1):
             try:
                 cursor.execute(
                     """
                     INSERT INTO Members (
-                        FirstName, LastName, Email, PhoneNumber,
+                        MemberID, FirstName, LastName, Email, PhoneNumber,
                         PlaceOfBirth, DateOfBirth, DateJoined, DateEnded,
                         MemberCategoryID, CountyID, SocietyID, IsActive
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                    (row.get('FirstName'),
+                    (str(next_id),
+                     row.get('FirstName'),
                      row.get('LastName'),
-                        row.get('Email'),
-                        row.get('PhoneNumber'),
-                        row.get('PlaceOfBirth'),
-                        row.get('DateOfBirth'),
-                        row.get('DateJoined'),
-                        row.get('DateEnded'),
-                        row.get('MemberCategoryID'),
-                        row.get('CountyID'),
-                        row.get('SocietyID'),
-                        True if row.get(
-                        'IsActive',
-                        '').lower() == 'true' else False))
+                     row.get('Email'),
+                     row.get('PhoneNumber'),
+                     row.get('PlaceOfBirth'),
+                     row.get('DateOfBirth'),
+                     row.get('DateJoined'),
+                     row.get('DateEnded'),
+                     row.get('MemberCategoryID'),
+                     row.get('CountyID'),
+                     row.get('SocietyID'),
+                     True if row.get(
+                     'IsActive',
+                     '').lower() == 'true' else False))
                 inserted += 1
+                next_id += 1
             except Exception as row_err:
                 errors.append(f"Row {i}: {str(row_err)}")
 
@@ -6296,31 +7035,68 @@ def get_public_dashboard():
     cursor = conn.cursor()
 
     try:
-        # Total number of members
-        cursor.execute("SELECT COUNT(*) FROM Members")
+        # Total number of HISTORICAL members (public view shows only historical)
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '0' OR IsActive = 0")
         row = cursor.fetchone()
-        total = row[0] if row is not None else 0
+        total_historical = row[0] if row is not None else 0
+        
+        # Also get active count for comparison metrics
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '1' OR IsActive = 1")
+        row = cursor.fetchone()
+        total_active = row[0] if row is not None else 0
+        
+        total = total_historical  # Main count for public dashboard
 
-        # Membership Categories
+        # Membership Categories - show actual category distribution
         cursor.execute("""
-            SELECT mc.CategoryName, COUNT(m.MemberID)
+            SELECT mc.CategoryName, COUNT(*) as MemberCount
             FROM Members m
             LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            WHERE mc.CategoryName IS NOT NULL
             GROUP BY mc.CategoryName
         """)
-        categories = [{"name": row[0] if row[0] else "Unknown", "value": row[1]}
-                    for row in cursor.fetchall()]
+        
+        categories = []
+        for row in cursor.fetchall():
+            cat_name = (row[0] or "Unknown").strip()
+            count = row[1] if row[1] else 0
+            
+            if count > 0:
+                categories.append({
+                    "name": cat_name, 
+                    "value": count
+                })
 
-        # Top 10 counties
-        cursor.execute("""
-            SELECT ic.CountyName, COUNT(m.MemberID)
-            FROM Members m
-            LEFT JOIN IrishCounties ic ON m.CountyID = ic.CountyID
-            GROUP BY ic.CountyName
-            ORDER BY COUNT(m.MemberID) DESC
-        """)
-        regions = [{"name": row[0] if row[0] else "Unknown", "value": row[1]}
-                for row in cursor.fetchall()[:10]]
+        # Top provinces - show all members with provincial data
+        # Get provincial distribution for current addresses
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='Provinces'")
+            table_exists = cursor.fetchone()
+            
+            if not table_exists:
+                regions = []
+            else:
+                cursor.execute("""
+                    SELECT p.ProvinceName, COUNT(ma.MemberID) as MemberCount
+                    FROM MemberAddress ma
+                    INNER JOIN Members m ON ma.MemberID = m.MemberID
+                    INNER JOIN Provinces p ON ma.ProvinceID = p.ProvinceID
+                    WHERE ma.IsCurrent = 1
+                    GROUP BY p.ProvinceName
+                    ORDER BY COUNT(ma.MemberID) DESC
+                """)
+                
+                rows = cursor.fetchall()
+                regions = []
+                for row in rows:
+                    prov_name = row[0].strip() if row[0] else "Unknown"
+                    count = row[1] if row[1] else 0
+                    if count > 0:
+                        regions.append({"name": prov_name, "value": count})
+                
+        except Exception as e:
+            print(f"Error in provincial query: {e}")
+            regions = []
 
         # Historical summary
         cursor.execute("SELECT MIN(DateJoined) FROM Members")
@@ -6343,12 +7119,14 @@ def get_public_dashboard():
         peak = cursor.fetchone()
         peak_count = peak[1] if peak else 0
 
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '1' OR IsActive = 1")
         row = cursor.fetchone()
         lifetime = row[0] if row is not None else 0
 
         return jsonify({
-            "totalMembers": total,
+            "totalMembers": total,  # Historical count
+            "totalActive": total_active,  # Active count for comparison
+            "totalHistorical": total_historical,  # Explicit historical count
             "categories": categories,
             "regions": regions,
             "historical": {
@@ -6493,10 +7271,10 @@ def admin_dashboard():
         cursor = conn.cursor()
         # Copy logic from get_dashboard
         # Basic stats
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '1' OR IsActive = 1")
         row = cursor.fetchone()
         active_members = row[0] if row is not None else 0
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 0")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '0' OR IsActive = 0")
         row = cursor.fetchone()
         inactive_members = row[0] if row is not None else 0
         try:
@@ -6506,7 +7284,7 @@ def admin_dashboard():
         except sqlite3.OperationalError:
             # Society table doesn't exist, set to 0
             total_societies = 0
-        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = 1")
+        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = '1' OR IsApproved = 1")
         row = cursor.fetchone()
         active_users = row[0] if row is not None else 0
         # Recent activities (last 30 days) - New approach using CreatedAt
@@ -6523,10 +7301,17 @@ def admin_dashboard():
         """, (thirty_days_ago.strftime('%Y-%m-%d %H:%M:%S'),))
         
         for row in cursor.fetchall():
+            raw_date = row[2]
+            if hasattr(raw_date, 'strftime'):
+                date_str = raw_date.strftime('%Y-%m-%d')
+            elif raw_date:
+                date_str = str(raw_date)[:10]
+            else:
+                date_str = None
             recent_activities.append({
                 'type': 'member_added',
                 'name': f"{row[0]} {row[1]}",
-                'date': row[2][:10] if row[2] else None,  # Extract date part
+                'date': date_str,
                 'description': f"New member {row[0]} {row[1]} added to system"
             })
         
@@ -6541,10 +7326,15 @@ def admin_dashboard():
         
         for row in cursor.fetchall():
             if row[2]:  # Only if CreatedAt is not empty
+                raw_date = row[2]
+                if hasattr(raw_date, 'strftime'):
+                    date_str = raw_date.strftime('%Y-%m-%d')
+                else:
+                    date_str = str(raw_date)[:10]
                 recent_activities.append({
                     'type': 'user_registered',
                     'name': f"{row[0] or ''} {row[1] or ''}".strip() or row[3],
-                    'date': row[2][:10] if row[2] else None,
+                    'date': date_str,
                     'description': f"New {row[4]} user registered"
                 })
         
@@ -6556,7 +7346,7 @@ def admin_dashboard():
         smart_notifications = []
         
         # 1. Pending user approvals
-        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = 0")
+        cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = '0' OR IsApproved = 0")
         pending_approvals = cursor.fetchone()[0] or 0
         if pending_approvals > 0:
             smart_notifications.append({
@@ -6578,7 +7368,7 @@ def admin_dashboard():
             })
         
         # 3. Members with missing email addresses
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1 AND (Email IS NULL OR Email = '')")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE (IsActive = '1' OR IsActive = 1) AND (Email IS NULL OR Email = '')")
         members_no_email = cursor.fetchone()[0] or 0
         if members_no_email > 0:
             smart_notifications.append({
@@ -6612,7 +7402,7 @@ def admin_dashboard():
                 pass
         
         # 5. Data quality check - members without birth dates
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = 1 AND ([Date of Birth] IS NULL OR [Date of Birth] = '')")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE (IsActive = '1' OR IsActive = 1) AND ([Date of Birth] IS NULL OR [Date of Birth] = '')")
         members_no_birth_date = cursor.fetchone()[0] or 0
         if members_no_birth_date > 10:  # Only notify if significant number
             smart_notifications.append({
@@ -6682,7 +7472,7 @@ def admin_dashboard():
 def admin_stats():
     # This is a placeholder. You should replace with real queries as needed.
     # The frontend expects: { total, growth, breakdown: {active, inactive,
-    # deceased}, yearly: {year: count, ...} }
+    # historical}, yearly: {year: count, ...} }
     conn = get_db_connection()
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
@@ -6694,20 +7484,10 @@ def admin_stats():
         start_date = request.args.get('startDate', '').strip()
         end_date = request.args.get('endDate', '').strip()
 
-        # Map category string to SQL condition
-        category_map = {
-            'Active': 'IsActive = 1',
-            'Inactive': 'IsActive = 0',
-            'Deceased': 'IsActive = 0',  # Treat deceased as inactive
-            'Honorary': 'IsHonorary = 1'
-        }
-        category_condition = category_map.get(category, None)
 
         # Build WHERE clause
         where_clauses = []
         params = []
-        if category_condition:
-            where_clauses.append(category_condition)
         if start_date:
             where_clauses.append('DateJoined >= ?')
             params.append(start_date)
@@ -6721,24 +7501,17 @@ def admin_stats():
         row = cursor.fetchone()
         total = row[0] if row is not None else 0
 
-        # Pie chart breakdown (filtered)
-        # Active
-        cursor.execute(f"SELECT COUNT(*) FROM Members WHERE IsActive = 1 {(('AND ' + ' AND '.join(where_clauses)) if where_clauses else '')}", params)
-        row = cursor.fetchone()
-        active_members = row[0] if row is not None else 0
-        # Inactive
-        cursor.execute(f"SELECT COUNT(*) FROM Members WHERE IsActive = 0 {(('AND ' + ' AND '.join(where_clauses)) if where_clauses else '')}", params)
-        row = cursor.fetchone()
-        inactive_members = row[0] if row is not None else 0
-        # Deceased (same as inactive)
-        deceased_members = inactive_members
-        # Honorary
-        try:
-            cursor.execute(f"SELECT COUNT(*) FROM Members WHERE IsHonorary = 1 {(('AND ' + ' AND '.join(where_clauses)) if where_clauses else '')}", params)
+        # Pie chart breakdown (filtered) using MemberCategoryID
+        def count_by_category(category_id):
+            sql = f"SELECT COUNT(*) FROM Members {where_sql}{' AND ' if where_sql else ' WHERE '} MemberCategoryID = ?"
+            cursor.execute(sql, params + [category_id])
             row = cursor.fetchone()
-            honorary_members = row[0] if row is not None else 0
-        except Exception:
-            honorary_members = 0
+            return row[0] if row is not None else 0
+
+        active_members = count_by_category(1)
+        historical_members = count_by_category(2)
+        inactive_members = count_by_category(3)
+        honorary_members = count_by_category(4)
 
         # Yearly breakdown (filtered)
         yearly = {}
@@ -6766,7 +7539,7 @@ def admin_stats():
             'breakdown': {
                 'active': active_members,
                 'inactive': inactive_members,
-                'deceased': deceased_members,
+                'historical': historical_members,
                 'honorary': honorary_members
             },
             'yearly': yearly
@@ -6786,11 +7559,24 @@ def get_stats():
         return jsonify({'error': 'Database connection failed'}), 500
     try:
         cursor = conn.cursor()
+        # Province/State distribution (from MemberAddress)
+        # Get province ID to name mapping
+        cursor.execute("SELECT ProvinceID, ProvinceName, CountryName FROM Provinces")
+        province_map = {str(row[0]): {'name': row[1], 'country': row[2]} for row in cursor.fetchall()}
+
+        # Province/State distribution (from MemberAddress)
+        cursor.execute("SELECT ProvinceID, COUNT(*) FROM MemberAddress WHERE ProvinceID IS NOT NULL AND ProvinceID != '' GROUP BY ProvinceID")
+        province_distribution = []
+        for row in cursor.fetchall():
+            pid = str(row[0])
+            count = row[1]
+            pname = province_map.get(pid, {}).get('name', pid)
+            country = province_map.get(pid, {}).get('country', '')
+            province_distribution.append({"province": pname, "country": country, "count": count})
         # Get filters from query params
         start_date = request.args.get('startDate')
         end_date = request.args.get('endDate')
         category = request.args.get('category')
-        print(f"[DEBUG] Received filters: startDate={start_date}, endDate={end_date}, category={category}")
 
         # Build WHERE clauses
         where_clauses = []
@@ -6802,66 +7588,32 @@ def get_stats():
             where_clauses.append("DateJoined <= ?")
             params.append(end_date)
         if category:
-            if category.lower() == "active":
-                where_clauses.append("IsActive = 1")
-            elif category.lower() == "inactive":
-                where_clauses.append("IsActive = 0")
-            elif category.lower() == "deceased":
-                where_clauses.append("IsDeceased = 1")
+            where_clauses.append("m.MemberCategoryID = mc.CategoryID")
+            where_clauses.append("mc.CategoryName = ?")
+            params.append(category.capitalize())
 
+        # Use JOIN with MemberCategory for all counts
+        join_sql = " FROM Members m INNER JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID"
         where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-        print(f"[DEBUG] WHERE SQL: {where_sql}, params: {params}")
 
         # Total members (with filters)
-        print(f"[DEBUG] Total SQL: SELECT COUNT(*) FROM Members{where_sql}, params: {params}")
-        cursor.execute(f"SELECT COUNT(*) FROM Members{where_sql}", params)
+        cursor.execute(f"SELECT COUNT(*){join_sql}{where_sql}", params)
         row = cursor.fetchone()
         total = row[0] if row is not None else 0
 
-        # Active
-        active_sql = where_sql
-        active_params = params.copy()
-        if category is None or category.lower() != "active":
-            # Only add IsActive filter if not already filtered by category
-            active_sql = f"{where_sql} {'AND' if where_sql else 'WHERE'} IsActive = 1"
-            active_params = params.copy()
-        print(f"[DEBUG] Active SQL: SELECT COUNT(*) FROM Members{active_sql}, params: {active_params}")
-        cursor.execute(f"SELECT COUNT(*) FROM Members{active_sql}", active_params)
-        row = cursor.fetchone()
-        active_members = row[0] if row is not None else 0
 
-        # Inactive
-        inactive_sql = where_sql
-        inactive_params = params.copy()
-        if category is None or category.lower() != "inactive":
-            inactive_sql = f"{where_sql} {'AND' if where_sql else 'WHERE'} IsActive = 0"
-            inactive_params = params.copy()
-        print(f"[DEBUG] Inactive SQL: SELECT COUNT(*) FROM Members{inactive_sql}, params: {inactive_params}")
-        cursor.execute(f"SELECT COUNT(*) FROM Members{inactive_sql}", inactive_params)
-        row = cursor.fetchone()
-        inactive_members = row[0] if row is not None else 0
+        # Get counts for all categories (Active, Inactive, Honorary, Historical)
+        categories = ['Active', 'Inactive', 'Honorary', 'Historical']
+        breakdown = {}
+        for cat in categories:
+            cursor.execute(f"SELECT COUNT(*){join_sql}{where_sql} {'AND' if where_sql else 'WHERE'} mc.CategoryName = ?", params + [cat])
+            row = cursor.fetchone()
+            breakdown[cat.lower()] = row[0] if row is not None else 0
 
-        # Deceased
-        deceased_sql = where_sql
-        deceased_params = params.copy()
-        if category is None or category.lower() != "deceased":
-            deceased_sql = f"{where_sql} {'AND' if where_sql else 'WHERE'} IsDeceased = 1"
-            deceased_params = params.copy()
-        print(f"[DEBUG] Deceased SQL: SELECT COUNT(*) FROM Members{deceased_sql}, params: {deceased_params}")
-        cursor.execute(f"SELECT COUNT(*) FROM Members{deceased_sql}", deceased_params)
-        row = cursor.fetchone()
-        deceased_members = row[0] if row is not None else 0
-
-        # Yearly breakdown (last 5 years, with filters)
+        # Yearly breakdown (last 5 years) - show total members per year regardless of date filter
         yearly = {}
         for y in range(datetime.now().year - 4, datetime.now().year + 1):
-            year_clauses = where_clauses.copy()
-            year_params = params.copy()
-            year_clauses.append("strftime('%Y', DateJoined) = ?")
-            year_params.append(str(y))
-            year_sql = f" WHERE {' AND '.join(year_clauses)}" if year_clauses else ""
-            print(f"[DEBUG] Yearly SQL ({y}): SELECT COUNT(*) FROM Members{year_sql}, params: {year_params}")
-            cursor.execute(f"SELECT COUNT(*) FROM Members{year_sql}", year_params)
+            cursor.execute("SELECT COUNT(*) FROM Members WHERE strftime('%Y', DateJoined) = ?", (str(y),))
             row = cursor.fetchone()
             yearly[str(y)] = row[0] if row is not None else 0
 
@@ -6872,12 +7624,13 @@ def get_stats():
             if len(years) > 1 and yearly[years[0]]:
                 growth = int(
                     100 * (yearly[years[-1]] - yearly[years[0]]) / yearly[years[0]])
-        print(f"[DEBUG] Response: total={total}, growth={growth}, breakdown={{'active': {active_members}, 'inactive': {inactive_members}, 'deceased': {deceased_members}}}, yearly={yearly}")
+        
         return jsonify({
             'total': total,
             'growth': growth,
-            'breakdown': {'active': active_members, 'inactive': inactive_members, 'deceased': deceased_members},
-            'yearly': yearly
+            'breakdown': breakdown,
+            'yearly': yearly,
+            'province_distribution': province_distribution
         })
     except Exception as e:
         print(f"[ERROR] Failed to fetch stats: {str(e)}")
@@ -7044,6 +7797,282 @@ def get_my_recognitions():
         return jsonify({'error': f'Failed to fetch recognitions: {str(e)}'}), 500
     finally:
         conn.close()
+
+
+# ===== OFFLINE SYNC SYSTEM =====
+# Routes for exporting/importing data for offline-first sync capability
+
+@app.route('/api/sync/export', methods=['GET'])
+@private_or_admin_required
+def export_for_offline():
+    """Export all data that the user should be able to access for offline use"""
+    try:
+        user_id = session.get('user_id')
+        user_role = session.get('user_role', 'public').lower()
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        offline_data = {
+            'timestamp': datetime.now().isoformat(),
+            'version': '1.0',
+            'user_id': user_id,
+            'user_role': user_role,
+            'data': {}
+        }
+        
+        # Export members list
+        cursor.execute("""
+            SELECT MemberID, FirstName, LastName, Email, PhoneNumber, 
+                   MemberCategoryID, IsActive
+            FROM Members
+            ORDER BY LastName, FirstName
+        """)
+        offline_data['data']['members'] = [
+            {
+                'id': row[0],
+                'firstName': row[1],
+                'lastName': row[2],
+                'email': row[3],
+                'phone': row[4],
+                'categoryId': row[5],
+                'isActive': row[6]
+            } for row in cursor.fetchall()
+        ]
+        
+        # Export member phone numbers
+        cursor.execute("""
+            SELECT PhoneID, MemberID, PhoneType, PhoneNumber, IsPreferred
+            FROM MemberPhoneNumbers
+            ORDER BY MemberID, IsPreferred DESC
+        """)
+        offline_data['data']['phones'] = [
+            {
+                'id': row[0],
+                'memberId': row[1],
+                'type': row[2],
+                'number': row[3],
+                'isPreferred': row[4]
+            } for row in cursor.fetchall()
+        ]
+        
+        # Export member addresses
+        cursor.execute("""
+            SELECT MemberAddressID, MemberID, Street, City, ProvinceID, 
+                   CountryID, PostalCode, FiscalYearID
+            FROM MemberAddress
+            ORDER BY MemberID, FiscalYearID DESC
+        """)
+        offline_data['data']['addresses'] = [
+            {
+                'id': row[0],
+                'memberId': row[1],
+                'street': row[2],
+                'city': row[3],
+                'provinceId': row[4],
+                'countryId': row[5],
+                'postalCode': row[6],
+                'fiscalYearId': row[7]
+            } for row in cursor.fetchall()
+        ]
+        
+        # Export categories (for admin/private only)
+        if user_role in ['admin', 'private']:
+            cursor.execute("""
+                SELECT CategoryID, CategoryName, IsActive
+                FROM MemberCategories
+                ORDER BY CategoryName
+            """)
+            offline_data['data']['categories'] = [
+                {
+                    'id': row[0],
+                    'name': row[1],
+                    'isActive': row[2]
+                } for row in cursor.fetchall()
+            ]
+        
+        # If admin, also export users
+        if user_role == 'admin':
+            cursor.execute("""
+                SELECT UserID, Username, FirstName, [Last Name], Email, Role, IsApproved
+                FROM User
+                ORDER BY Username
+            """)
+            offline_data['data']['users'] = [
+                {
+                    'id': row[0],
+                    'username': row[1],
+                    'firstName': row[2],
+                    'lastName': row[3],
+                    'email': row[4],
+                    'role': row[5],
+                    'isApproved': row[6]
+                } for row in cursor.fetchall()
+            ]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'size_bytes': len(json.dumps(offline_data)),
+            'data': offline_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Error exporting offline data: {e}")
+        return jsonify({'error': 'Failed to export data for offline use'}), 500
+
+
+@app.route('/api/sync/import', methods=['POST'])
+@private_or_admin_required
+def import_offline_changes():
+    """Import changes made offline and sync them back to the server"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No sync data provided'}), 400
+        
+        changes = data.get('changes', {})
+        user_id = session.get('user_id')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        sync_result = {
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'synced_items': 0,
+            'conflicts': 0,
+            'errors': 0
+        }
+        
+        try:
+            # Process member changes
+            for item in changes.get('members', []):
+                try:
+                    member_id = item.get('id')
+                    if member_id:
+                        cursor.execute("""
+                            UPDATE Members SET FirstName=?, LastName=?, Email=?, 
+                                    PhoneNumber=?, MemberCategoryID=?, IsActive=?
+                            WHERE MemberID=?
+                        """, (
+                            item.get('firstName'),
+                            item.get('lastName'),
+                            item.get('email'),
+                            item.get('phone'),
+                            item.get('categoryId'),
+                            item.get('isActive'),
+                            member_id
+                        ))
+                        sync_result['synced_items'] += 1
+                except Exception as e:
+                    logger.error(f"Error syncing member {item.get('id')}: {e}")
+                    sync_result['conflicts'] += 1
+            
+            # Process phone number changes
+            for item in changes.get('phones', []):
+                try:
+                    phone_id = item.get('id')
+                    if phone_id:
+                        cursor.execute("""
+                            UPDATE MemberPhoneNumbers 
+                            SET PhoneType=?, PhoneNumber=?, IsPreferred=?
+                            WHERE PhoneID=?
+                        """, (
+                            item.get('type'),
+                            item.get('number'),
+                            item.get('isPreferred'),
+                            phone_id
+                        ))
+                        sync_result['synced_items'] += 1
+                except Exception as e:
+                    logger.error(f"Error syncing phone {item.get('id')}: {e}")
+                    sync_result['conflicts'] += 1
+            
+            # Process address changes
+            for item in changes.get('addresses', []):
+                try:
+                    addr_id = item.get('id')
+                    if addr_id:
+                        cursor.execute("""
+                            UPDATE MemberAddress
+                            SET Street=?, City=?, ProvinceID=?, CountryID=?, PostalCode=?
+                            WHERE MemberAddressID=?
+                        """, (
+                            item.get('street'),
+                            item.get('city'),
+                            item.get('provinceId'),
+                            item.get('countryId'),
+                            item.get('postalCode'),
+                            addr_id
+                        ))
+                        sync_result['synced_items'] += 1
+                except Exception as e:
+                    logger.error(f"Error syncing address {item.get('id')}: {e}")
+                    sync_result['conflicts'] += 1
+            
+            conn.commit()
+            
+        except Exception as sync_error:
+            conn.rollback()
+            logger.error(f"Error processing sync: {sync_error}")
+            sync_result['errors'] += 1
+            sync_result['success'] = False
+        
+        conn.close()
+        
+        return jsonify(sync_result)
+        
+    except Exception as e:
+        logger.error(f"Error importing offline changes: {e}")
+        return jsonify({'error': 'Failed to sync offline changes'}), 500
+
+
+@app.route('/api/sync/status', methods=['GET'])
+@private_or_admin_required
+def get_sync_status():
+    """Get sync status and last update timestamp"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Count records for status reporting
+        cursor.execute("SELECT COUNT(*) FROM Members")
+        member_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM MemberPhoneNumbers")
+        phone_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM MemberAddress")
+        address_count = cursor.fetchone()[0]
+        
+        # Get last update time from database
+        cursor.execute("SELECT MAX(CreatedAt) FROM Members")
+        last_update = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'status': 'online',
+            'last_sync': datetime.now().isoformat(),
+            'data_version': '1.0',
+            'record_counts': {
+                'members': member_count,
+                'phones': phone_count,
+                'addresses': address_count
+            },
+            'last_update': last_update
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting sync status: {e}")
+        return jsonify({
+            'success': False,
+            'status': 'error',
+            'error': str(e)
+        }), 500
 
 
 if __name__ == '__main__':

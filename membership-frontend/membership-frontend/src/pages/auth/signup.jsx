@@ -106,45 +106,88 @@ export default function Signup() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)'
+      background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)'
     }}>
-      <div style={{ width: '100%', maxWidth: '520px' }}>
+      <div style={{ 
+        width: '100%', 
+        maxWidth: '580px',
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        padding: '56px',
+        boxShadow: '0 20px 40px rgba(20, 184, 166, 0.15)',
+        border: '3px solid #14b8a6'
+      }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div className="icon-container">
-            <svg style={{ width: '40px', height: '40px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
+        <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+          <div style={{
+            width: '100px',
+            height: '100px',
+            margin: '0 auto 20px',
+            background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+            borderRadius: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 20px rgba(20, 184, 166, 0.3)',
+            fontSize: '42px',
+            fontWeight: '800',
+            color: 'white'
+          }}>
+            ✨
           </div>
           <h1 style={{ 
-            fontSize: '32px', 
-            fontWeight: '700', 
+            fontSize: '38px', 
+            fontWeight: '800', 
             color: '#0f172a', 
-            marginBottom: '8px',
+            marginBottom: '10px',
             letterSpacing: '-0.02em'
           }}>
             Create Account
           </h1>
           <p style={{ 
             color: '#64748b', 
-            fontSize: '16px',
-            fontWeight: '400'
+            fontSize: '18px',
+            fontWeight: '600'
           }}>
             Join our membership community
           </p>
         </div>
 
-        {/* Signup Card */}
-        <div className="card" style={{ padding: '40px' }}>
+        {/* Form Section */}
+        <div>
           {error && (
-            <div className="alert alert-error">
-              {error}
+            <div style={{
+              padding: '16px 20px',
+              backgroundColor: '#fee',
+              border: '2px solid #ef4444',
+              borderRadius: '10px',
+              marginBottom: '24px',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span>⚠️</span> {error}
             </div>
           )}
 
           {success && (
-            <div className="alert alert-success">
-              {success}
+            <div style={{
+              padding: '16px 20px',
+              backgroundColor: '#f0fdf4',
+              border: '2px solid #22c55e',
+              borderRadius: '10px',
+              marginBottom: '24px',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#16a34a',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span>✅</span> {success}
             </div>
           )}
 
@@ -153,12 +196,18 @@ export default function Signup() {
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr', 
-              gap: '16px',
-              marginBottom: '24px'
+              gap: '20px',
+              marginBottom: '28px'
             }}>
               <div>
-                <label className="form-label" htmlFor="firstName">
-                  First Name
+                <label style={{
+                  display: 'block',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  color: '#0f172a',
+                  marginBottom: '10px'
+                }} htmlFor="firstName">
+                  👤 First Name
                 </label>
                 <input
                   id="firstName"
@@ -167,13 +216,40 @@ export default function Signup() {
                   value={form.firstName}
                   onChange={handleChange}
                   required
-                  className="form-input"
                   placeholder="Enter first name"
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    border: '2px solid #14b8a6',
+                    borderRadius: '10px',
+                    fontSize: '17px',
+                    fontWeight: '600',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#f9fafb',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.backgroundColor = '#f9fafb';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
               <div>
-                <label className="form-label" htmlFor="lastName">
-                  Last Name
+                <label style={{
+                  display: 'block',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  color: '#0f172a',
+                  marginBottom: '10px'
+                }} htmlFor="lastName">
+                  👤 Last Name
                 </label>
                 <input
                   id="lastName"
@@ -182,37 +258,76 @@ export default function Signup() {
                   value={form.lastName}
                   onChange={handleChange}
                   required
-                  className="form-input"
                   placeholder="Enter last name"
+                  style={{
+                    width: '100%',
+                    padding: '16px 20px',
+                    border: '2px solid #14b8a6',
+                    borderRadius: '10px',
+                    fontSize: '17px',
+                    fontWeight: '600',
+                    outline: 'none',
+                    transition: 'all 0.2s ease',
+                    backgroundColor: '#f9fafb',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.backgroundColor = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.backgroundColor = '#f9fafb';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
             </div>
 
             {/* Email Toggle */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '28px' }}>
               <label style={{ 
                 display: 'flex', 
                 alignItems: 'center',
-                fontSize: '14px',
-                color: '#64748b',
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#475569',
                 cursor: 'pointer',
-                marginBottom: '16px'
-              }}>
+                marginBottom: '20px',
+                padding: '14px 18px',
+                backgroundColor: '#f0fdfa',
+                borderRadius: '10px',
+                border: '2px solid #ccfbf1',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e6fcf9'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f0fdfa'}>
                 <input
                   type="checkbox"
                   name="noEmail"
                   checked={form.noEmail}
                   onChange={handleChange}
-                  className="checkbox"
-                  style={{ marginRight: '8px' }}
+                  style={{ 
+                    marginRight: '12px',
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer'
+                  }}
                 />
-                I don't have an email address
+                📧 I don't have an email address
               </label>
 
               {form.noEmail ? (
                 <div>
-                  <label className="form-label" htmlFor="userID">
-                    User ID
+                  <label style={{
+                    display: 'block',
+                    fontSize: '17px',
+                    fontWeight: '700',
+                    color: '#0f172a',
+                    marginBottom: '10px'
+                  }} htmlFor="userID">
+                    🆔 User ID
                   </label>
                   <input
                     id="userID"
@@ -221,14 +336,41 @@ export default function Signup() {
                     value={form.userID}
                     onChange={handleChange}
                     required
-                    className="form-input"
                     placeholder="Choose a unique user ID"
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      border: '2px solid #14b8a6',
+                      borderRadius: '10px',
+                      fontSize: '17px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f9fafb',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="form-label" htmlFor="email">
-                    Email Address
+                  <label style={{
+                    display: 'block',
+                    fontSize: '17px',
+                    fontWeight: '700',
+                    color: '#0f172a',
+                    marginBottom: '10px'
+                  }} htmlFor="email">
+                    📧 Email Address
                   </label>
                   <input
                     id="email"
@@ -237,8 +379,29 @@ export default function Signup() {
                     value={form.email}
                     onChange={handleChange}
                     required
-                    className="form-input"
                     placeholder="Enter your email address"
+                    style={{
+                      width: '100%',
+                      padding: '16px 20px',
+                      border: '2px solid #14b8a6',
+                      borderRadius: '10px',
+                      fontSize: '17px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f9fafb',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                 </div>
               )}
@@ -248,12 +411,18 @@ export default function Signup() {
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: '1fr 1fr', 
-              gap: '16px',
-              marginBottom: '24px'
+              gap: '20px',
+              marginBottom: '28px'
             }}>
               <div>
-                <label className="form-label" htmlFor="password">
-                  Password
+                <label style={{
+                  display: 'block',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  color: '#0f172a',
+                  marginBottom: '10px'
+                }} htmlFor="password">
+                  🔒 Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -263,53 +432,73 @@ export default function Signup() {
                     value={form.password}
                     onChange={handleChange}
                     required
-                    className="form-input"
                     placeholder="Enter password"
-                    style={{ paddingRight: '50px' }}
+                    style={{ 
+                      width: '100%',
+                      padding: '16px 20px',
+                      paddingRight: '60px',
+                      border: '2px solid #14b8a6',
+                      borderRadius: '10px',
+                      fontSize: '17px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f9fafb',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
                     style={{ 
                       position: 'absolute', 
-                      right: '12px', 
+                      right: '16px', 
                       top: '50%',
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#64748b',
+                      color: '#14b8a6',
                       cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      padding: '4px 6px',
-                      borderRadius: '4px',
+                      fontSize: '20px',
+                      padding: '8px',
+                      borderRadius: '6px',
                       transition: 'all 0.2s ease'
                     }}
                     tabIndex={-1}
-                    onMouseEnter={(e) => {
-                      e.target.style.color = '#14b8a6';
-                      e.target.style.backgroundColor = '#f0fdfa';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.color = '#64748b';
-                      e.target.style.backgroundColor = 'transparent';
-                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
-                    {showPassword ? '👁️‍🗨️' : '👁️'}
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
                   </button>
                 </div>
                 <p style={{ 
-                  fontSize: '12px', 
-                  color: '#94a3b8', 
-                  marginTop: '4px',
-                  margin: '4px 0 0 0'
+                  fontSize: '14px', 
+                  fontWeight: '600',
+                  color: '#64748b', 
+                  marginTop: '8px'
                 }}>
-                  At least 8 characters with a number
+                  💡 At least 8 characters with a number
                 </p>
               </div>
               <div>
-                <label className="form-label" htmlFor="confirmPassword">
-                  Confirm Password
+                <label style={{
+                  display: 'block',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  color: '#0f172a',
+                  marginBottom: '10px'
+                }} htmlFor="confirmPassword">
+                  🔒 Confirm Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -319,39 +508,53 @@ export default function Signup() {
                     value={form.confirmPassword}
                     onChange={handleChange}
                     required
-                    className="form-input"
                     placeholder="Confirm password"
-                    style={{ paddingRight: '50px' }}
+                    style={{ 
+                      width: '100%',
+                      padding: '16px 20px',
+                      paddingRight: '60px',
+                      border: '2px solid #14b8a6',
+                      borderRadius: '10px',
+                      fontSize: '17px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      transition: 'all 0.2s ease',
+                      backgroundColor: '#f9fafb',
+                      boxSizing: 'border-box'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.backgroundColor = '#f9fafb';
+                      e.target.style.boxShadow = 'none';
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(v => !v)}
                     style={{ 
                       position: 'absolute', 
-                      right: '12px', 
+                      right: '16px', 
                       top: '50%',
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#64748b',
+                      color: '#14b8a6',
                       cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      padding: '4px 6px',
-                      borderRadius: '4px',
+                      fontSize: '20px',
+                      padding: '8px',
+                      borderRadius: '6px',
                       transition: 'all 0.2s ease'
                     }}
                     tabIndex={-1}
-                    onMouseEnter={(e) => {
-                      e.target.style.color = '#14b8a6';
-                      e.target.style.backgroundColor = '#f0fdfa';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.color = '#64748b';
-                      e.target.style.backgroundColor = 'transparent';
-                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
-                    {showConfirmPassword ? '👁️‍🗨️' : '👁️'}
+                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
                   </button>
                 </div>
               </div>
@@ -362,24 +565,38 @@ export default function Signup() {
               <label style={{ 
                 display: 'flex', 
                 alignItems: 'flex-start',
-                fontSize: '14px',
-                color: '#64748b',
-                cursor: 'pointer'
-              }}>
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#475569',
+                cursor: 'pointer',
+                padding: '18px 20px',
+                backgroundColor: '#f0fdfa',
+                borderRadius: '10px',
+                border: '2px solid #ccfbf1',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e6fcf9'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f0fdfa'}>
                 <input
                   type="checkbox"
                   name="requestPrivate"
                   checked={form.requestPrivate}
                   onChange={handleChange}
-                  className="checkbox"
-                  style={{ marginRight: '8px', marginTop: '2px' }}
+                  style={{ 
+                    marginRight: '12px', 
+                    marginTop: '2px',
+                    width: '18px',
+                    height: '18px',
+                    cursor: 'pointer'
+                  }}
                 />
                 <div>
-                  Request Private Access
+                  🔐 Request Private Access
                   <div style={{ 
-                    fontSize: '12px', 
-                    color: '#94a3b8',
-                    marginTop: '2px'
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    color: '#64748b',
+                    marginTop: '6px'
                   }}>
                     Private access requires admin approval
                   </div>
@@ -390,41 +607,91 @@ export default function Signup() {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn-primary"
-              style={{ width: '100%', marginBottom: '24px' }}
+              style={{ 
+                width: '100%', 
+                marginBottom: '28px',
+                padding: '18px 24px',
+                background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '18px',
+                fontWeight: '700',
+                color: 'white',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.5px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)',
+                opacity: isLoading ? 0.7 : 1
+              }}
+              onMouseEnter={(e) => !isLoading && (e.target.style.transform = 'translateY(-2px)')}
+              onMouseLeave={(e) => !isLoading && (e.target.style.transform = 'translateY(0)')}
             >
               {isLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="spinner" style={{ marginRight: '8px' }}></div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    border: '3px solid rgba(255,255,255,0.3)',
+                    borderTop: '3px solid white',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite'
+                  }}></div>
                   Creating account...
                 </div>
               ) : (
-                "Create Account"
+                "✨ Create Account"
               )}
             </button>
           </form>
 
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#64748b', fontSize: '14px' }}>
-              Already have an account?{" "}
-              <Link to="/login" className="link">
-                Sign in
-              </Link>
+          <div style={{ 
+            textAlign: 'center',
+            padding: '24px',
+            backgroundColor: '#f0fdfa',
+            borderRadius: '12px',
+            border: '2px solid #ccfbf1',
+            boxShadow: '0 2px 8px rgba(20, 184, 166, 0.1)'
+          }}>
+            <p style={{ 
+              color: '#475569', 
+              fontSize: '17px',
+              fontWeight: '600',
+              margin: '0 0 12px 0'
+            }}>
+              Already have an account?
+            </p>
+            <Link to="/login" style={{
+              color: '#14b8a6',
+              textDecoration: 'none',
+              fontSize: '18px',
+              fontWeight: '700',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.color = '#0f766e';
+              e.target.style.textDecoration = 'underline';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.color = '#14b8a6';
+              e.target.style.textDecoration = 'none';
+            }}>
+              🚀 Sign in
+            </Link>
+          </div>
+
+          {/* Footer Note */}
+          <div style={{ 
+            marginTop: '24px', 
+            textAlign: 'center' 
+          }}>
+            <p style={{ 
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#94a3b8' 
+            }}>
+              © 2025 Membership System. All rights reserved.
             </p>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ 
-          marginTop: '32px', 
-          textAlign: 'center' 
-        }}>
-          <p style={{ 
-            fontSize: '12px', 
-            color: '#94a3b8' 
-          }}>
-            © 2025 Membership System. All rights reserved.
-          </p>
         </div>
       </div>
     </div>

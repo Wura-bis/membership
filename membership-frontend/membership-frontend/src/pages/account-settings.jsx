@@ -77,10 +77,10 @@ export default function AccountSettings() {
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
             <h1 style={{
-              fontSize: '32px',
+              fontSize: '38px',
               fontWeight: '700',
-              color: '#134e4a',
-              marginBottom: '8px',
+              color: '#0f766e',
+              marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
               gap: '12px'
@@ -88,7 +88,8 @@ export default function AccountSettings() {
               ⚙️ Account Settings
             </h1>
             <p style={{
-              fontSize: '16px',
+              fontSize: '20px',
+              fontWeight: '600',
               color: '#64748b',
               margin: '0'
             }}>
@@ -125,18 +126,18 @@ export default function AccountSettings() {
 
           {/* Settings Form */}
           <div style={{
-            background: 'white',
-            border: '1px solid #e2e8f0',
+            background: '#f0fdfa',
+            border: '2px solid #5eead4',
             borderRadius: '12px',
-            padding: '32px',
-            marginBottom: '24px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            padding: '36px',
+            marginBottom: '28px',
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
           }}>
             <h2 style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#1e293b',
-              marginBottom: '24px'
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px'
             }}>
               Notification Preferences
             </h2>
@@ -159,39 +160,41 @@ export default function AccountSettings() {
                   }}
                 />
                 <span style={{
-                  fontSize: '16px',
+                  fontSize: '17px',
                   color: '#1e293b',
-                  fontWeight: '500'
+                  fontWeight: '600'
                 }}>
                   Email Notifications
                 </span>
               </label>
               <p style={{
-                fontSize: '14px',
+                fontSize: '16px',
+                fontWeight: '500',
                 color: '#64748b',
-                margin: '8px 0 0 30px'
+                margin: '10px 0 0 30px',
+                lineHeight: '1.6'
               }}>
                 Receive updates about society events, news, and important announcements
               </p>
             </div>
 
             <h2 style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#1e293b',
-              marginBottom: '24px',
-              marginTop: '32px'
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px',
+              marginTop: '36px'
             }}>
               Privacy Settings
             </h2>
 
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '28px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1e293b',
-                marginBottom: '8px'
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '10px'
               }}>
                 Profile Visibility
               </label>
@@ -200,20 +203,24 @@ export default function AccountSettings() {
                 onChange={(e) => handleChange('profileVisibility', e.target.value)}
                 style={{
                   width: '100%',
-                  maxWidth: '300px',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  maxWidth: '400px',
+                  padding: '16px',
+                  border: '2px solid #5eead4',
+                  borderRadius: '10px',
+                  fontSize: '17px',
+                  fontWeight: '500',
+                  background: 'white'
                 }}
               >
                 <option value="private">Private (Members only)</option>
                 <option value="public">Public</option>
               </select>
               <p style={{
-                fontSize: '14px',
+                fontSize: '16px',
+                fontWeight: '500',
                 color: '#64748b',
-                margin: '8px 0 0 0'
+                margin: '10px 0 0 0',
+                lineHeight: '1.6'
               }}>
                 Control who can view your profile information
               </p>
@@ -222,10 +229,10 @@ export default function AccountSettings() {
             <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1e293b',
-                marginBottom: '8px'
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '10px'
               }}>
                 Preferred Contact Method
               </label>
@@ -234,11 +241,13 @@ export default function AccountSettings() {
                 onChange={(e) => handleChange('contactPreference', e.target.value)}
                 style={{
                   width: '100%',
-                  maxWidth: '300px',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  maxWidth: '400px',
+                  padding: '16px',
+                  border: '2px solid #5eead4',
+                  borderRadius: '10px',
+                  fontSize: '17px',
+                  fontWeight: '500',
+                  background: 'white'
                 }}
               >
                 <option value="email">Email</option>
@@ -246,7 +255,8 @@ export default function AccountSettings() {
                 <option value="mail">Physical Mail</option>
               </select>
               <p style={{
-                fontSize: '14px',
+                fontSize: '16px',
+                fontWeight: '500',
                 color: '#64748b',
                 margin: '8px 0 0 0'
               }}>
@@ -256,18 +266,20 @@ export default function AccountSettings() {
 
             <div style={{
               display: 'flex',
-              gap: '12px',
-              paddingTop: '24px',
-              borderTop: '1px solid #e2e8f0'
+              gap: '16px',
+              paddingTop: '32px',
+              borderTop: '3px solid #ccfbf1'
             }}>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
                 style={{
-                  background: isSaving ? '#94a3b8' : 'linear-gradient(135deg, #14b8a6, #0d9488)',
+                  background: isSaving ? '#94a3b8' : '#14b8a6',
                   color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
+                  border: '2px solid ' + (isSaving ? '#94a3b8' : '#0f766e'),
+                  padding: '18px 32px',
+                  fontSize: '16px',
+                  fontWeight: '700',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '500',

@@ -42,40 +42,76 @@ export default function SearchResults() {
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
           <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
               <div>
-                <h1 className="dashboard-title">🔍 Search Results</h1>
-                <p className="dashboard-subtitle">
+                <h1 className="dashboard-title" style={{ fontSize: '38px', fontWeight: '800' }}>🔍 Search Results</h1>
+                <p className="dashboard-subtitle" style={{ fontSize: '20px', fontWeight: '600' }}>
                   {query ? `Results for "${query}"` : "Enter a search term to find members"}
                 </p>
               </div>
-              <Link to="/members" className="btn-primary" style={{ textDecoration: 'none' }}>
-                ← Back to Members
+              <Link 
+                to="/members" 
+                style={{ 
+                  textDecoration: 'none',
+                  padding: '16px 28px',
+                  background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+                  color: 'white',
+                  borderRadius: '10px',
+                  fontSize: '17px',
+                  fontWeight: '700',
+                  border: '2px solid #0f766e',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)',
+                  display: 'inline-block'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
+                }}
+              >
+                ← Back to Directory
               </Link>
             </div>
           </div>
 
           {/* Search Info */}
           {query && (
-            <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <strong style={{ color: '#0f172a' }}>Search Query:</strong>
+            <div className="dashboard-card" style={{ 
+              marginBottom: '28px',
+              padding: '32px',
+              background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+              border: '2px solid #14b8a6'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <strong style={{ color: '#0f766e', fontSize: '18px', fontWeight: '700' }}>🔎 Search Query:</strong>
                   <span style={{ 
-                    marginLeft: '8px',
-                    padding: '4px 12px',
-                    background: '#f0fdfa',
-                    color: '#0f766e',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600'
+                    padding: '10px 20px',
+                    background: 'white',
+                    color: '#14b8a6',
+                    borderRadius: '10px',
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    border: '2px solid #14b8a6'
                   }}>
-                    {query}
+                    "{query}"
                   </span>
                 </div>
                 {!loading && (
-                  <div style={{ color: '#64748b', fontSize: '14px' }}>
-                    {results.length} result{results.length !== 1 ? 's' : ''} found
+                  <div style={{ 
+                    color: '#0f766e', 
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    padding: '10px 20px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    border: '2px solid #14b8a6'
+                  }}>
+                    📊 {results.length} result{results.length !== 1 ? 's' : ''} found
                   </div>
                 )}
               </div>
@@ -99,12 +135,12 @@ export default function SearchResults() {
 
           {/* No Query State */}
           {!query && !loading && (
-            <div className="dashboard-card" style={{ textAlign: 'center', padding: '60px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-              <h2 style={{ fontSize: '24px', color: '#64748b', marginBottom: '16px' }}>
+            <div className="dashboard-card" style={{ textAlign: 'center', padding: '100px 40px', border: '2px solid #14b8a6' }}>
+              <div style={{ fontSize: '80px', marginBottom: '24px' }}>🔍</div>
+              <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#374151', marginBottom: '20px' }}>
                 Ready to Search
               </h2>
-              <p style={{ color: '#94a3b8', fontSize: '16px' }}>
+              <p style={{ color: '#64748b', fontSize: '18px', fontWeight: '500' }}>
                 Use the search feature in the members directory to find specific members.
               </p>
             </div>
@@ -112,12 +148,12 @@ export default function SearchResults() {
 
           {/* No Results State */}
           {!loading && query && results.length === 0 && !error && (
-            <div className="dashboard-card" style={{ textAlign: 'center', padding: '60px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>😔</div>
-              <h2 style={{ fontSize: '24px', color: '#64748b', marginBottom: '16px' }}>
+            <div className="dashboard-card" style={{ textAlign: 'center', padding: '100px 40px', border: '2px solid #14b8a6' }}>
+              <div style={{ fontSize: '80px', marginBottom: '24px' }}>😔</div>
+              <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#374151', marginBottom: '20px' }}>
                 No Results Found
               </h2>
-              <p style={{ color: '#94a3b8', fontSize: '16px' }}>
+              <p style={{ color: '#64748b', fontSize: '18px', fontWeight: '500' }}>
                 No members found matching "{query}". Try a different search term.
               </p>
             </div>
@@ -125,75 +161,63 @@ export default function SearchResults() {
 
           {/* Results Table */}
           {!loading && results.length > 0 && (
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">📋 Search Results</h2>
+            <div className="dashboard-card" style={{ padding: '36px', border: '2px solid #14b8a6' }}>
+              <h2 className="dashboard-card-title" style={{ fontSize: '24px', fontWeight: '700', marginBottom: '28px', color: '#0f766e' }}>📋 Member Results</h2>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', fontSize: '14px' }}>
+                <table style={{ width: '100%', fontSize: '17px', borderCollapse: 'separate', borderSpacing: '0' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    <tr style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', borderBottom: '3px solid #14b8a6' }}>
                       <th style={{ 
-                        padding: '16px', 
+                        padding: '22px 24px', 
                         textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         Surname
                       </th>
                       <th style={{ 
-                        padding: '16px', 
+                        padding: '22px 24px', 
                         textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         First Name
                       </th>
                       <th style={{ 
-                        padding: '16px', 
+                        padding: '22px 24px', 
                         textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         County
                       </th>
                       <th style={{ 
-                        padding: '16px', 
+                        padding: '22px 24px', 
                         textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         Category
                       </th>
                       <th style={{ 
-                        padding: '16px', 
+                        padding: '22px 24px', 
                         textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         Status
                       </th>
                       <th style={{ 
-                        padding: '16px', 
-                        textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#374151',
-                        fontSize: '12px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
+                        padding: '22px 24px', 
+                        textAlign: 'center',
+                        fontWeight: '700',
+                        color: '#0f766e',
+                        fontSize: '17px'
                       }}>
                         Actions
                       </th>
@@ -204,71 +228,80 @@ export default function SearchResults() {
                       <tr 
                         key={member.id} 
                         style={{ 
-                          borderBottom: '1px solid #f1f5f9',
-                          transition: 'background-color 0.2s ease'
+                          borderBottom: '2px solid #f0fdfa',
+                          transition: 'all 0.2s ease'
                         }}
-                        onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8fafc'}
-                        onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}
+                        onMouseEnter={(e) => {
+                          e.target.closest('tr').style.backgroundColor = '#f0fdfa';
+                          e.target.closest('tr').style.transform = 'scale(1.005)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.closest('tr').style.backgroundColor = 'white';
+                          e.target.closest('tr').style.transform = 'scale(1)';
+                        }}
                       >
-                        <td style={{ padding: '16px', fontWeight: '500' }}>
+                        <td style={{ padding: '20px 24px', fontWeight: '700', fontSize: '17px', color: '#0f172a' }}>
                           {member.lastName}
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 24px', fontWeight: '600', fontSize: '17px', color: '#374151' }}>
                           {member.firstName}
                         </td>
-                        <td style={{ padding: '16px', color: '#64748b' }}>
+                        <td style={{ padding: '20px 24px', fontWeight: '500', fontSize: '17px', color: '#64748b' }}>
                           {member.county || "—"}
                         </td>
-                        <td style={{ padding: '16px', color: '#64748b' }}>
+                        <td style={{ padding: '20px 24px', fontWeight: '500', fontSize: '17px', color: '#64748b' }}>
                           {member.category || "—"}
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 24px' }}>
                           <span style={{
                             display: 'inline-block',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            borderRadius: '20px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
+                            padding: '8px 18px',
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            borderRadius: '10px',
                             ...(member.isActive 
                               ? { 
                                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                  color: 'white'
+                                  color: 'white',
+                                  border: '2px solid #059669'
                                 }
                               : { 
                                   background: '#f1f5f9', 
-                                  color: '#64748b'
+                                  color: '#64748b',
+                                  border: '2px solid #cbd5e1'
                                 }
                             )
                           }}>
-                            {member.isActive ? "Active" : "Inactive"}
+                            {member.isActive ? "✓ Active" : "✕ Inactive"}
                           </span>
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 24px', textAlign: 'center' }}>
                           <Link
                             to={`/members/${member.id}`}
                             style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#14b8a6',
-                              fontSize: '12px',
-                              fontWeight: '600',
+                              display: 'inline-block',
+                              padding: '14px 28px',
+                              background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+                              color: 'white',
+                              fontSize: '17px',
+                              fontWeight: '700',
                               textDecoration: 'none',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              transition: 'all 0.2s ease'
+                              borderRadius: '10px',
+                              border: '2px solid #0f766e',
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)',
+                              minWidth: '160px'
                             }}
                             onMouseEnter={(e) => {
-                              e.target.style.background = '#f0fdfa';
-                              e.target.style.textDecoration = 'underline';
+                              e.target.style.transform = 'translateY(-2px)';
+                              e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
                             }}
                             onMouseLeave={(e) => {
-                              e.target.style.background = 'none';
-                              e.target.style.textDecoration = 'none';
+                              e.target.style.transform = 'translateY(0)';
+                              e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
                             }}
                           >
-                            View Details
+                            👁️ View Profile
                           </Link>
                         </td>
                       </tr>

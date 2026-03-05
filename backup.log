@@ -1,0 +1,18 @@
+2026-03-05 12:37:46,784 - INFO - ======================================================================
+2026-03-05 12:37:46,784 - INFO -  DATABASE BACKUP MANAGER
+2026-03-05 12:37:46,785 - INFO - ======================================================================
+2026-03-05 12:37:46,788 - INFO - Backup frequency: daily
+2026-03-05 12:37:46,791 - INFO - No previous backups found, creating initial backup
+2026-03-05 12:37:46,792 - INFO - Backup needed, creating backup...
+2026-03-05 12:40:14,180 - INFO - ======================================================================
+2026-03-05 12:40:14,181 - INFO -  DATABASE BACKUP MANAGER v2
+2026-03-05 12:40:14,181 - INFO - ======================================================================
+2026-03-05 12:40:14,181 - INFO - Backup location: C:\Users\user\Documents\membership\backups
+2026-03-05 12:40:14,182 - INFO - Backup frequency: daily
+2026-03-05 12:40:14,182 - INFO - Retention: 10 backups or 30 days
+2026-03-05 12:40:14,182 - INFO - Compression: Enabled
+2026-03-05 12:40:14,182 - INFO - No previous backups found, creating initial backup
+2026-03-05 12:40:14,182 - INFO - Creating backup...
+2026-03-05 12:40:14,314 - INFO - ZIP integrity check passed: BISMembershipDatabase_backup_20260305_124014.zip
+2026-03-05 12:40:14,315 - INFO - Backup created: BISMembershipDatabase_backup_20260305_124014.zip (0.07 MB)
+2026-03-05 12:40:14,315 - INFO - SHA256: f06d6fcc3d1c19050868cd8e51d4ac71974fb2175f31bb75bd9e47e19ef90a07

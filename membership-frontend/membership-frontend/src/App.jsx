@@ -21,9 +21,8 @@ import Settings from "./pages/settings";
 import DevTools from "./components/devtools";
 import PrivateDashboard from "./pages/dashboard/private";
 import Support from "./pages/support";
-import AccountSettings from "./pages/account-settings";
+import AppSettings from "./pages/app-settings";
 import BulkImport from "./pages/admin/import";
-import Recognitions from "./pages/recognitions";
 import AdminRecognitions from "./pages/admin/recognitions";
 
 function App() {
@@ -40,10 +39,9 @@ function App() {
         <Route path="/admin/recognitions" element={<RequireAuth allowedRoles={["admin"]}><AdminRecognitions /></RequireAuth>} />
         <Route path="/admin/import" element={<RequireAuth allowedRoles={["admin"]}><BulkImport /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth allowedRoles={["admin"]}><Settings /></RequireAuth>} />
-        <Route path="/account-settings" element={<RequireAuth allowedRoles={["private","admin"]}><AccountSettings /></RequireAuth>} />
+        <Route path="/app-settings" element={<RequireAuth allowedRoles={["private","admin","public"]}><AppSettings /></RequireAuth>} />
         <Route path="/my-profile" element={<RequireAuth allowedRoles={["admin","private","public"]}><MyProfile /></RequireAuth>} />
         <Route path="/members" element={<RequireAuth allowedRoles={["admin","private","public"]}><Members /></RequireAuth>} />
-        <Route path="/recognitions" element={<RequireAuth allowedRoles={["admin","private","public"]}><Recognitions /></RequireAuth>} />
         <Route path="/support" element={<RequireAuth allowedRoles={["admin","private"]}><Support /></RequireAuth>} />
         <Route path="/members/new" element={<RequireAuth allowedRoles={["admin"]}><AddMember /></RequireAuth>} />
         <Route path="/members/edit/:id" element={<RequireAuth allowedRoles={["admin"]}><EditMember /></RequireAuth>} />

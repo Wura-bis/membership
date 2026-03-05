@@ -144,13 +144,26 @@ export default function UserManagement() {
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
-          <div className="dashboard-header">
-            <div>
-              <h1 className="dashboard-title">👥 User Management</h1>
-              <p className="dashboard-subtitle">
-                Manage user roles, permissions, and account status
-              </p>
-            </div>
+          <div style={{ marginBottom: '32px' }}>
+            <h1 style={{ 
+              fontSize: '38px', 
+              fontWeight: '700', 
+              color: '#0f766e', 
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              👥 User Management
+            </h1>
+            <p style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              color: '#64748b',
+              margin: 0
+            }}>
+              Manage user roles, permissions, and account status
+            </p>
           </div>
 
           {error && (
@@ -160,15 +173,37 @@ export default function UserManagement() {
           )}
 
           {/* Filters */}
-          <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-            <h2 className="dashboard-card-title">🔍 Search & Filters</h2>
+          <div style={{ 
+            padding: '36px', 
+            background: '#f0fdfa', 
+            borderRadius: '12px', 
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)', 
+            border: '2px solid #5eead4',
+            marginBottom: '24px'
+          }}>
+            <h2 style={{ 
+              fontSize: '24px', 
+              fontWeight: '700', 
+              color: '#0f766e',
+              marginBottom: '28px'
+            }}>
+              🔍 Search & Filters
+            </h2>
             <div style={{ 
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '16px'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '20px'
             }}>
               <div>
-                <label className="form-label">Search Users</label>
+                <label style={{ 
+                  display: 'block',
+                  marginBottom: '10px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#0f766e'
+                }}>
+                  Search Users
+                </label>
                 <input
                   type="text"
                   placeholder="Search by name or email..."
@@ -178,7 +213,15 @@ export default function UserManagement() {
                 />
               </div>
               <div>
-                <label className="form-label">Filter by Role</label>
+                <label style={{ 
+                  display: 'block',
+                  marginBottom: '10px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#0f766e'
+                }}>
+                  Filter by Role
+                </label>
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
@@ -191,7 +234,15 @@ export default function UserManagement() {
                 </select>
               </div>
               <div>
-                <label className="form-label">Filter by Status</label>
+                <label style={{ 
+                  display: 'block',
+                  marginBottom: '10px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#0f766e'
+                }}>
+                  Filter by Status
+                </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -205,84 +256,92 @@ export default function UserManagement() {
             </div>
             
             <div style={{ 
-              marginTop: '16px',
-              padding: '12px 16px',
-              background: '#f8fafc',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: '#64748b'
+              marginTop: '24px',
+              padding: '16px 20px',
+              background: 'white',
+              borderRadius: '10px',
+              border: '2px solid #ccfbf1',
+              fontSize: '17px',
+              fontWeight: '500',
+              color: '#0f766e'
             }}>
-              Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
+              Showing <strong style={{ fontWeight: '700' }}>{filteredUsers.length}</strong> of <strong style={{ fontWeight: '700' }}>{users.length}</strong> users
             </div>
           </div>
 
           {/* Users Table */}
-          <div className="dashboard-card">
+          <div style={{ 
+            padding: '36px', 
+            background: '#f0fdfa', 
+            borderRadius: '12px', 
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)', 
+            border: '2px solid #5eead4'
+          }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', fontSize: '14px' }}>
+              <table style={{ width: '100%', fontSize: '16px' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                  <tr style={{ borderBottom: '3px solid #5eead4' }}>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
                       User
                     </th>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
                       Email
                     </th>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
                       Role
                     </th>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
                       Status
                     </th>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
                       Approval
                     </th>
                     <th style={{ 
-                      padding: '16px', 
+                      padding: '20px 16px', 
                       textAlign: 'left',
-                      fontWeight: '600',
-                      color: '#374151',
-                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px'
                     }}>
@@ -295,11 +354,12 @@ export default function UserManagement() {
                     <tr>
                       <td colSpan="6" style={{ 
                         textAlign: 'center', 
-                        padding: '48px', 
-                        color: '#94a3b8',
-                        fontSize: '14px'
+                        padding: '64px 48px', 
+                        color: '#64748b',
+                        fontSize: '17px',
+                        fontWeight: '500'
                       }}>
-                        {users.length === 0 ? 'No users found' : 'No users match your current filters'}
+                        {users.length === 0 ? '📭 No users found' : '🔍 No users match your current filters'}
                       </td>
                     </tr>
                   ) : (
@@ -307,65 +367,69 @@ export default function UserManagement() {
                       <tr 
                         key={u.id}
                         style={{ 
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '2px solid #ccfbf1',
                           transition: 'background-color 0.2s ease',
-                          backgroundColor: u.id === user?.id ? '#f0fdfa' : 'transparent'
+                          backgroundColor: u.id === user?.id ? '#d1fae5' : 'white'
                         }}
-                        onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = u.id === user?.id ? '#f0fdfa' : '#f8fafc'}
-                        onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = u.id === user?.id ? '#f0fdfa' : 'transparent'}
+                        onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = u.id === user?.id ? '#d1fae5' : '#f0fdfa'}
+                        onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = u.id === user?.id ? '#d1fae5' : 'white'}
                       >
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <td style={{ padding: '20px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                             <div style={{
-                              width: '40px',
-                              height: '40px',
+                              width: '48px',
+                              height: '48px',
                               borderRadius: '50%',
                               background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               color: 'white',
-                              fontWeight: '600',
-                              fontSize: '14px'
+                              fontWeight: '700',
+                              fontSize: '17px',
+                              border: '2px solid white',
+                              boxShadow: '0 2px 8px rgba(20,184,166,0.2)'
                             }}>
                               {u.firstName?.charAt(0)}{u.lastName?.charAt(0)}
                             </div>
                             <div>
-                              <div style={{ fontWeight: '500', color: '#0f172a' }}>
+                              <div style={{ fontWeight: '600', color: '#0f766e', fontSize: '17px' }}>
                                 {u.firstName} {u.lastName}
                                 {u.id === user?.id && (
                                   <span style={{ 
-                                    marginLeft: '8px',
+                                    marginLeft: '10px',
                                     background: '#14b8a6',
                                     color: 'white',
-                                    fontSize: '10px',
-                                    padding: '2px 6px',
-                                    borderRadius: '10px',
-                                    fontWeight: '600'
+                                    fontSize: '12px',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
+                                    fontWeight: '700'
                                   }}>
                                     YOU
                                   </span>
                                 )}
                               </div>
-                              <div style={{ fontSize: '12px', color: '#64748b' }}>
+                              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '4px', fontWeight: '500' }}>
                                 ID: {u.userID || u.id}
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '16px', color: '#64748b' }}>
+                        <td style={{ padding: '20px 16px', color: '#0f766e', fontSize: '16px', fontWeight: '500' }}>
                           {u.email || "No email"}
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 16px' }}>
                           {u.id === user?.id ? (
                             <span style={{
-                              padding: '8px 12px',
+                              display: 'inline-block',
+                              padding: '10px 16px',
                               background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
                               color: 'white',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              textTransform: 'uppercase'
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              fontWeight: '700',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
                             }}>
                               {u.role}
                             </span>
@@ -375,12 +439,11 @@ export default function UserManagement() {
                               onChange={(e) =>
                                 updateUser(u.id, "role", { role: e.target.value })
                               }
+                              className="form-input"
                               style={{
-                                padding: '6px 10px',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                background: 'white'
+                                padding: '10px 14px',
+                                fontSize: '15px',
+                                minWidth: '140px'
                               }}
                             >
                               {roleOptions.map((r) => (
@@ -391,55 +454,59 @@ export default function UserManagement() {
                             </select>
                           )}
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 16px' }}>
                           <span style={{
                             display: 'inline-block',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            fontWeight: '600',
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            fontWeight: '700',
                             borderRadius: '20px',
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             ...(u.isActive 
                               ? { 
                                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                  color: 'white'
+                                  color: 'white',
+                                  border: '2px solid #059669'
                                 }
                               : { 
-                                  background: '#f1f5f9', 
-                                  color: '#64748b'
+                                  background: '#fee2e2', 
+                                  color: '#dc2626',
+                                  border: '2px solid #dc2626'
                                 }
                             )
                           }}>
-                            {u.isActive ? "Active" : "Inactive"}
+                            {u.isActive ? "✅ Active" : "❌ Inactive"}
                           </span>
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 16px' }}>
                           <span style={{
                             display: 'inline-block',
-                            padding: '4px 12px',
-                            fontSize: '12px',
-                            fontWeight: '600',
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            fontWeight: '700',
                             borderRadius: '20px',
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
                             ...(u.isApproved 
                               ? { 
                                   background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                  color: 'white'
+                                  color: 'white',
+                                  border: '2px solid #059669'
                                 }
                               : { 
                                   background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
-                                  color: 'white'
+                                  color: 'white',
+                                  border: '2px solid #d97706'
                                 }
                             )
                           }}>
-                            {u.isApproved ? "Approved" : "Pending"}
+                            {u.isApproved ? "✓ Approved" : "⏳ Pending"}
                           </span>
                         </td>
-                        <td style={{ padding: '16px' }}>
+                        <td style={{ padding: '20px 16px' }}>
                           {u.id !== user?.id && (
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                               {!u.isApproved && (
                                 <button
                                   onClick={() =>
@@ -448,16 +515,23 @@ export default function UserManagement() {
                                   style={{
                                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                     color: 'white',
-                                    border: 'none',
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
+                                    border: '2px solid #059669',
+                                    padding: '10px 18px',
+                                    borderRadius: '8px',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 2px 6px rgba(5,150,105,0.3)'
                                   }}
-                                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
-                                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 4px 12px rgba(5,150,105,0.4)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 2px 6px rgba(5,150,105,0.3)';
+                                  }}
                                 >
                                   ✓ Approve
                                 </button>
@@ -468,20 +542,28 @@ export default function UserManagement() {
                                     handleConfirmUserAction(u.id, "status", { isApproved: false }, u)
                                   }
                                   style={{
-                                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
+                                    background: 'white',
+                                    color: '#dc2626',
+                                    border: '2px solid #dc2626',
+                                    padding: '10px 18px',
+                                    borderRadius: '8px',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease'
                                   }}
-                                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
-                                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.background = '#dc2626';
+                                    e.target.style.color = 'white';
+                                    e.target.style.transform = 'translateY(-2px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.background = 'white';
+                                    e.target.style.color = '#dc2626';
+                                    e.target.style.transform = 'translateY(0)';
+                                  }}
                                 >
-                                  ⏸ Deactivate
+                                  🔒 Deactivate
                                 </button>
                               ) : (
                                 <button
@@ -491,18 +573,25 @@ export default function UserManagement() {
                                   style={{
                                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                     color: 'white',
-                                    border: 'none',
-                                    padding: '6px 12px',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
+                                    border: '2px solid #059669',
+                                    padding: '10px 18px',
+                                    borderRadius: '8px',
+                                    fontSize: '15px',
+                                    fontWeight: '700',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 2px 6px rgba(5,150,105,0.3)'
                                   }}
-                                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-1px)'}
-                                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 4px 12px rgba(5,150,105,0.4)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = '0 2px 6px rgba(5,150,105,0.3)';
+                                  }}
                                 >
-                                  ▶ Activate
+                                  🔓 Activate
                                 </button>
                               )}
                             </div>

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
 import ConfirmModal from "../components/confirmmodal";
+import React from 'react';
 
 export default function MyProfile() {
   const { user: authUser } = useAuth();
@@ -13,35 +14,20 @@ export default function MyProfile() {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Password change modal state
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordLoading, setPasswordLoading] = useState(false);
   const [showPrivateAccessConfirm, setShowPrivateAccessConfirm] = useState(false);
   const [showDataExportConfirm, setShowDataExportConfirm] = useState(false);
-  
-  // Private access request state
   const [requestingPrivateAccess, setRequestingPrivateAccess] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showExportData, setShowExportData] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/my-profile", {
-      credentials: "include",
-    })
+    fetch("http://localhost:5000/api/my-profile", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
           setError(data.error);
         } else {
-          // Convert role to lowercase to match frontend expectations
           const userWithLowerRole = { ...data, role: data.role?.toLowerCase() };
           setUser(userWithLowerRole);
           setForm({
@@ -63,20 +49,18 @@ export default function MyProfile() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(""); // Clear error when user starts typing
+    if (error) setError("");
   };
 
   const handleSave = async () => {
     setError("");
     setSuccess("");
     setIsSaving(true);
-
     if (!form.username) {
       setError("Username is required.");
       setIsSaving(false);
       return;
     }
-
     try {
       const res = await fetch("http://localhost:5000/api/my-profile", {
         method: "PUT",
@@ -86,10 +70,9 @@ export default function MyProfile() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Update failed");
-
       setSuccess("Profile updated successfully!");
       setEditMode(false);
-      setUser((prev) => ({ ...prev, ...form, role: prev.role })); // Preserve role
+      setUser((prev) => ({ ...prev, ...form, role: prev.role }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -97,98 +80,18 @@ export default function MyProfile() {
     }
   };
 
-  // Handle password change
-  const handlePasswordChange = async () => {
-    setPasswordError("");
-    
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError("All password fields are required.");
-      return;
-    }
-    
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError("New passwords don't match.");
-      return;
-    }
-    
-    if (passwordForm.newPassword.length < 6) {
-      setPasswordError("New password must be at least 6 characters long.");
-      return;
-    }
-    
-    setPasswordLoading(true);
-    
-    try {
-      const res = await fetch("http://localhost:5000/api/me/change-password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        }),
-        credentials: "include",
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to change password");
-      }
-      
-      setSuccess("Password changed successfully!");
-      setShowPasswordModal(false);
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    } catch (err) {
-      setPasswordError(err.message);
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
-  // Handle export my data
-  const handleExportMyData = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/my-data/export", {
-        credentials: "include",
-      });
-      
-      if (!res.ok) {
-        throw new Error("Failed to export data");
-      }
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `my-data-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      setSuccess("Your data has been exported successfully!");
-    } catch (err) {
-      setError("Failed to export data: " + err.message);
-    }
-  };
-
-  // Handle private access request
   const handleRequestPrivateAccess = async () => {
     setRequestingPrivateAccess(true);
-    setError('');
-    setSuccess('');
-    
+    setError("");
+    setSuccess("");
     try {
       const res = await fetch('http://localhost:5000/api/my-profile/request-private-access', {
         method: 'POST',
         credentials: 'include'
       });
-      
       const data = await res.json();
-      
       if (res.ok) {
         setSuccess(data.message);
-        // Update user state to reflect the change
         setUser(prev => ({ ...prev, role: 'private', isApproved: false }));
       } else {
         setError(data.error || 'Failed to submit private access request');
@@ -200,16 +103,31 @@ export default function MyProfile() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/delete_account', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        // Log out and redirect to home/login
+        window.location.href = '/login';
+      } else {
+        alert('Error deleting account');
+      }
+    } catch (err) {
+      alert('Error deleting account');
+    }
+    setDeleting(false);
+    setShowDeleteModal(false);
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
         <div className="dashboard-container">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: '400px'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
             <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
           </div>
         </div>
@@ -232,13 +150,13 @@ export default function MyProfile() {
   return (
     <MainLayout>
       <div className="dashboard-container">
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           {/* Header */}
           <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <h1 className="dashboard-title">👤 My Profile</h1>
-                <p className="dashboard-subtitle">
+                <h1 className="dashboard-title" style={{ fontSize: '38px', fontWeight: '700', color: '#0f766e' }}>👤 My Profile</h1>
+                <p className="dashboard-subtitle" style={{ fontSize: '20px', fontWeight: '600', color: '#64748b' }}>
                   Manage your personal information and account settings
                 </p>
               </div>
@@ -247,7 +165,11 @@ export default function MyProfile() {
                 className="btn-primary" 
                 style={{ 
                   textDecoration: 'none',
-                  background: '#64748b'
+                  background: '#64748b',
+                  padding: '18px 28px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  borderRadius: '8px'
                 }}
               >
                 ← Back to Dashboard
@@ -261,6 +183,12 @@ export default function MyProfile() {
             </div>
           )}
 
+          {user && user.notification && (
+            <div className="alert alert-warning" style={{ marginBottom: '32px', background: '#fef3c7', color: '#92400e', padding: '12px', borderRadius: '8px' }}>
+              {user.notification}
+            </div>
+          )}
+
           {success && (
             <div className="alert alert-success" style={{ marginBottom: '32px' }}>
               {success}
@@ -268,14 +196,25 @@ export default function MyProfile() {
           )}
 
           {/* Profile Card */}
-          <div className="dashboard-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 className="dashboard-card-title">📋 Profile Information</h2>
+          <div className="dashboard-card" style={{ 
+            padding: '36px',
+            background: '#f0fdfa',
+            borderRadius: '12px',
+            border: '2px solid #5eead4',
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 className="dashboard-card-title" style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e' }}>📋 Profile Information</h2>
               {!editMode && (
                 <button
                   onClick={() => setEditMode(true)}
                   className="btn-primary"
-                  style={{ fontSize: '14px', padding: '8px 16px' }}
+                  style={{ 
+                    fontSize: '16px', 
+                    padding: '16px 28px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
+                  }}
                 >
                   ✏️ Edit Profile
                 </button>
@@ -291,7 +230,7 @@ export default function MyProfile() {
                   marginBottom: '32px'
                 }}>
                   <div>
-                    <label className="form-label" htmlFor="firstName">First Name</label>
+                    <label className="form-label" htmlFor="firstName" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>First Name</label>
                     <input
                       id="firstName"
                       type="text"
@@ -300,11 +239,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your first name"
+                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
                     />
                   </div>
                   
                   <div>
-                    <label className="form-label" htmlFor="lastName">Last Name</label>
+                    <label className="form-label" htmlFor="lastName" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Last Name</label>
                     <input
                       id="lastName"
                       type="text"
@@ -313,11 +253,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your last name"
+                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="username">Username *</label>
+                    <label className="form-label" htmlFor="username" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Username *</label>
                     <input
                       id="username"
                       type="text"
@@ -327,11 +268,12 @@ export default function MyProfile() {
                       required
                       className="form-input"
                       placeholder="Enter your username"
+                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="email">Email Address</label>
+                    <label className="form-label" htmlFor="email" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Email Address</label>
                     <input
                       id="email"
                       type="email"
@@ -340,11 +282,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your email"
+                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="phoneNumber">Phone Number</label>
+                    <label className="form-label" htmlFor="phoneNumber" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Phone Number</label>
                     <input
                       id="phoneNumber"
                       type="tel"
@@ -353,11 +296,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="+353 87 123 4567"
+                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -376,7 +320,11 @@ export default function MyProfile() {
                     className="btn-primary"
                     style={{ 
                       background: '#64748b',
-                      border: 'none'
+                      border: 'none',
+                      fontSize: '16px',
+                      padding: '18px 32px',
+                      fontWeight: '700',
+                      borderRadius: '8px'
                     }}
                   >
                     Cancel
@@ -385,10 +333,16 @@ export default function MyProfile() {
                     type="submit"
                     disabled={isSaving}
                     className="btn-primary"
+                    style={{
+                      fontSize: '16px',
+                      padding: '18px 32px',
+                      fontWeight: '700',
+                      borderRadius: '8px'
+                    }}
                   >
                     {isSaving ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
+                        <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
                         Saving...
                       </div>
                     ) : (
@@ -400,26 +354,26 @@ export default function MyProfile() {
             ) : (
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                gap: '24px' 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+                gap: '28px' 
               }}>
                 <div className="info-item">
-                  <div className="info-label">Full Name</div>
-                  <div className="info-value">
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Full Name</div>
+                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>
                     {[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}
                   </div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label">Username</div>
-                  <div className="info-value">{user.username || "—"}</div>
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Username</div>
+                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>{user.username || "—"}</div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label">Email Address</div>
-                  <div className="info-value">
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Email Address</div>
+                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500' }}>
                     {user.email ? (
-                      <a href={`mailto:${user.email}`} style={{ color: '#14b8a6', textDecoration: 'none' }}>
+                      <a href={`mailto:${user.email}`} style={{ color: '#14b8a6', textDecoration: 'none', fontWeight: '600' }}>
                         {user.email}
                       </a>
                     ) : "—"}
@@ -427,77 +381,44 @@ export default function MyProfile() {
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label">Phone Number</div>
-                  <div className="info-value">{user.phoneNumber || "—"}</div>
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Phone Number</div>
+                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>{user.phoneNumber || "—"}</div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label">Account Role</div>
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>ACCOUNT ROLE</div>
                   <div className="info-value">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        borderRadius: '20px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        background: user.role === 'admin' 
-                          ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' 
-                          : user.role === 'private'
-                          ? user.isApproved === false 
-                            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'  // Orange for pending
-                            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'  // Blue for approved
-                          : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white'
-                      }}>
-                        {user.role === 'admin' ? '👑 Administrator' : 
-                         user.role === 'private' ? 
-                           user.isApproved === false ? '⏳ Private Access Pending' : '🔒 Private Member'
-                         : '🌐 Public Member'}
-                      </span>
-                      
-                      {/* Private Access Request Button */}
-                      {user.role === 'public' && (
-                        <button
-                          onClick={() => setShowPrivateAccessConfirm(true)}
-                          disabled={requestingPrivateAccess}
-                          style={{
-                            padding: '6px 12px',
-                            fontSize: '11px',
-                            fontWeight: '500',
-                            border: '1px solid #6366f1',
-                            borderRadius: '6px',
-                            background: 'white',
-                            color: '#6366f1',
-                            cursor: requestingPrivateAccess ? 'not-allowed' : 'pointer',
-                            opacity: requestingPrivateAccess ? 0.6 : 1,
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!requestingPrivateAccess) {
-                              e.target.style.background = '#6366f1';
-                              e.target.style.color = 'white';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!requestingPrivateAccess) {
-                              e.target.style.background = 'white';
-                              e.target.style.color = '#6366f1';
-                            }
-                          }}
-                        >
-                          {requestingPrivateAccess ? '⏳ Requesting...' : '🔐 Request Private Access'}
-                        </button>
-                      )}
-                    </div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '12px 20px',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      borderRadius: '20px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      background: user.role === 'admin'
+                        ? '#0d9488'
+                        : user.role === 'private' && user.isApproved === false
+                          ? '#f59e0b'
+                          : user.role === 'private' && user.isApproved === true
+                            ? '#6366f1'
+                            : '#10b981',
+                      color: 'white'
+                    }}>
+                      {user.role === 'admin'
+                        ? 'ADMINISTRATOR'
+                        : user.role === 'private' && user.isApproved === false
+                          ? 'PENDING APPROVAL'
+                          : user.role === 'private' && user.isApproved === true
+                            ? 'PRIVATE MEMBER'
+                            : 'PUBLIC USER'}
+                    </span>
                   </div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label">Last Login</div>
-                  <div className="info-value">
+                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Last Login</div>
+                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>
                     {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "—"}
                   </div>
                 </div>
@@ -507,373 +428,163 @@ export default function MyProfile() {
 
           {/* Account Actions */}
           {!editMode && (
-            <div className="dashboard-card">
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#1f2937',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                🔧 Account Actions
-              </h2>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                gap: '16px' 
-              }}>
-                <button
-                  onClick={() => setShowPasswordModal(true)}
-                  style={{ 
-                    background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '16px 24px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 8px 20px rgba(13, 148, 136, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(13, 148, 136, 0.3)';
-                  }}
-                >
-                  🔑 Change Password
-                </button>
-                
-                <button
-                  onClick={() => setShowDataExportConfirm(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '16px 24px',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 8px 20px rgba(5, 150, 105, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(5, 150, 105, 0.3)';
-                  }}
-                >
-                  📄 Export My Data (PDF)
-                </button>
+            <div className="dashboard-card" style={{ 
+              padding: '36px',
+              background: '#f0fdfa',
+              borderRadius: '12px',
+              border: '2px solid #5eead4',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>🔧 Account Actions</h2>
+              <div className="account-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                {user.role === 'admin' ? (
+                  <>
+                    <button 
+                      className="action-btn" 
+                      onClick={() => setShowChangePassword(true)} 
+                      style={{ 
+                        padding: '14px 24px', 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        border: '2px solid #14b8a6', 
+                        borderRadius: '8px', 
+                        background: 'white', 
+                        color: '#14b8a6', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease' 
+                      }}
+                    >
+                      🔑 Change Password
+                    </button>
+                    <button 
+                      className="action-btn" 
+                      onClick={() => setShowExportData(true)} 
+                      style={{ 
+                        padding: '14px 24px', 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        border: '2px solid #059669', 
+                        borderRadius: '8px', 
+                        background: 'white', 
+                        color: '#059669', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease' 
+                      }}
+                    >
+                      📄 Export My Data
+                    </button>
+                    <button
+                      className="action-btn delete-account-btn"
+                      style={{ 
+                        padding: '14px 24px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        border: '2px solid #dc2626', 
+                        color: '#dc2626', 
+                        background: 'white',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      🗑️ Delete Account
+                    </button>
+                  </>
+                ) : (user.role === 'private' && user.isApproved === true) ? (
+                  <>
+                    <button 
+                      className="action-btn" 
+                      onClick={() => setShowChangePassword(true)} 
+                      style={{ 
+                        padding: '14px 24px', 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        border: '2px solid #14b8a6', 
+                        borderRadius: '8px', 
+                        background: 'white', 
+                        color: '#14b8a6', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease' 
+                      }}
+                    >
+                      🔑 Change Password
+                    </button>
+                    <button 
+                      className="action-btn" 
+                      onClick={() => setShowExportData(true)} 
+                      style={{ 
+                        padding: '14px 24px', 
+                        fontSize: '16px', 
+                        fontWeight: '600', 
+                        border: '2px solid #059669', 
+                        borderRadius: '8px', 
+                        background: 'white', 
+                        color: '#059669', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease' 
+                      }}
+                    >
+                      📄 Export My Data
+                    </button>
+                    <button
+                      className="action-btn delete-account-btn"
+                      style={{ 
+                        padding: '14px 24px',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        border: '2px solid #dc2626', 
+                        color: '#dc2626', 
+                        background: 'white',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      🗑️ Delete Account
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={() => setShowPrivateAccessConfirm(true)} 
+                    disabled={requestingPrivateAccess} 
+                    style={{ 
+                      padding: '14px 28px', 
+                      fontSize: '16px', 
+                      fontWeight: '600', 
+                      border: '2px solid #6366f1', 
+                      borderRadius: '8px', 
+                      background: 'white', 
+                      color: '#6366f1', 
+                      cursor: requestingPrivateAccess ? 'not-allowed' : 'pointer', 
+                      opacity: requestingPrivateAccess ? 0.6 : 1, 
+                      transition: 'all 0.2s ease' 
+                    }}
+                  >
+                    {requestingPrivateAccess ? '⏳ Requesting...' : '🔐 Request Private Access'}
+                  </button>
+                )}
               </div>
+              
+              {/* Info message for public users */}
+              {user.role === 'public' && (
+                <div style={{
+                  marginTop: '24px',
+                  padding: '16px 20px',
+                  background: '#f0f9ff',
+                  border: '2px solid #0891b2',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  color: '#0c4a6e'
+                }}>
+                  <strong>ℹ️ Public Account:</strong> You're using a shared public account. To get individual account features like password management and data export, request private access above.
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
-
-      {/* Password Change Modal */}
-      {showPasswordModal && (
-        <div style={{
-          position: 'fixed',
-          top: '0',
-          left: '0',
-          right: '0',
-          bottom: '0',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: '1000',
-          padding: '20px'
-        }} onClick={() => setShowPasswordModal(false)}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-            maxWidth: '500px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }} onClick={(e) => e.stopPropagation()}>
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid #e5e7eb',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                margin: '0',
-                fontSize: '20px',
-                fontWeight: '600',
-                color: '#1f2937',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                🔑 Change Password
-              </h3>
-              <button 
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  padding: '4px',
-                  borderRadius: '4px'
-                }}
-                onClick={() => setShowPasswordModal(false)}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#f3f4f6'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div style={{ padding: '24px' }}>
-              {passwordError && (
-                <div style={{
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#dc2626',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  marginBottom: '20px',
-                  fontSize: '14px'
-                }}>
-                  {passwordError}
-                </div>
-              )}
-              
-              <form onSubmit={(e) => { e.preventDefault(); handlePasswordChange(); }}>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    Current Password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={passwordForm.currentPassword}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        color: '#6b7280'
-                      }}
-                    >
-                      {showCurrentPassword ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                </div>
-                
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    New Password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showNewPassword ? "text" : "password"}
-                      value={passwordForm.newPassword}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                      minLength="6"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        color: '#6b7280'
-                      }}
-                    >
-                      {showNewPassword ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                  <div style={{
-                    fontSize: '12px',
-                    color: '#6b7280',
-                    marginTop: '6px',
-                    lineHeight: '1.4'
-                  }}>
-                    <strong>Password Requirements:</strong><br/>
-                    • Minimum 6 characters<br/>
-                    • Mix of letters and numbers recommended<br/>
-                    • Avoid using personal information
-                  </div>
-                </div>
-                
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    Confirm New Password
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontSize: '16px',
-                        boxSizing: 'border-box'
-                      }}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        color: '#6b7280'
-                      }}
-                    >
-                      {showConfirmPassword ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  gap: '12px',
-                  justifyContent: 'flex-end'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordModal(false)}
-                    style={{
-                      padding: '12px 24px',
-                      border: '1px solid #d1d5db',
-                      backgroundColor: 'white',
-                      color: '#374151',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    disabled={passwordLoading}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = 'white';
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      padding: '12px 24px',
-                      border: 'none',
-                      backgroundColor: passwordLoading ? '#9ca3af' : '#059669',
-                      color: 'white',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: passwordLoading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    disabled={passwordLoading}
-                    onMouseEnter={(e) => {
-                      if (!passwordLoading) {
-                        e.target.style.backgroundColor = '#047857';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!passwordLoading) {
-                        e.target.style.backgroundColor = '#059669';
-                      }
-                    }}
-                  >
-                    {passwordLoading ? "Changing..." : "Change Password"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Private Access Confirmation Modal */}
       {showPrivateAccessConfirm && (
@@ -882,27 +593,147 @@ export default function MyProfile() {
           title="🔒 Request Private Member Access"
           message="Are you sure you want to request private member access? This will require administrator approval and may take some time to process."
           confirmLabel="Request Access"
-          onConfirm={() => {
-            setShowPrivateAccessConfirm(false);
-            handleRequestPrivateAccess();
-          }}
+          onConfirm={() => { setShowPrivateAccessConfirm(false); handleRequestPrivateAccess(); }}
           onCancel={() => setShowPrivateAccessConfirm(false)}
         />
       )}
 
-      {/* Data Export Confirmation Modal */}
-      {showDataExportConfirm && (
-        <ConfirmModal
-          isOpen={showDataExportConfirm}
-          title="📄 Download Personal Data"
-          message="Download your personal data as a PDF? This will include your profile information and activity history."
-          confirmLabel="Download PDF"
-          onConfirm={() => {
-            setShowDataExportConfirm(false);
-            handleExportMyData();
-          }}
-          onCancel={() => setShowDataExportConfirm(false)}
-        />
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="modal-content" style={{
+            background: 'white',
+            padding: '40px',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            minWidth: '400px',
+            maxWidth: '90vw',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+            <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1f2937' }}>Permanently Delete Account</h3>
+            <p style={{ fontSize: '17px', marginBottom: '28px', color: '#64748b', lineHeight: '1.6' }}>
+              Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={handleDeleteAccount} 
+                disabled={deleting} 
+                style={{
+                  background: '#dc2626', 
+                  color: 'white', 
+                  padding: '14px 28px', 
+                  borderRadius: '8px', 
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  opacity: deleting ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {deleting ? '⏳ Deleting...' : '🗑️ Delete Account'}
+              </button>
+              <button 
+                onClick={() => setShowDeleteModal(false)} 
+                disabled={deleting} 
+                style={{
+                  background: '#64748b', 
+                  color: 'white', 
+                  padding: '14px 28px', 
+                  borderRadius: '8px', 
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export My Data Modal */}
+      {showExportData && (
+        <div className="modal" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div className="modal-content" style={{
+            background: 'white',
+            padding: '40px',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            minWidth: '400px',
+            maxWidth: '90vw',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
+            <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1f2937' }}>Export My Data</h3>
+            <p style={{ fontSize: '17px', marginBottom: '28px', color: '#64748b', lineHeight: '1.6' }}>
+              Download a PDF containing all personal data we have on file for your account.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  window.open('http://localhost:5000/api/my-data/export', '_blank');
+                  setShowExportData(false);
+                }}
+                style={{
+                  background: '#059669', 
+                  color: 'white', 
+                  padding: '14px 28px', 
+                  borderRadius: '8px', 
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                📥 Download PDF
+              </button>
+              <button 
+                onClick={() => setShowExportData(false)} 
+                style={{
+                  background: '#64748b', 
+                  color: 'white', 
+                  padding: '14px 28px', 
+                  borderRadius: '8px', 
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </MainLayout>
   );

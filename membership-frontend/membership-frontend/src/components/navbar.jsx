@@ -32,7 +32,7 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     if (user.role === "public") {
-      navigate("/public");
+      navigate("/login");
     } else {
       navigate("/login");
     }

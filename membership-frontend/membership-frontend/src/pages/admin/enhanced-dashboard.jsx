@@ -33,8 +33,8 @@ export default function EnhancedAdminDashboard() {
     })
       .then((res) => res.json())
       .then((data) => {
-        setDashboardData(data.stats);
-        setActivities(data.recentActivities);
+        setDashboardData(data.stats || null);
+        setActivities(data.recentActivities || []);
         setSmartNotifications(data.smartNotifications || []);
         setUser(data.adminUser || { firstName: "Admin", lastName: "" });
       })
@@ -67,7 +67,7 @@ export default function EnhancedAdminDashboard() {
         setStats({
           total: 0,
           growth: 0,
-          breakdown: { active: 0, inactive: 0, deceased: 0 },
+          breakdown: { active: 0, inactive: 0, historical: 0, honorary: 0 },
           yearly: {},
         });
       } else {
@@ -92,7 +92,8 @@ export default function EnhancedAdminDashboard() {
     return [
       { name: 'Active', value: stats.breakdown.active },
       { name: 'Inactive', value: stats.breakdown.inactive },
-      { name: 'Deceased', value: stats.breakdown.deceased }
+      { name: 'Historical', value: stats.breakdown.historical },
+      { name: 'Honorary', value: stats.breakdown.honorary }
     ].filter(item => item.value > 0);
   };
 
@@ -111,25 +112,36 @@ export default function EnhancedAdminDashboard() {
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Welcome Section */}
-          <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <h1 className="dashboard-title">
+                <h1 style={{
+                  fontSize: '38px',
+                  fontWeight: '700',
+                  color: '#0f766e',
+                  marginBottom: '12px'
+                }}>
                   Welcome back, {user.firstName} {user.lastName}! 👋
                 </h1>
-                <p className="dashboard-subtitle">
+                <p style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#64748b',
+                  margin: '0'
+                }}>
                   Here's what's happening with your membership system today.
                 </p>
               </div>
               <div style={{
                 background: '#14b8a6',
                 color: 'white',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
+                padding: '14px 24px',
+                borderRadius: '24px',
+                fontSize: '16px',
+                fontWeight: '700',
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                border: '2px solid #0f766e'
               }}>
                 Administrator
               </div>
@@ -142,51 +154,123 @@ export default function EnhancedAdminDashboard() {
             </div>
           )}
 
-          <div className="dashboard-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
             {/* Member Summary */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">📊 Member Summary</h2>
-              <div>
-                <div className="dashboard-stat">
-                  <span className="dashboard-stat-label">Active Memberships</span>
-                  <span className="dashboard-stat-value positive">
+            <div style={{
+              background: '#f0fdfa',
+              border: '2px solid #5eead4',
+              borderRadius: '12px',
+              padding: '36px',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                📊 Member Summary
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '16px 0',
+                  borderBottom: '2px solid #ccfbf1'
+                }}>
+                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Active Memberships</span>
+                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
                     {dashboardData?.activeMembers || 0}
                   </span>
                 </div>
-                <div className="dashboard-stat">
-                  <span className="dashboard-stat-label">Non-Active Memberships</span>
-                  <span className="dashboard-stat-value negative">
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '16px 0',
+                  borderBottom: '2px solid #ccfbf1'
+                }}>
+                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Non-Active Memberships</span>
+                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#dc2626' }}>
                     {dashboardData?.inactiveMembers || 0}
                   </span>
                 </div>
-                <div className="dashboard-stat">
-                  <span className="dashboard-stat-label">Active Users</span>
-                  <span className="dashboard-stat-value positive">
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '16px 0',
+                  borderBottom: '2px solid #ccfbf1'
+                }}>
+                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Active Users</span>
+                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
                     {dashboardData?.activeUsers || 0}
                   </span>
                 </div>
-                <div className="dashboard-stat">
-                  <span className="dashboard-stat-label">Growth Rate</span>
-                  <span className="dashboard-stat-value positive">
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '16px 0'
+                }}>
+                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Growth Rate</span>
+                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
                     {stats?.growth || 0}%
                   </span>
                 </div>
-                <Link to="/members" className="btn-primary" style={{ width: '100%', marginTop: '16px', textDecoration: 'none', display: 'block', textAlign: 'center' }}>
+                <Link 
+                  to="/members" 
+                  style={{ 
+                    background: '#14b8a6',
+                    color: 'white',
+                    border: '2px solid #0f766e',
+                    padding: '16px 24px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    display: 'block',
+                    marginTop: '12px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
                   VIEW ALL MEMBERS
                 </Link>
               </div>
             </div>
 
             {/* Recent Activities */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">🔔 Recent Activities</h2>
+            <div style={{
+              background: '#f0fdfa',
+              border: '2px solid #5eead4',
+              borderRadius: '12px',
+              padding: '36px',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                🔔 Recent Activities
+              </h2>
               <div>
                 {activities.length === 0 ? (
                   <div style={{ 
                     textAlign: 'center', 
-                    padding: '32px', 
+                    padding: '48px 24px', 
                     color: '#94a3b8',
-                    fontSize: '14px'
+                    fontSize: '17px',
+                    fontWeight: '500'
                   }}>
                     No recent activity
                   </div>
@@ -199,25 +283,45 @@ export default function EnhancedAdminDashboard() {
                     }}>
                       {activitiesToShow.map((item, i) => (
                         <div key={i} style={{ 
-                          padding: '12px',
-                          background: '#f8fafc',
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0'
+                          padding: '16px 20px',
+                          background: '#ffffff',
+                          borderRadius: '10px',
+                          border: '2px solid #ccfbf1',
+                          marginBottom: '8px'
                         }}>
                           <div style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
                             justifyContent: 'space-between',
-                            marginBottom: '4px'
+                            marginBottom: '8px',
+                            gap: '12px'
                           }}>
-                            <div style={{ fontWeight: '600', color: '#0f172a' }}>
-                              {item.type === 'member_added' ? '👤' : '🔑'} {item.name}
+                            <div style={{ 
+                              fontSize: '17px',
+                              fontWeight: '700', 
+                              color: '#0f766e',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
+                            }}>
+                              <span>{item.type === 'member_added' ? '👤' : '🔑'}</span>
+                              {item.name}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#64748b' }}>
+                            <div style={{ 
+                              fontSize: '15px', 
+                              color: '#64748b',
+                              fontWeight: '600',
+                              whiteSpace: 'nowrap'
+                            }}>
                               {item.date}
                             </div>
                           </div>
-                          <div style={{ fontSize: '13px', color: '#64748b' }}>
+                          <div style={{ 
+                            fontSize: '16px', 
+                            color: '#64748b',
+                            fontWeight: '500',
+                            lineHeight: '1.5'
+                          }}>
                             {item.description || (item.type === 'member_added' ? 'New member added' : 'User registered')}
                           </div>
                         </div>
@@ -228,27 +332,28 @@ export default function EnhancedAdminDashboard() {
                       <button
                         onClick={() => setShowAllActivities(!showAllActivities)}
                         style={{
-                          background: 'none',
-                          border: '1px solid #14b8a6',
+                          background: '#ffffff',
+                          border: '2px solid #14b8a6',
                           color: '#14b8a6',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '600',
+                          padding: '12px 20px',
+                          borderRadius: '10px',
+                          fontSize: '16px',
+                          fontWeight: '700',
                           cursor: 'pointer',
                           textAlign: 'center',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s',
+                          marginTop: '8px'
                         }}
                         onMouseOver={(e) => {
                           e.target.style.background = '#14b8a6';
                           e.target.style.color = 'white';
                         }}
                         onMouseOut={(e) => {
-                          e.target.style.background = 'none';
+                          e.target.style.background = '#ffffff';
                           e.target.style.color = '#14b8a6';
                         }}
                       >
-                        {showAllActivities ? 'Show Less' : `View All (${activities.length})`}
+                        {showAllActivities ? '▲ Show Less' : `▼ View All (${activities.length})`}
                       </button>
                     )}
                   </div>
@@ -257,61 +362,124 @@ export default function EnhancedAdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">⚡ Quick Actions</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{
+              background: '#f0fdfa',
+              border: '2px solid #5eead4',
+              borderRadius: '12px',
+              padding: '36px',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                ⚡ Quick Actions
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Link
                   to="/members/new"
-                  className="btn-primary"
                   style={{
+                    background: '#14b8a6',
+                    color: 'white',
+                    border: '2px solid #0f766e',
+                    padding: '18px 24px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    textAlign: 'center',
                     textDecoration: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '10px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <span>👤</span>
+                  <span style={{ fontSize: '20px' }}>👤</span>
                   ADD NEW MEMBER
                 </Link>
                 <Link
                   to="/admin/import"
-                  className="btn-primary"
                   style={{
+                    background: '#14b8a6',
+                    color: 'white',
+                    border: '2px solid #0f766e',
+                    padding: '18px 24px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    textAlign: 'center',
                     textDecoration: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '10px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <span>📊</span>
+                  <span style={{ fontSize: '20px' }}>📊</span>
                   IMPORT MEMBERS
                 </Link>
                 <Link
                   to="/admin/approvals"
-                  className="btn-primary"
                   style={{
+                    background: '#14b8a6',
+                    color: 'white',
+                    border: '2px solid #0f766e',
+                    padding: '18px 24px',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    textAlign: 'center',
                     textDecoration: 'none',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '10px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <span>✅</span>
+                  <span style={{ fontSize: '20px' }}>✅</span>
                   USER APPROVALS
                 </Link>
               </div>
             </div>
 
             {/* Analytics Filters */}
-            <div className="dashboard-card" style={{ gridColumn: 'span 2' }}>
-              <h2 className="dashboard-card-title">📈 Analytics & Reports</h2>
-              <div style={{ marginBottom: '24px' }}>
+            <div style={{ 
+              gridColumn: 'span 2',
+              background: '#f0fdfa',
+              border: '2px solid #5eead4',
+              borderRadius: '12px',
+              padding: '36px',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                📈 Analytics & Reports
+              </h2>
+              <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '10px', 
+                      fontSize: '16px', 
+                      fontWeight: '700', 
+                      color: '#0f766e' 
+                    }}>
                       Start Date
                     </label>
                     <input
@@ -320,15 +488,23 @@ export default function EnhancedAdminDashboard() {
                       onChange={(e) => setStartDate(e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px'
+                        padding: '14px 16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500',
+                        background: 'white'
                       }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '10px', 
+                      fontSize: '16px', 
+                      fontWeight: '700', 
+                      color: '#0f766e' 
+                    }}>
                       End Date
                     </label>
                     <input
@@ -337,15 +513,23 @@ export default function EnhancedAdminDashboard() {
                       onChange={(e) => setEndDate(e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px'
+                        padding: '14px 16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500',
+                        background: 'white'
                       }}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '10px', 
+                      fontSize: '16px', 
+                      fontWeight: '700', 
+                      color: '#0f766e' 
+                    }}>
                       Category
                     </label>
                     <select
@@ -353,10 +537,12 @@ export default function EnhancedAdminDashboard() {
                       onChange={(e) => setCategory(e.target.value)}
                       style={{
                         width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px'
+                        padding: '14px 16px',
+                        border: '2px solid #5eead4',
+                        borderRadius: '10px',
+                        fontSize: '17px',
+                        fontWeight: '500',
+                        background: 'white'
                       }}
                     >
                       <option value="">All Categories</option>
@@ -367,8 +553,18 @@ export default function EnhancedAdminDashboard() {
                   <div style={{ display: 'flex', alignItems: 'end' }}>
                     <button
                       onClick={fetchStats}
-                      className="btn-primary"
-                      style={{ width: '100%' }}
+                      style={{
+                        width: '100%',
+                        background: '#14b8a6',
+                        color: 'white',
+                        border: '2px solid #0f766e',
+                        padding: '16px 24px',
+                        borderRadius: '10px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
                     >
                       Apply Filters
                     </button>

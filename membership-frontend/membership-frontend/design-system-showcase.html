@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership System - Design System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+            padding: 60px;
+            color: #0f172a;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 80px;
+            box-shadow: 0 20px 60px rgba(20, 184, 166, 0.15);
+        }
+        
+        h1 {
+            font-size: 56px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 20px;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            font-size: 24px;
+            color: #64748b;
+            margin-bottom: 60px;
+            font-weight: 600;
+        }
+        
+        .section {
+            margin-bottom: 80px;
+        }
+        
+        .section-title {
+            font-size: 38px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .section-subtitle {
+            font-size: 18px;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-weight: 600;
+        }
+        
+        /* Color Palette */
+        .colors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+        }
+        
+        .color-card {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .color-swatch {
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        
+        .color-info {
+            padding: 20px;
+            background: #f8fafc;
+        }
+        
+        .color-name {
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        
+        .color-code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        
+        /* Typography */
+        .typography-examples {
+            background: #f8fafc;
+            padding: 40px;
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .type-example {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .type-example:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .type-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #14b8a6;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .type-sample {
+            color: #0f172a;
+        }
+        
+        /* Buttons */
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 18px 36px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            font-family: inherit;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #14b8a6, #0d9488);
+            color: white;
+            box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #14b8a6;
+            border: 2px solid #14b8a6;
+        }
+        
+        .btn-secondary:hover {
+            background: #f0fdfa;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Form Elements */
+        .form-example {
+            max-width: 600px;
+        }
+        
+        .form-group {
+            margin-bottom: 28px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 17px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #14b8a6;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: 600;
+            outline: none;
+            transition: all 0.2s ease;
+            background: #f9fafb;
+            font-family: inherit;
+        }
+        
+        .form-input:focus {
+            border-color: #0f766e;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        }
+        
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .card {
+            background: white;
+            border: 3px solid #14b8a6;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 8px 20px rgba(20, 184, 166, 0.15);
+        }
+        
+        .card-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        
+        .card-text {
+            font-size: 17px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        /* Spacing */
+        .spacing-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: flex-end;
+        }
+        
+        .spacing-box {
+            background: #14b8a6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .spacing-label {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Design System</h1>
+        <div class="subtitle">Benevolent Irish Society - Membership Management System</div>
+        
+        <!-- Color Palette -->
+        <div class="section">
+            <div class="section-title">🎨 Color Palette</div>
+            <div class="section-subtitle">A calming teal-based color scheme for trust and professionalism</div>
+            <div class="colors">
+                <div class="color-card">
+                    <div class="color-swatch" style="background: linear-gradient(135deg, #14b8a6, #0d9488);">
+                        Primary
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Teal Gradient</div>
+                        <div class="color-code">#14b8a6 → #0d9488</div>
+                    </div>
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #14b8a6;">
+                        Teal
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Primary Teal</div>
+                        <div class="color-code">#14b8a6</div>
+                    </div>
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #0f766e;">
+                        Dark Teal
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Teal Dark</div>
+                        <div class="color-code">#0f766e</div>
+                    </div>
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #f0fdfa; color: #14b8a6; border: 3px solid #14b8a6;">
+                        Light
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Teal Light</div>
+                        <div class="color-code">#f0fdfa</div>
+                    </div>
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #0f172a;">
+                        Text
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Text Primary</div>
+                        <div class="color-code">#0f172a</div>
+                    </div>
+                </div>
+                
+                <div class="color-card">
+                    <div class="color-swatch" style="background: #64748b;">
+                        Secondary
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Text Secondary</div>
+                        <div class="color-code">#64748b</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Typography -->
+        <div class="section">
+            <div class="section-title">📝 Typography</div>
+            <div class="section-subtitle">Goldilocks sizing - not too big, not too small, just right!</div>
+            <div class="typography-examples">
+                <div class="type-example">
+                    <div class="type-label">Heading 1 (Page Title)</div>
+                    <div class="type-sample" style="font-size: 38px; font-weight: 800;">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                    <div style="margin-top: 10px; color: #64748b; font-size: 14px;">38px / 800 weight</div>
+                </div>
+                
+                <div class="type-example">
+                    <div class="type-label">Heading 2 (Section Title)</div>
+                    <div class="type-sample" style="font-size: 28px; font-weight: 700;">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                    <div style="margin-top: 10px; color: #64748b; font-size: 14px;">28px / 700 weight</div>
+                </div>
+                
+                <div class="type-example">
+                    <div class="type-label">Subtitle</div>
+                    <div class="type-sample" style="font-size: 18px; font-weight: 600;">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                    <div style="margin-top: 10px; color: #64748b; font-size: 14px;">18px / 600 weight</div>
+                </div>
+                
+                <div class="type-example">
+                    <div class="type-label">Body Text / Form Labels</div>
+                    <div class="type-sample" style="font-size: 17px; font-weight: 600;">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                    <div style="margin-top: 10px; color: #64748b; font-size: 14px;">17px / 600 weight</div>
+                </div>
+                
+                <div class="type-example">
+                    <div class="type-label">Regular Text</div>
+                    <div class="type-sample" style="font-size: 16px; font-weight: 400;">
+                        The quick brown fox jumps over the lazy dog. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                    </div>
+                    <div style="margin-top: 10px; color: #64748b; font-size: 14px;">16px / 400 weight</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="section">
+            <div class="section-title">🔘 Buttons</div>
+            <div class="section-subtitle">Clear, accessible, and interactive</div>
+            <div class="buttons">
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-danger">Danger Button</button>
+            </div>
+        </div>
+        
+        <!-- Form Elements -->
+        <div class="section">
+            <div class="section-title">📋 Form Elements</div>
+            <div class="section-subtitle">Clean, accessible inputs with clear focus states</div>
+            <div class="form-example">
+                <div class="form-group">
+                    <label class="form-label">👤 First Name</label>
+                    <input type="text" class="form-input" placeholder="Enter your first name" value="John">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📧 Email Address</label>
+                    <input type="email" class="form-input" placeholder="Enter your email" value="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🔒 Password</label>
+                    <input type="password" class="form-input" placeholder="Enter your password" value="password123">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cards -->
+        <div class="section">
+            <div class="section-title">🎴 Card Components</div>
+            <div class="section-subtitle">Consistent containers for content</div>
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">Card Title</div>
+                    <div class="card-text">
+                        Clean card design with teal borders and subtle shadows for depth and hierarchy.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Stat Card</div>
+                    <div class="card-text">
+                        Used throughout the dashboard for displaying key metrics and statistics.
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Member Card</div>
+                    <div class="card-text">
+                        Displays member information in an organized, scannable format.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Spacing -->
+        <div class="section">
+            <div class="section-title">📐 Spacing System</div>
+            <div class="section-subtitle">Consistent padding and margins throughout</div>
+            <div class="spacing-examples">
+                <div>
+                    <div class="spacing-box" style="width: 56px; height: 56px;">56</div>
+                    <div class="spacing-label">Container Padding</div>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 36px; height: 36px;">36</div>
+                    <div class="spacing-label">Card Padding</div>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 28px; height: 28px;">28</div>
+                    <div class="spacing-label">Section Gap</div>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 20px; height: 20px;">20</div>
+                    <div class="spacing-label">Element Gap</div>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 16px; height: 16px;">16</div>
+                    <div class="spacing-label">Input Padding</div>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 10px; height: 10px;">10</div>
+                    <div class="spacing-label">Label Gap</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Borders & Shadows -->
+        <div class="section">
+            <div class="section-title">✨ Borders & Shadows</div>
+            <div class="section-subtitle">Subtle depth and definition</div>
+            <div class="cards">
+                <div style="padding: 30px; background: white; border: 2px solid #14b8a6; border-radius: 12px;">
+                    <strong>2px Border</strong><br>
+                    Standard border width<br>
+                    <code style="color: #64748b;">#14b8a6</code>
+                </div>
+                <div style="padding: 30px; background: white; border: 3px solid #14b8a6; border-radius: 12px;">
+                    <strong>3px Border</strong><br>
+                    Emphasized containers<br>
+                    <code style="color: #64748b;">#14b8a6</code>
+                </div>
+                <div style="padding: 30px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);">
+                    <strong>Standard Shadow</strong><br>
+                    Buttons & cards<br>
+                    <code style="color: #64748b; font-size: 12px;">0 4px 12px rgba(20, 184, 166, 0.3)</code>
+                </div>
+                <div style="padding: 30px; background: white; border-radius: 12px; box-shadow: 0 20px 40px rgba(20, 184, 166, 0.15);">
+                    <strong>Large Shadow</strong><br>
+                    Main containers<br>
+                    <code style="color: #64748b; font-size: 12px;">0 20px 40px rgba(20, 184, 166, 0.15)</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

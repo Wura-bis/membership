@@ -45,7 +45,7 @@ export default function EditMember() {
       occupationId: "",
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
       email: "",
-      phoneNumber: "",
+      phoneNumbers: [{ type: "", number: "", isPreferred: false }],
       addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
       otherSocieties: "",
       categoryId: "",
@@ -59,11 +59,12 @@ export default function EditMember() {
       seconder: "",
       proposalDate: "",
       roleFiscalYears: [{ role: "", fiscalYear: "" }],
+      volunteeringInterests: [],
       notes: "",
       isActive: true,
       photo: null
     });
-  const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [] });
+  const [lookups, setLookups] = useState({ counties: [], categories: [], roles: [], fiscalYears: [], societies: [], connections: [], occupations: [], volunteeringInterests: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -80,7 +81,13 @@ export default function EditMember() {
           placeOfBirth: data.placeOfBirth ?? "",
           occupationId: data.occupationID ?? "",
           email: data.email ?? "",
-          phoneNumber: data.phoneNumber ?? "",
+          phoneNumbers: Array.isArray(data.phoneNumbers) && data.phoneNumbers.length > 0
+            ? data.phoneNumbers.map((phone, idx) => ({
+                type: phone.type ?? "",
+                number: phone.number ?? "",
+                isPreferred: typeof phone.isPreferred === "boolean" ? phone.isPreferred : (idx === 0)
+              }))
+            : [{ type: "", number: "", isPreferred: true }],
           cellPhone: "", // Not in DB
           irishConnections: Array.isArray(data.irishConnections) && data.irishConnections.length > 0
             ? data.irishConnections.map(ic => ({
@@ -118,6 +125,7 @@ export default function EditMember() {
                 fiscalYear: rf.fiscalYearID ? rf.fiscalYearID.toString() : ""
               }))
             : [{ role: "", fiscalYear: "" }],
+          volunteeringInterests: Array.isArray(data.volunteeringInterests) ? data.volunteeringInterests : [],
           notes: data.notes ?? "",
           isActive: typeof data.isActive === "boolean" ? data.isActive : true,
           photo: null
@@ -139,6 +147,18 @@ export default function EditMember() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     // For array fields, sanitize each item
+    if (name === "phoneNumbers") {
+      const arr = Array.isArray(value) ? value : [];
+      setFormData(prev => ({
+        ...prev,
+        phoneNumbers: arr.map(phone => ({
+          type: phone.type ?? "",
+          number: phone.number ?? "",
+          isPreferred: typeof phone.isPreferred === "boolean" ? phone.isPreferred : false
+        }))
+      }));
+      return;
+    }
     if (name === "irishConnections") {
       const arr = Array.isArray(value) ? value : [];
       setFormData(prev => ({

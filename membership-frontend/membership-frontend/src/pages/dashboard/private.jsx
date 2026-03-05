@@ -32,9 +32,6 @@ export default function PrivateDashboard() {
     category: ""
   });
 
-  // Chart colors
-  const COLORS = ['#14b8a6', '#dc2626', '#f59e0b', '#3b82f6'];
-
   // Check backend connection status
   useEffect(() => {
     const checkBackend = async () => {
@@ -83,22 +80,15 @@ export default function PrivateDashboard() {
     loadStats();
   }, [filters]);
 
-  const prepareChartData = () => {
-    if (!analyticsData?.breakdown) return [];
-    return [
-      { name: 'Active', value: analyticsData.breakdown.active },
-      { name: 'Inactive', value: analyticsData.breakdown.inactive },
-      { name: 'Deceased', value: analyticsData.breakdown.deceased }
-    ].filter(item => item.value > 0);
-  };
-
-  const prepareYearlyData = () => {
-    if (!analyticsData?.yearly) return [];
-    return Object.entries(analyticsData.yearly).map(([year, count]) => ({
-      year: parseInt(year),
-      members: count
-    })).sort((a, b) => a.year - b.year);
-  };
+  // Standardized chart data for membership breakdown
+  const breakdown = analyticsData?.breakdown || {};
+  const pieData = [
+    { name: 'Active', value: breakdown.active || 0, color: '#14b8a6' },
+    { name: 'Inactive', value: breakdown.inactive || 0, color: '#ef4444' },
+    { name: 'Historical', value: breakdown.historical || 0, color: '#8b5cf6' },
+    { name: 'Honorary', value: breakdown.honorary || 0, color: '#f59e0b' }
+  ].filter(item => item.value > 0);
+  const yearlyData = analyticsData?.yearly ? Object.entries(analyticsData.yearly).map(([year, value]) => ({ year, value })) : [];
 
   return (
     <MainLayout>
@@ -108,20 +98,29 @@ export default function PrivateDashboard() {
           <div className="dashboard-header">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h1 className="dashboard-title">
+                <h1 className="dashboard-title" style={{
+                  fontSize: '38px',
+                  fontWeight: '700',
+                  color: '#0f766e',
+                  marginBottom: '8px'
+                }}>
                   Welcome back, {user?.firstName || 'Member'}! 👋
                 </h1>
-                <p className="dashboard-subtitle">
+                <p className="dashboard-subtitle" style={{
+                  fontSize: '20px',
+                  fontWeight: '600',
+                  color: '#64748b'
+                }}>
                   Access member resources, view directory, and manage your profile.
                 </p>
               </div>
               <div style={{
                 background: '#14b8a6',
                 color: 'white',
-                padding: '8px 16px',
+                padding: '14px 24px',
                 borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: '600',
+                fontSize: '16px',
+                fontWeight: '700',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
@@ -130,43 +129,64 @@ export default function PrivateDashboard() {
             </div>
           </div>
           {/* Analytics & Reports Filters */}
-          <div className="dashboard-card" style={{ marginBottom: '24px', marginTop: '24px', padding: '24px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 12px rgba(20,184,166,0.06)', border: '1px solid #e5e7eb' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#14b8a6', marginBottom: '16px' }}>Analytics & Reports</h2>
+          <div className="dashboard-card" style={{ marginBottom: '24px', marginTop: '32px', padding: '36px', background: '#f0fdfa', borderRadius: '12px', boxShadow: '0 2px 12px rgba(20,184,166,0.08)', border: '2px solid #5eead4' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e', marginBottom: '24px' }}>📊 Analytics & Reports</h2>
             <form
-              style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}
+              style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}
               onSubmit={e => { e.preventDefault(); setFilters(filters); }}
               aria-label="Analytics Filters"
             >
               <div>
-                <label htmlFor="startDate">Start Date</label>
+                <label htmlFor="startDate" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>Start Date</label>
                 <input
                   type="date"
                   id="startDate"
                   name="startDate"
                   value={filters.startDate}
                   onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                  style={{ marginRight: '8px' }}
+                  style={{ 
+                    padding: '14px',
+                    fontSize: '17px',
+                    fontWeight: '500',
+                    border: '2px solid #5eead4',
+                    borderRadius: '8px',
+                    minWidth: '180px'
+                  }}
                 />
               </div>
               <div>
-                <label htmlFor="endDate">End Date</label>
+                <label htmlFor="endDate" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>End Date</label>
                 <input
                   type="date"
                   id="endDate"
                   name="endDate"
                   value={filters.endDate}
                   onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                  style={{ marginRight: '8px' }}
+                  style={{ 
+                    padding: '14px',
+                    fontSize: '17px',
+                    fontWeight: '500',
+                    border: '2px solid #5eead4',
+                    borderRadius: '8px',
+                    minWidth: '180px'
+                  }}
                 />
               </div>
               <div>
-                <label htmlFor="category">Category</label>
+                <label htmlFor="category" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>Category</label>
                 <select
                   id="category"
                   name="category"
                   value={filters.category}
                   onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
-                  style={{ marginRight: '8px' }}
+                  style={{ 
+                    padding: '14px',
+                    fontSize: '17px',
+                    fontWeight: '500',
+                    border: '2px solid #5eead4',
+                    borderRadius: '8px',
+                    minWidth: '180px'
+                  }}
                 >
                   <option value="">All</option>
                   <option value="Active">Active</option>
@@ -174,7 +194,29 @@ export default function PrivateDashboard() {
                   <option value="Deceased">Deceased</option>
                 </select>
               </div>
-              <button type="submit" className="btn-primary" style={{ minWidth: '140px' }}>Apply Filters</button>
+              <button type="submit" className="btn-primary" style={{ 
+                minWidth: '180px',
+                padding: '16px 24px',
+                fontSize: '16px',
+                fontWeight: '700',
+                borderRadius: '8px'
+              }}>Apply Filters</button>
+              <button 
+                type="button"
+                onClick={() => setFilters({ startDate: "", endDate: "", category: "" })}
+                className="btn-primary" 
+                style={{ 
+                  minWidth: '180px',
+                  padding: '16px 24px',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  background: '#64748b',
+                  border: 'none'
+                }}
+              >
+                🔄 Clear Filters
+              </button>
             </form>
           </div>
 
@@ -187,18 +229,29 @@ export default function PrivateDashboard() {
           {/* Main Dashboard Grid */}
           <div className="dashboard-grid">
             {/* Quick Overview */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">📊 Member Directory</h2>
+            <div className="dashboard-card" style={{
+              padding: '36px',
+              background: '#f0fdfa',
+              borderRadius: '12px',
+              border: '2px solid #5eead4',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 className="dashboard-card-title" style={{
+                fontSize: '22px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '24px'
+              }}>📊 Member Directory</h2>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
-                  fontSize: '48px',
-                  fontWeight: '700',
+                  fontSize: '64px',
+                  fontWeight: '800',
                   color: '#14b8a6',
                   marginBottom: '8px'
                 }}>
                   {memberStats?.totalMembers || analyticsData?.total || 0}
                 </div>
-                <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '16px' }}>
+                <p style={{ color: '#64748b', fontSize: '17px', fontWeight: '600', marginBottom: '24px' }}>
                   Total registered members
                 </p>
                 <Link 
@@ -207,7 +260,11 @@ export default function PrivateDashboard() {
                   style={{ 
                     textDecoration: 'none',
                     width: '100%',
-                    display: 'block'
+                    display: 'block',
+                    padding: '18px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
                   }}
                 >
                   📋 View Member Directory
@@ -216,9 +273,20 @@ export default function PrivateDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">⚡ Quick Actions</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="dashboard-card" style={{
+              padding: '36px',
+              background: '#f0fdfa',
+              borderRadius: '12px',
+              border: '2px solid #5eead4',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 className="dashboard-card-title" style={{
+                fontSize: '22px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '24px'
+              }}>⚡ Quick Actions</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Link
                   to="/my-profile"
                   className="btn-primary"
@@ -227,7 +295,11 @@ export default function PrivateDashboard() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '12px',
+                    padding: '18px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
                   }}
                 >
                   <span>👤</span>
@@ -241,7 +313,11 @@ export default function PrivateDashboard() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '12px',
+                    padding: '18px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
                   }}
                 >
                   <span>🎧</span>
@@ -251,9 +327,20 @@ export default function PrivateDashboard() {
             </div>
 
             {/* Export Data */}
-            <div className="dashboard-card">
-              <h2 className="dashboard-card-title">📊 Export Data</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="dashboard-card" style={{
+              padding: '36px',
+              background: '#f0fdfa',
+              borderRadius: '12px',
+              border: '2px solid #5eead4',
+              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            }}>
+              <h2 className="dashboard-card-title" style={{
+                fontSize: '22px',
+                fontWeight: '700',
+                color: '#0f766e',
+                marginBottom: '24px'
+              }}>📊 Export Data</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <button 
                   className="btn-primary" 
                   style={{ 
@@ -261,9 +348,13 @@ export default function PrivateDashboard() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '12px',
+                    padding: '18px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
                   }}
-                  onClick={() => window.open('http://localhost:5000/api/export/csv', '_blank')}
+                  onClick={() => window.open('http://localhost:5000/api/export/members/csv', '_blank')}
                 >
                   <span>📄</span>
                   Export CSV
@@ -275,9 +366,13 @@ export default function PrivateDashboard() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '12px',
+                    padding: '18px',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    borderRadius: '8px'
                   }}
-                  onClick={() => window.open('http://localhost:5000/api/export/pdf', '_blank')}
+                  onClick={() => window.open('http://localhost:5000/api/export/members/pdf', '_blank')}
                 >
                   <span>📑</span>
                   Export PDF
@@ -287,85 +382,78 @@ export default function PrivateDashboard() {
           </div>
 
           {/* Society Analytics - Full Width */}
-          <div className="dashboard-card" style={{ marginTop: '32px' }}>
-            <h2 className="dashboard-card-title">📈 Society Analytics</h2>
+          <div className="dashboard-card" style={{ 
+            marginTop: '32px',
+            padding: '36px',
+            background: '#f0fdfa',
+            borderRadius: '12px',
+            border: '2px solid #5eead4',
+            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+          }}>
+            <h2 className="dashboard-card-title" style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#0f766e',
+              marginBottom: '28px'
+            }}>📈 Society Analytics</h2>
             
             {analyticsData ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px' }}>
                 {/* Membership Breakdown */}
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
-                    Membership Distribution
-                  </h3>
-                  {prepareChartData().length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={prepareChartData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {prepareChartData().map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      height: '300px', 
-                      color: '#9ca3af',
-                      fontSize: '14px'
-                    }}>
-                      No data available
-                    </div>
-                  )}
+                <div className="dashboard-card" style={{
+                  padding: '28px',
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  border: '2px solid #ccfbf1'
+                }}>
+                  <h2 className="dashboard-card-title" style={{
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    color: '#0f766e',
+                    marginBottom: '20px'
+                  }}>Membership Breakdown</h2>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label style={{ fontSize: '16px', fontWeight: '600' }}>
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ fontSize: '16px', fontWeight: '600', padding: '12px', borderRadius: '8px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-
                 {/* Yearly Growth */}
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
-                    Membership Growth Over Time
-                  </h3>
-                  {prepareYearlyData().length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={prepareYearlyData()}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="members" stroke="#14b8a6" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      height: '300px', 
-                      color: '#9ca3af',
-                      fontSize: '14px'
-                    }}>
-                      No data available
-                    </div>
-                  )}
+                <div className="dashboard-card" style={{
+                  padding: '28px',
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  border: '2px solid #ccfbf1'
+                }}>
+                  <h2 className="dashboard-card-title" style={{
+                    fontSize: '20px',
+                    fontWeight: '700',
+                    color: '#0f766e',
+                    marginBottom: '20px'
+                  }}>Yearly Membership Growth</h2>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={yearlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ccfbf1" />
+                      <XAxis dataKey="year" style={{ fontSize: '14px', fontWeight: '600' }} />
+                      <YAxis style={{ fontSize: '14px', fontWeight: '600' }} />
+                      <Tooltip contentStyle={{ fontSize: '16px', fontWeight: '600', padding: '12px', borderRadius: '8px' }} />
+                      <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={4} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             ) : (
               <div style={{ 
                 textAlign: 'center', 
-                padding: '32px', 
+                padding: '48px', 
                 color: '#94a3b8',
-                fontSize: '14px'
+                fontSize: '17px',
+                fontWeight: '600'
               }}>
                 Loading analytics...
               </div>

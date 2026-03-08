@@ -1,6 +1,6 @@
 # 📋 ISSUES LOG — BIS Membership System
 
-**Last Updated:** 2026-03-08
+**Last Updated:** 2026-03-05
 
 This document is a log of all known issues raised against the BIS Membership System, their current status, and any relevant notes. It is intended to be readable by both technical and non-technical team members.
 

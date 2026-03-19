@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function ForgotNoEmail() {
   const [userID, setUserID] = useState("");
@@ -31,7 +32,7 @@ export default function ForgotNoEmail() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/reset-password-noemail", {
+      const res = await fetch(`${API_BASE_URL}/api/reset-password-noemail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userID, password: password, confirm_password: confirm }),

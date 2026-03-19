@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useauth";
 import MainLayout from "../../components/mainlayout";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function ExpiredMembers() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export default function ExpiredMembers() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/members/expired", {
+    fetch(`${API_BASE_URL}/api/members/expired`, {
       credentials: "include",
     })
       .then((res) => {
@@ -213,25 +214,16 @@ export default function ExpiredMembers() {
                     padding: '18px 28px',
                     fontSize: '17px',
                     fontWeight: '700',
-                    border: '2px solid #ef4444',
+                    border: '2px solid #14b8a6',
                     borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: 'white',
+                    background: 'white',
+                    color: '#0f766e',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    minHeight: '58px',
-                    boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
+                    minHeight: '58px'
                   }}
                 >
                   <span style={{ fontSize: '20px' }}>✕</span>
@@ -270,104 +262,23 @@ export default function ExpiredMembers() {
                 </select>
               </div>
             </div>
+          </div>
 
-            {/* Sort Controls */}
-            <div style={{
-              padding: '24px',
-              background: 'white',
-              borderRadius: '12px',
-              border: '2px solid #14b8a6'
-            }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '16px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span style={{ 
-                    fontSize: '17px', 
-                    fontWeight: '700', 
-                    color: '#0f766e'
-                  }}>
-                    ⚡ Sort by:
-                  </span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    style={{
-                      padding: '14px 20px',
-                      fontSize: '17px',
-                      border: '2px solid #14b8a6',
-                      borderRadius: '10px',
-                      background: 'white',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="lastName">Last Name</option>
-                    <option value="firstName">First Name</option>
-                    <option value="county">County</option>
-                    <option value="membershipEndDate">Expiry Date</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                    style={{
-                      padding: '14px 24px',
-                      fontSize: '17px',
-                      fontWeight: '700',
-                      border: '2px solid #14b8a6',
-                      borderRadius: '10px',
-                      background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                      color: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-2px)';
-                      e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
-                    }}
-                  >
-                    {sortOrder === "asc" ? "A → Z" : "Z → A"}
-                    <span style={{ fontSize: '20px' }}>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Results Summary */}
-            <div style={{ 
-              marginTop: '24px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '12px',
-              padding: '20px 28px',
-              background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-              borderRadius: '12px',
-              border: '2px solid #14b8a6',
-              fontSize: '17px',
-              fontWeight: '700',
-              color: '#0f766e',
-              boxShadow: '0 2px 8px rgba(20, 184, 166, 0.15)'
-            }}>
-              <div>
-                📊 Showing <strong style={{ fontSize: '24px', color: '#14b8a6' }}>{filtered.length}</strong> 
-                {filtered.length === members.length 
-                  ? ` expired member${filtered.length !== 1 ? 's' : ''}` 
-                  : ` of ${members.length} expired members`
-                }
-              </div>
+          {/* Results Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            margin: '20px 0 16px',
+            padding: '0 4px'
+          }}>
+            <div style={{ fontSize: '17px', fontWeight: '600', color: '#0f766e' }}>
+              <strong style={{ fontSize: '22px', fontWeight: '800', color: '#14b8a6' }}>{filtered.length}</strong>
+              {' '}{filtered.length === members.length
+                ? `total expired ${filtered.length === 1 ? 'membership' : 'memberships'}`
+                : `of ${members.length} expired memberships`}
             </div>
           </div>
 

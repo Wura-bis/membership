@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
 import DeactivateConfirm from "../../components/deactivateconfirm";
 import { useAuth } from "../../hooks/useauth";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function Members() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function Members() {
   // Remove forced redirect for public users
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/members", {
+    fetch(`${API_BASE_URL}/api/members`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -47,7 +48,7 @@ export default function Members() {
     if (!selectedMember) return;
     try {
       const res = await fetch(
-        `http://localhost:5000/api/members/${selectedMember.id}/deactivate`,
+        `${API_BASE_URL}/api/members/${selectedMember.id}/deactivate`,
         { method: "POST", credentials: "include" }
       );
       const data = await res.json();
@@ -168,9 +169,9 @@ export default function Members() {
           textAlign: 'left',
           fontWeight: '700',
           color: isActive ? '#14b8a6' : '#0f766e',
-          fontSize: '14px',
+          fontSize: '16px',
           textTransform: 'uppercase',
-          letterSpacing: '0.8px',
+          letterSpacing: '0.5px',
           cursor: 'pointer',
           userSelect: 'none',
           position: 'relative',
@@ -190,7 +191,7 @@ export default function Members() {
           {children}
           {isActive ? (
             <span style={{ 
-              fontSize: '16px', 
+              fontSize: '18px', 
               fontWeight: 'bold',
               color: '#14b8a6'
             }}>
@@ -198,7 +199,7 @@ export default function Members() {
             </span>
           ) : (
             <span style={{ 
-              fontSize: '14px', 
+              fontSize: '16px', 
               opacity: 0.5,
               transition: 'opacity 0.2s ease'
             }}>
@@ -212,11 +213,11 @@ export default function Members() {
 
   // Fetch lookup options for category and county
   useEffect(() => {
-    fetch("http://localhost:5000/api/lookups/categories", { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/lookups/categories`, { credentials: "include" })
       .then(res => res.json())
       .then(data => setCategoryOptions(data))
       .catch(() => setCategoryOptions([]));
-    fetch("http://localhost:5000/api/lookups/counties", { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/lookups/counties`, { credentials: "include" })
       .then(res => res.json())
       .then(data => setCountyOptions(data))
       .catch(() => setCountyOptions([]));
@@ -244,25 +245,14 @@ export default function Members() {
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
+          <div className="dashboard-header">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
               <div>
-                <h1 style={{ 
-                  fontSize: '38px', 
-                  fontWeight: '700', 
-                  color: '#0f766e', 
-                  marginBottom: '12px',
-                  margin: 0 
-                }}>
-                  👥 Active Members
+                <h1 className="dashboard-title" style={{ fontSize: '38px', fontWeight: '800', margin: 0 }}>
+                  👥 Member Directory
                 </h1>
-                <p style={{ 
-                  fontSize: '20px', 
-                  color: '#64748b', 
-                  fontWeight: '600',
-                  margin: 0 
-                }}>
-                  Browse active membership records
+                <p className="dashboard-subtitle" style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>
+                  Browse all membership records
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -270,14 +260,14 @@ export default function Members() {
                 {user && (user.role === "private" || user.role === "admin") && (
                   <div style={{ display: 'flex', gap: '12px' }}>
                     <button
-                      onClick={() => window.open('http://localhost:5000/api/export/members/csv', '_blank')}
+                      onClick={() => window.open(`${API_BASE_URL}/api/export/members/csv`, '_blank')}
                       style={{
                         background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                         color: 'white',
                         border: '2px solid #16a34a',
-                        padding: '12px 24px',
-                        borderRadius: '12px',
-                        fontSize: '15px',
+                        padding: '14px 28px',
+                        borderRadius: '10px',
+                        fontSize: '16px',
                         fontWeight: '700',
                         cursor: 'pointer',
                         display: 'flex',
@@ -298,14 +288,14 @@ export default function Members() {
                       📊 Export CSV
                     </button>
                     <button
-                      onClick={() => window.open('http://localhost:5000/api/export/members/pdf', '_blank')}
+                      onClick={() => window.open(`${API_BASE_URL}/api/export/members/pdf`, '_blank')}
                       style={{
                         background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                         color: 'white',
                         border: '2px solid #dc2626',
-                        padding: '12px 24px',
-                        borderRadius: '12px',
-                        fontSize: '15px',
+                        padding: '14px 28px',
+                        borderRadius: '10px',
+                        fontSize: '16px',
                         fontWeight: '700',
                         cursor: 'pointer',
                         display: 'flex',
@@ -337,10 +327,10 @@ export default function Members() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
-                      padding: '12px 28px',
-                      fontSize: '15px',
+                      padding: '14px 28px',
+                      fontSize: '16px',
                       fontWeight: '700',
-                      borderRadius: '12px',
+                      borderRadius: '10px',
                       background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
                       color: 'white',
                       border: '2px solid #0f766e',
@@ -406,7 +396,7 @@ export default function Members() {
                 className="form-input"
                 style={{
                   fontSize: '18px',
-                  padding: '16px 20px',
+                  padding: '18px 24px',
                   flex: '1',
                   minWidth: '320px',
                   maxWidth: '600px',
@@ -425,9 +415,9 @@ export default function Members() {
                     setSortOrder("asc");
                   }}
                   style={{
-                    padding: '14px 22px',
-                    fontSize: '16px',
-                    fontWeight: '600',
+                    padding: '18px 28px',
+                    fontSize: '17px',
+                    fontWeight: '700',
                     border: '2px solid #14b8a6',
                     borderRadius: '10px',
                     background: 'white',
@@ -436,7 +426,8 @@ export default function Members() {
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '10px',
+                    minHeight: '58px'
                   }}
                 >
                   <span>✕</span>
@@ -453,12 +444,12 @@ export default function Members() {
               marginBottom: '24px'
             }}>
               <div>
-                <label className="form-label" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '10px' }}>Status</label>
+                <label className="form-label" style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px', display: 'block' }}>Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="form-input"
-                  style={{ fontSize: '17px', padding: '14px', border: '2px solid #5eead4', borderRadius: '10px' }}
+                  style={{ fontSize: '17px', padding: '18px 24px', border: '2px solid #5eead4', borderRadius: '10px', fontWeight: '600' }}
                 >
                   <option value="all">All Statuses</option>
                   <option value="active">Active</option>
@@ -466,12 +457,12 @@ export default function Members() {
                 </select>
               </div>
               <div>
-                <label className="form-label" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '10px' }}>Category</label>
+                <label className="form-label" style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px', display: 'block' }}>Category</label>
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   className="form-input"
-                  style={{ fontSize: '17px', padding: '14px', border: '2px solid #5eead4', borderRadius: '10px' }}
+                  style={{ fontSize: '17px', padding: '18px 24px', border: '2px solid #5eead4', borderRadius: '10px', fontWeight: '600' }}
                 >
                   <option value="all">All Categories</option>
                   {categoryOptions.map((c) => (
@@ -480,12 +471,12 @@ export default function Members() {
                 </select>
               </div>
               <div>
-                <label className="form-label" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '10px' }}>County</label>
+                <label className="form-label" style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px', display: 'block' }}>County</label>
                 <select
                   value={countyFilter}
                   onChange={(e) => setCountyFilter(e.target.value)}
                   className="form-input"
-                  style={{ fontSize: '17px', padding: '14px', border: '2px solid #5eead4', borderRadius: '10px' }}
+                  style={{ fontSize: '17px', padding: '18px 24px', border: '2px solid #5eead4', borderRadius: '10px', fontWeight: '600' }}
                 >
                   <option value="all">All Counties</option>
                   {countyOptions.map((c) => (
@@ -495,210 +486,37 @@ export default function Members() {
               </div>
             </div>
 
-            {/* Sort Controls */}
-            <div style={{
-              padding: '24px',
-              background: 'white',
-              borderRadius: '12px',
-              border: '2px solid #ccfbf1'
-            }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '16px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-                  <span style={{ 
-                    fontSize: '16px', 
-                    fontWeight: '700', 
-                    color: '#0f766e'
-                  }}>
-                    📊 Sort by:
-                  </span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="form-input"
-                    style={{
-                      width: 'auto',
-                      minWidth: '160px',
-                      fontSize: '15px'
-                    }}
-                  >
-                    <option value="lastName">Last Name</option>
-                    <option value="firstName">First Name</option>
-                    <option value="county">County</option>
-                    <option value="category">Category</option>
-                    <option value="status">Status</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                    style={{
-                      padding: '10px 18px',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      border: '2px solid #5eead4',
-                      borderRadius: '10px',
-                      background: 'white',
-                      color: '#0f766e',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#f0fdfa';
-                      e.target.style.borderColor = '#14b8a6';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'white';
-                      e.target.style.borderColor = '#5eead4';
-                    }}
-                  >
-                    {sortOrder === "asc" ? "A → Z" : "Z → A"}
-                    <span style={{ fontSize: '18px' }}>{sortOrder === "asc" ? "↑" : "↓"}</span>
-                  </button>
-                </div>
-                
-                {/* Quick actions */}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={() => { setSortBy("lastName"); setSortOrder("asc"); }}
-                    style={{
-                      padding: '10px 18px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      border: '2px solid ' + (sortBy === "lastName" && sortOrder === "asc" ? '#14b8a6' : '#e5e7eb'),
-                      borderRadius: '10px',
-                      background: sortBy === "lastName" && sortOrder === "asc" ? '#14b8a6' : 'white',
-                      color: sortBy === "lastName" && sortOrder === "asc" ? 'white' : '#64748b',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!(sortBy === "lastName" && sortOrder === "asc")) {
-                        e.target.style.borderColor = '#5eead4';
-                        e.target.style.color = '#0f766e';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!(sortBy === "lastName" && sortOrder === "asc")) {
-                        e.target.style.borderColor = '#e5e7eb';
-                        e.target.style.color = '#64748b';
-                      }
-                    }}
-                  >
-                    A-Z Names
-                  </button>
-                  <button
-                    onClick={() => { setSortBy("county"); setSortOrder("asc"); }}
-                    style={{
-                      padding: '10px 18px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      border: '2px solid ' + (sortBy === "county" && sortOrder === "asc" ? '#14b8a6' : '#e5e7eb'),
-                      borderRadius: '10px',
-                      background: sortBy === "county" && sortOrder === "asc" ? '#14b8a6' : 'white',
-                      color: sortBy === "county" && sortOrder === "asc" ? 'white' : '#64748b',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!(sortBy === "county" && sortOrder === "asc")) {
-                        e.target.style.borderColor = '#5eead4';
-                        e.target.style.color = '#0f766e';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!(sortBy === "county" && sortOrder === "asc")) {
-                        e.target.style.borderColor = '#e5e7eb';
-                        e.target.style.color = '#64748b';
-                      }
-                    }}
-                  >
-                    By County
-                  </button>
-                </div>
-              </div>
+          </div>
+
+          {/* Results Bar */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            margin: '20px 0 16px',
+            padding: '0 4px'
+          }}>
+            <div style={{ fontSize: '17px', fontWeight: '600', color: '#0f766e' }}>
+              <strong style={{ fontSize: '22px', fontWeight: '800', color: '#14b8a6' }}>{filtered.length}</strong>
+              {' '}{filtered.length === members.length
+                ? `total ${filtered.length === 1 ? 'member' : 'members'}`
+                : `of ${members.length} ${members.length === 1 ? 'member' : 'members'}`}
             </div>
-            
-            {/* Results Summary */}
-            <div style={{ 
-              marginTop: '24px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '16px',
-              padding: '20px 24px',
-              background: 'white',
-              borderRadius: '12px',
-              border: '2px solid #ccfbf1'
-            }}>
-              <div style={{
-                fontSize: '17px',
-                fontWeight: '600',
-                color: '#0f766e'
-              }}>
-                <strong style={{ 
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: '#14b8a6'
-                }}>
-                  {filtered.length}
-                </strong> 
-                {filtered.length === members.length 
-                  ? ` total ${filtered.length === 1 ? 'member' : 'members'}` 
-                  : ` of ${members.length} ${members.length === 1 ? 'member' : 'members'}`
-                }
-              </div>
-              
-              {/* Items per page selector */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ 
-                  fontSize: '16px', 
-                  fontWeight: '700', 
-                  color: '#0f766e' 
-                }}>
-                  📄 Show:
-                </span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="form-input"
-                  style={{
-                    width: 'auto',
-                    minWidth: '140px',
-                    fontSize: '15px'
-                  }}
-                >
-                  <option value={10}>10 per page</option>
-                  <option value={25}>25 per page</option>
-                  <option value={50}>50 per page</option>
-                  <option value={100}>100 per page</option>
-                  <option value={filtered.length}>All ({filtered.length})</option>
-                </select>
-              </div>
-              {(sortBy && sortBy !== "lastName") || sortOrder !== "asc" ? (
-                <div style={{ 
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  padding: '8px 16px',
-                  background: '#f0fdfa',
-                  borderRadius: '10px',
-                  border: '2px solid #5eead4',
-                  color: '#0f766e'
-                }}>
-                  📊 Sorted by {sortBy === "lastName" ? "surname" : sortBy === "firstName" ? "first name" : sortBy} 
-                  ({sortOrder === "asc" ? "A-Z" : "Z-A"})
-                </div>
-              ) : null}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '16px', fontWeight: '600', color: '#64748b' }}>Show:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                style={{ padding: '10px 16px', fontSize: '16px', border: '2px solid #5eead4', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', background: 'white' }}
+              >
+                <option value={10}>10 per page</option>
+                <option value={25}>25 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+                <option value={filtered.length}>All ({filtered.length})</option>
+              </select>
             </div>
           </div>
 
@@ -711,7 +529,7 @@ export default function Members() {
             boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
           }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', fontSize: '16px' }}>
+              <table style={{ width: '100%', fontSize: '17px' }}>
                 <thead>
                   <tr style={{ borderBottom: '3px solid #5eead4', background: '#f0fdfa' }}>
                     <SortableHeader column="lastName">
@@ -740,9 +558,9 @@ export default function Members() {
                       textAlign: 'left',
                       fontWeight: '700',
                       color: '#0f766e',
-                      fontSize: '14px',
+                      fontSize: '16px',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.8px'
+                      letterSpacing: '0.5px'
                     }}>
                       Actions
                     </th>
@@ -755,7 +573,7 @@ export default function Members() {
                         textAlign: 'center', 
                         padding: '80px 48px'
                       }}>
-                        <div style={{ fontSize: '80px', marginBottom: '20px' }}>
+                        <div style={{ fontSize: '64px', marginBottom: '20px' }}>
                           {members.length === 0 ? '👥' : '🔍'}
                         </div>
                         <div style={{ 
@@ -819,93 +637,75 @@ export default function Members() {
                             {m.isActive ? "✅ Active" : "❌ Inactive"}
                           </span>
                         </td>
-                        <td style={{ padding: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <td style={{ padding: '16px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {/* View button for all roles */}
                           <Link
                             to={`/members/${m.id}`}
                             style={{
                               fontSize: '15px',
                               fontWeight: '700',
+                              lineHeight: '1.2',
                               padding: '10px 18px',
-                              borderRadius: '10px',
+                              borderRadius: '8px',
                               textDecoration: 'none',
                               background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
                               color: 'white',
                               transition: 'all 0.2s ease',
                               border: '2px solid #0f766e',
                               boxShadow: '0 2px 6px rgba(20, 184, 166, 0.3)',
-                              display: 'inline-block'
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              whiteSpace: 'nowrap',
+                              boxSizing: 'border-box'
                             }}
                             onMouseEnter={e => {
-                              e.target.style.transform = 'translateY(-2px)';
-                              e.target.style.boxShadow = '0 4px 10px rgba(20, 184, 166, 0.4)';
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.boxShadow = '0 4px 10px rgba(20, 184, 166, 0.45)';
                             }}
                             onMouseLeave={e => {
-                              e.target.style.transform = 'translateY(0)';
-                              e.target.style.boxShadow = '0 2px 6px rgba(20, 184, 166, 0.3)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = '0 2px 6px rgba(20, 184, 166, 0.3)';
                             }}
                           >
                             👁️ View
                           </Link>
                           
-                          {/* Export buttons for admin and private users */}
-                          {user && (user.role === "admin" || user.role === "private") && (
-                            <>
-                              <button
-                                onClick={() => window.open(`http://localhost:5000/api/export/member/${m.id}/csv`, '_blank')}
-                                style={{
-                                  fontSize: '15px',
-                                  fontWeight: '700',
-                                  padding: '10px 16px',
-                                  borderRadius: '10px',
-                                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                                  color: 'white',
-                                  border: '2px solid #16a34a',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  boxShadow: '0 2px 6px rgba(34, 197, 94, 0.3)'
-                                }}
-                                onMouseEnter={e => {
-                                  e.target.style.transform = 'translateY(-2px)';
-                                  e.target.style.boxShadow = '0 4px 10px rgba(34, 197, 94, 0.4)';
-                                }}
-                                onMouseLeave={e => {
-                                  e.target.style.transform = 'translateY(0)';
-                                  e.target.style.boxShadow = '0 2px 6px rgba(34, 197, 94, 0.3)';
-                                }}
-                                title="Export as CSV"
-                              >
-                                📊 CSV
-                              </button>
-                              <button
-                                onClick={() => window.open(`http://localhost:5000/api/export/member/${m.id}/pdf`, '_blank')}
-                                style={{
-                                  fontSize: '15px',
-                                  fontWeight: '700',
-                                  padding: '10px 16px',
-                                  borderRadius: '10px',
-                                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                                  color: 'white',
-                                  border: '2px solid #2563eb',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
-                                }}
-                                onMouseEnter={e => {
-                                  e.target.style.transform = 'translateY(-2px)';
-                                  e.target.style.boxShadow = '0 4px 10px rgba(59, 130, 246, 0.4)';
-                                }}
-                                onMouseLeave={e => {
-                                  e.target.style.transform = 'translateY(0)';
-                                  e.target.style.boxShadow = '0 2px 6px rgba(59, 130, 246, 0.3)';
-                                }}
-                                title="Export as PDF"
-                              >
-                                📄 PDF
-                              </button>
-                            </>
+                          {/* Edit button for admin only */}
+                          {user && user.role === "admin" && (
+                            <Link
+                              to={`/members/edit/${m.id}`}
+                              style={{
+                                fontSize: '15px',
+                                fontWeight: '700',
+                                lineHeight: '1.2',
+                                padding: '10px 18px',
+                                borderRadius: '8px',
+                                textDecoration: 'none',
+                                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                                color: 'white',
+                                transition: 'all 0.2s ease',
+                                border: '2px solid #d97706',
+                                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                whiteSpace: 'nowrap',
+                                boxSizing: 'border-box'
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 4px 10px rgba(245, 158, 11, 0.45)';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(245, 158, 11, 0.3)';
+                              }}
+                            >
+                              ✏️ Edit
+                            </Link>
                           )}
-                          
+
                           {/* Deactivate button for admin only */}
                           {user && user.role === "admin" && m.isActive && (
                             <button
@@ -919,21 +719,35 @@ export default function Members() {
                                 color: '#dc2626',
                                 fontSize: '15px',
                                 fontWeight: '700',
+                                lineHeight: '1.2',
                                 cursor: 'pointer',
-                                padding: '10px 16px',
+                                padding: '10px 18px',
                                 borderRadius: '8px',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.2s ease',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                whiteSpace: 'nowrap',
+                                boxSizing: 'border-box',
+                                fontFamily: 'inherit',
+                                WebkitAppearance: 'none',
+                                appearance: 'none',
+                                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.15)'
                               }}
                               onMouseEnter={(e) => {
-                                e.target.style.background = '#dc2626';
-                                e.target.style.color = 'white';
+                                e.currentTarget.style.background = '#dc2626';
+                                e.currentTarget.style.color = 'white';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                e.currentTarget.style.boxShadow = '0 4px 10px rgba(220, 38, 38, 0.35)';
                               }}
                               onMouseLeave={(e) => {
-                                e.target.style.background = '#fef2f2';
-                                e.target.style.color = '#dc2626';
+                                e.currentTarget.style.background = '#fef2f2';
+                                e.currentTarget.style.color = '#dc2626';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 2px 6px rgba(220, 38, 38, 0.15)';
                               }}
                             >
-                              ❌ Deactivate
+                              🚫 Deactivate
                             </button>
                           )}
                         </td>
@@ -974,7 +788,7 @@ export default function Members() {
                     onClick={() => setCurrentPage(currentPage - 1)}
                     disabled={currentPage === 1}
                     style={{
-                      padding: '12px 20px',
+                      padding: '14px 24px',
                       fontSize: '16px',
                       fontWeight: '700',
                       border: '2px solid #5eead4',
@@ -1018,7 +832,7 @@ export default function Members() {
                           key={pageNum}
                           onClick={() => setCurrentPage(pageNum)}
                           style={{
-                            padding: '12px 16px',
+                            padding: '14px 18px',
                             fontSize: '16px',
                             fontWeight: '700',
                             border: currentPage === pageNum ? '2px solid #14b8a6' : '2px solid #e5e7eb',
@@ -1055,7 +869,7 @@ export default function Members() {
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     style={{
-                      padding: '12px 20px',
+                      padding: '14px 24px',
                       fontSize: '16px',
                       fontWeight: '700',
                       border: '2px solid #5eead4',

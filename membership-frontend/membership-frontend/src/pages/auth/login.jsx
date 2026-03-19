@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import { ActionButton } from "../../components/ui";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function Login() {
   const [userID, setUserID] = useState("");
@@ -73,7 +74,7 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch(`${API_BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: userID, password }),
@@ -85,7 +86,15 @@ export default function Login() {
       // Update AuthContext with user data
       login(data.user);
       showToast("Welcome back!", "success");
-      
+
+      // If the session expired while on a page, redirect back there
+      const savedRedirect = sessionStorage.getItem("redirectAfterLogin");
+      if (savedRedirect && savedRedirect.startsWith("/") && !savedRedirect.startsWith("//")) {
+        sessionStorage.removeItem("redirectAfterLogin");
+        navigate(savedRedirect);
+        return;
+      }
+
       // Role-based redirect (use lowercase for comparison)
       const userRole = data.user.role.toLowerCase();
       if (userRole === "admin") {

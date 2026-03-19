@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState, useRef } from "react";
+import { API_BASE_URL } from '../utils/api';
 
 const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export function AuthProvider({ children }) {
   // Session refresh function
   const refreshSession = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/check-auth", {
+      const response = await fetch(`${API_BASE_URL}/api/check-auth`, {
         credentials: "include",
       });
       const data = await response.json();
@@ -74,7 +75,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     clearSessionRefresh();
-    fetch("http://localhost:5000/api/logout", { method: "POST", credentials: "include" });
+    fetch(`${API_BASE_URL}/api/logout`, { method: "POST", credentials: "include" });
   };
 
   return (

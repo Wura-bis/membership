@@ -21,7 +21,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
   };
 
   return (
-    <form onSubmit={onSubmit} aria-label="Member Form">
+    <form onSubmit={onSubmit} aria-label="Member Form" autoComplete="off">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
         {/* Personal Information Card */}
         <div style={{ 
@@ -42,11 +42,11 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             <div>
               <label htmlFor="firstName" style={labelStyle}>First Name</label>
-              <input name="firstName" id="firstName" value={formData.firstName || ""} onChange={onChange} style={inputStyle} />
+              <input name="firstName" id="firstName" value={formData.firstName || ""} onChange={onChange} style={inputStyle} autoComplete="off" />
             </div>
             <div>
               <label htmlFor="lastName" style={labelStyle}>Last Name</label>
-              <input name="lastName" id="lastName" value={formData.lastName || ""} onChange={onChange} style={inputStyle} />
+              <input name="lastName" id="lastName" value={formData.lastName || ""} onChange={onChange} style={inputStyle} autoComplete="off" />
             </div>
             <div>
               <label htmlFor="dateOfBirth" style={labelStyle}>Date of Birth</label>
@@ -54,7 +54,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
             </div>
             <div>
               <label htmlFor="placeOfBirth" style={labelStyle}>Place of Birth</label>
-              <input name="placeOfBirth" id="placeOfBirth" value={formData.placeOfBirth || ""} onChange={onChange} style={inputStyle} />
+              <input name="placeOfBirth" id="placeOfBirth" value={formData.placeOfBirth || ""} onChange={onChange} style={inputStyle} autoComplete="off" />
             </div>
             <div>
               <label htmlFor="occupationId" style={labelStyle}>Occupation</label>
@@ -205,7 +205,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '28px' }}>
             <div>
               <label htmlFor="email" style={labelStyle}>Email</label>
-              <input name="email" id="email" value={formData.email || ""} onChange={onChange} style={inputStyle} type="email" />
+              <input name="email" id="email" value={formData.email || ""} onChange={onChange} style={inputStyle} type="email" autoComplete="off" />
             </div>
           </div>
 
@@ -264,6 +264,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                     }}
                     style={inputStyle}
                     placeholder="(123) 456-7890"
+                    autoComplete="off"
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}>
@@ -348,16 +349,17 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
           {(formData.addresses && formData.addresses.length > 0 ? formData.addresses : [{
             street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true
           }]).map((addr, idx) => {
-            // Universal country list
+            // Universal country list — Canada, United States, Ireland pinned first, rest alphabetical
             const allCountries = [
+              "Canada", "United States", "Ireland",
               "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
               "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
               "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
-              "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica",
+              "Cameroon", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica",
               "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt",
               "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon",
               "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
-              "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel",
+              "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Israel",
               "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kosovo", "Kuwait",
               "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg",
               "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico",
@@ -368,7 +370,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
               "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia",
               "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
               "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey",
-              "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu",
+              "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "Uruguay", "Uzbekistan", "Vanuatu",
               "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
             ];
             const countryOptions = allCountries.map(c => ({ label: c, value: c }));
@@ -385,15 +387,15 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '16px' }}>
                   <div>
                     <label style={labelStyle}>Address Line 1</label>
-                    <input value={addr.street} onChange={e => onAddressChange(idx, "street", e.target.value)} placeholder="Address Line 1" style={inputStyle} aria-label="Address Line 1" />
+                    <input value={addr.street} onChange={e => onAddressChange(idx, "street", e.target.value)} placeholder="Address Line 1" style={inputStyle} aria-label="Address Line 1" autoComplete="off" />
                   </div>
                   <div>
                     <label style={labelStyle}>Address Line 2</label>
-                    <input value={addr.addressLine2} onChange={e => onAddressChange(idx, "addressLine2", e.target.value)} placeholder="Address Line 2" style={inputStyle} aria-label="Address Line 2" />
+                    <input value={addr.addressLine2} onChange={e => onAddressChange(idx, "addressLine2", e.target.value)} placeholder="Address Line 2" style={inputStyle} aria-label="Address Line 2" autoComplete="off" />
                   </div>
                   <div>
                     <label style={labelStyle}>City/Town</label>
-                    <input value={addr.city} onChange={e => onAddressChange(idx, "city", e.target.value)} placeholder="City/Town" style={inputStyle} aria-label="City/Town" />
+                    <input value={addr.city} onChange={e => onAddressChange(idx, "city", e.target.value)} placeholder="City/Town" style={inputStyle} aria-label="City/Town" autoComplete="off" />
                   </div>
                   <div>
                     <label style={labelStyle}>Province/State</label>
@@ -426,7 +428,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                 </div>
                 <div>
                   <label style={labelStyle}>Postal Code</label>
-                  <input value={addr.postalCode} onChange={e => onAddressChange(idx, "postalCode", e.target.value)} placeholder="Postal Code" style={inputStyle} aria-label="Postal Code" />
+                  <input value={addr.postalCode} onChange={e => onAddressChange(idx, "postalCode", e.target.value)} placeholder="Postal Code" style={inputStyle} aria-label="Postal Code" autoComplete="off" />
                 </div>
                 <div>
                   <label style={labelStyle}>Date in Residence</label>

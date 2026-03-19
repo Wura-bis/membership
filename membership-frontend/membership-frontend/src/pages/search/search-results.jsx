@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -19,7 +20,7 @@ export default function SearchResults() {
     setLoading(true);
     setError("");
 
-    fetch(`http://localhost:5000/api/members/search?q=${encodeURIComponent(query)}`, {
+    fetch(`${API_BASE_URL}/api/members/search?q=${encodeURIComponent(query)}`, {
       credentials: "include",
     })
       .then((res) => {

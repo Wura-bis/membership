@@ -3,6 +3,7 @@ import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import CreatableSelect from '../../components/creatableselect';
+import { API_BASE_URL } from '../../utils/api';
 
 function AdminRecognitions() {
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -17,14 +18,14 @@ function AdminRecognitions() {
 
   // Always fetch recognition types when opening add/edit modal
   const fetchRecognitionTypes = () => {
-    fetch('http://localhost:5000/api/recognition-types', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/api/recognition-types`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setRecognitionTypes(data));
   };
   // Add logic
   const handleAdd = () => {
     fetchRecognitionTypes();
-    fetch('http://localhost:5000/api/fiscal-years', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setFiscalYears(data));
     setNewRecognition({ title: '', description: '', recognitionTypeId: '', fiscalYearId: '', isActive: true });
@@ -34,7 +35,7 @@ function AdminRecognitions() {
   const saveAdd = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/recognitions/old', {
+      const response = await fetch(`${API_BASE_URL}/api/recognitions/old`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -68,7 +69,7 @@ function AdminRecognitions() {
   const confirmDelete = async () => {
     if (!deleteConfirm.recognition) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/recognitions/${deleteConfirm.recognition.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/recognitions/${deleteConfirm.recognition.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -86,7 +87,7 @@ function AdminRecognitions() {
 
   // Edit logic
   const fetchFiscalYears = () => {
-    fetch('http://localhost:5000/api/fiscal-years', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         // Map backend {FiscalYearID, YearLabel} to {value, label}
@@ -98,7 +99,7 @@ function AdminRecognitions() {
   };
   const handleEdit = (recognition) => {
     fetchRecognitionTypes();
-    fetch('http://localhost:5000/api/fiscal-years', { credentials: 'include' })
+    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         // Map backend {FiscalYearID, YearLabel} to {value, label}
@@ -141,7 +142,7 @@ function AdminRecognitions() {
       }
     } catch (e) { /* ignore parse errors */ }
     try {
-      const response = await fetch(`http://localhost:5000/api/recognitions/${updated.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/recognitions/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -177,7 +178,7 @@ function AdminRecognitions() {
 
   const loadRecognitions = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/recognitions/old", {
+      const response = await fetch(`${API_BASE_URL}/api/recognitions/old`, {
         credentials: "include"
       });
       if (response.ok) {
@@ -263,7 +264,7 @@ function AdminRecognitions() {
                       onChange={e => setEditRecognition({ ...editRecognition, fiscalYearId: e.target.value })}
                       onCreate={async (inputYear) => {
                         // POST to backend to create year, then refresh
-                        const res = await fetch('http://localhost:5000/api/lookups/fiscal-years', {
+                        const res = await fetch(`${API_BASE_URL}/api/lookups/fiscal-years`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           credentials: 'include',
@@ -349,7 +350,7 @@ function AdminRecognitions() {
                       onChange={e => setNewRecognition({ ...newRecognition, fiscalYearId: e.target.value })}
                       onCreate={async (inputYear) => {
                         // POST to backend to create year, then refresh
-                        const res = await fetch('http://localhost:5000/api/lookups/fiscal-years', {
+                        const res = await fetch(`${API_BASE_URL}/api/lookups/fiscal-years`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           credentials: 'include',

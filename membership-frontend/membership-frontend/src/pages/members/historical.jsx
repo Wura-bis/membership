@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useauth";
 import MainLayout from "../../components/mainlayout";
+import { API_BASE_URL } from '../../utils/api';
 
-export default function DeceasedMembers() {
+export default function HistoricalMembers() {
   const { user } = useAuth();
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,17 +20,17 @@ export default function DeceasedMembers() {
   }
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/members", {
+    fetch(`${API_BASE_URL}/api/members`, {
       credentials: "include",
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch deceased members");
+        if (!res.ok) throw new Error("Failed to fetch historical members");
         return res.json();
       })
       .then((data) => {
-        // Filter for inactive members (deceased)
-        const deceased = Array.isArray(data) ? data.filter(m => m.isActive === false) : [];
-        setMembers(deceased);
+        // Filter for historical members
+        const historical = Array.isArray(data) ? data.filter(m => m.isActive === false) : [];
+        setMembers(historical);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -85,33 +86,32 @@ export default function DeceasedMembers() {
     return (
       <th 
         style={{ 
-          padding: '16px', 
+          padding: '22px 24px', 
           textAlign: 'left',
-          fontWeight: '600',
-          color: isActive ? '#14b8a6' : '#374151',
-          fontSize: '12px',
+          fontWeight: '700',
+          color: isActive ? '#14b8a6' : '#0f766e',
+          fontSize: '17px',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
           cursor: 'pointer',
           userSelect: 'none',
           position: 'relative',
-          transition: 'color 0.2s ease',
-          borderBottom: isActive ? '2px solid #14b8a6' : '2px solid #e2e8f0'
+          transition: 'color 0.2s ease'
         }}
         onClick={() => handleSort(column)}
         onMouseEnter={(e) => {
-          if (!isActive) e.target.style.color = '#64748b';
+          if (!isActive) e.target.style.color = '#14b8a6';
         }}
         onMouseLeave={(e) => {
-          if (!isActive) e.target.style.color = '#374151';
+          if (!isActive) e.target.style.color = '#0f766e';
         }}
         title={`Sort by ${children}${isActive ? ` (currently ${sortDirection === "asc" ? "A-Z" : "Z-A"})` : ""}`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {children}
           {isActive ? (
             <span style={{ 
-              fontSize: '12px', 
+              fontSize: '18px', 
               fontWeight: 'bold',
               color: '#14b8a6'
             }}>
@@ -119,8 +119,8 @@ export default function DeceasedMembers() {
             </span>
           ) : (
             <span style={{ 
-              fontSize: '10px', 
-              opacity: 0.4,
+              fontSize: '14px', 
+              opacity: 0.5,
               transition: 'opacity 0.2s ease'
             }}>
               ↕
@@ -138,9 +138,9 @@ export default function DeceasedMembers() {
           {/* Header */}
           <div className="dashboard-header">
             <div>
-              <h1 className="dashboard-title">📚 Member Directory</h1>
+              <h1 className="dashboard-title">📜 Historical Members</h1>
               <p className="dashboard-subtitle">
-                Browse and search member records
+                Browse memorial and historical member records
               </p>
             </div>
           </div>
@@ -159,15 +159,15 @@ export default function DeceasedMembers() {
           ) : (
             <>
               {/* Filter Bar */}
-              <div className="dashboard-card" style={{ marginBottom: '24px' }}>
-            <h2 className="dashboard-card-title">🔍 Search & Filters</h2>
+              <div className="dashboard-card" style={{ marginBottom: '28px', padding: '36px', background: '#f0fdfa', border: '2px solid #5eead4' }}>
+            <h2 className="dashboard-card-title" style={{ fontSize: '24px', fontWeight: '700', marginBottom: '28px', color: '#0f766e' }}>🔍 Search & Filter</h2>
             
             {/* Primary Search */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '20px',
+              gap: '20px', 
+              marginBottom: '28px',
               flexWrap: 'wrap'
             }}>
               <input
@@ -177,11 +177,15 @@ export default function DeceasedMembers() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="form-input"
                 style={{
-                  fontSize: '16px',
-                  padding: '12px 16px',
+                  fontSize: '17px',
+                  padding: '18px 24px',
                   flex: '1',
-                  minWidth: '300px',
-                  maxWidth: '500px'
+                  minWidth: '320px',
+                  maxWidth: '600px',
+                  border: '2px solid #14b8a6',
+                  borderRadius: '10px',
+                  fontWeight: '600',
+                  background: 'white'
                 }}
               />
               {(searchTerm || filterCounty || sortField !== "lastName" || sortDirection !== "asc") && (
@@ -193,21 +197,22 @@ export default function DeceasedMembers() {
                     setSortDirection("asc");
                   }}
                   style={{
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
+                    padding: '18px 28px',
+                    fontSize: '17px',
+                    fontWeight: '700',
+                    border: '2px solid #14b8a6',
+                    borderRadius: '10px',
                     background: 'white',
-                    color: '#64748b',
+                    color: '#0f766e',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '10px',
+                    minHeight: '58px'
                   }}
                 >
-                  <span>✕</span>
+                  <span style={{ fontSize: '20px' }}>✕</span>
                   Clear All
                 </button>
               )}
@@ -216,16 +221,25 @@ export default function DeceasedMembers() {
             {/* Filters Grid */}
             <div style={{ 
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: '16px',
-              marginBottom: '20px'
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '20px',
+              marginBottom: '28px'
             }}>
               <div>
-                <label className="form-label">County</label>
+                <label className="form-label" style={{ fontSize: '17px', fontWeight: '700', marginBottom: '14px', display: 'block', color: '#0f766e' }}>📍 County</label>
                 <select
                   value={filterCounty}
                   onChange={(e) => setFilterCounty(e.target.value)}
                   className="form-input"
+                  style={{
+                    fontSize: '17px',
+                    padding: '18px 24px',
+                    border: '2px solid #14b8a6',
+                    borderRadius: '10px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    background: 'white'
+                  }}
                 >
                   <option value="">All Counties</option>
                   {uniqueCounties.map(county => (
@@ -235,152 +249,48 @@ export default function DeceasedMembers() {
               </div>
             </div>
 
-            {/* Sort Controls */}
-            <div style={{
-              padding: '16px',
-              background: '#f8fafc',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ 
-                    fontSize: '13px', 
-                    fontWeight: '600', 
-                    color: '#64748b'
-                  }}>
-                    Sort by:
-                  </span>
-                  <select
-                    value={sortField}
-                    onChange={(e) => setSortField(e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: '13px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      background: 'white'
-                    }}
-                  >
-                    <option value="lastName">Last Name</option>
-                    <option value="firstName">First Name</option>
-                    <option value="dateOfBirth">Date of Birth</option>
-                    <option value="county">County</option>
-                    <option value="membershipYears">Years Active</option>
-                  </select>
-                  <button
-                    onClick={() => setSortDirection(sortDirection === "asc" ? "desc" : "asc")}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      background: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {sortDirection === "asc" ? "A → Z" : "Z → A"}
-                    <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
-                  </button>
-                </div>
-                
-                {/* Quick actions */}
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => { setSortField("lastName"); setSortDirection("asc"); }}
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      background: sortField === "lastName" && sortDirection === "asc" ? '#14b8a6' : 'white',
-                      color: sortField === "lastName" && sortDirection === "asc" ? 'white' : '#64748b',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    A-Z Names
-                  </button>
-                  <button
-                    onClick={() => { setSortField("membershipYears"); setSortDirection("desc"); }}
-                    style={{
-                      padding: '6px 10px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      background: sortField === "membershipYears" && sortDirection === "desc" ? '#14b8a6' : 'white',
-                      color: sortField === "membershipYears" && sortDirection === "desc" ? 'white' : '#64748b',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    Most Active
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Results Summary */}
-            <div style={{ 
-              marginTop: '16px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '8px',
-              padding: '12px 16px',
-              background: '#f8fafc',
-              borderRadius: '8px',
-              fontSize: '14px',
-              color: '#64748b'
-            }}>
-              <div>
-                <strong style={{ color: '#374151' }}>{filteredMembers.length}</strong> 
-                {filteredMembers.length === members.length 
-                  ? ` members` 
-                  : ` of ${members.length} members`
-                }
-              </div>
-            </div>
+          </div>
+
+          {/* Results Bar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            margin: '20px 0 16px',
+            padding: '0 4px',
+            fontSize: '17px',
+            fontWeight: '600',
+            color: '#0f766e'
+          }}>
+            <strong style={{ fontSize: '22px', fontWeight: '800', color: '#14b8a6', marginRight: '6px' }}>{filteredMembers.length}</strong>
+            {filteredMembers.length === members.length
+              ? `total historical ${filteredMembers.length === 1 ? 'record' : 'records'}`
+              : `of ${members.length} historical records`}
           </div>
 
           {/* Members Table */}
-          <div className="dashboard-card">
+          <div className="dashboard-card" style={{ padding: '36px', border: '2px solid #14b8a6' }}>
             {filteredMembers.length === 0 ? (
               <div style={{
                 textAlign: 'center',
-                padding: '60px',
+                padding: '80px 40px',
                 color: '#64748b'
               }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+                <div style={{ fontSize: '64px', marginBottom: '20px' }}>🕊️</div>
+                <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '12px', color: '#374151' }}>
                   {searchTerm || filterCounty ? 'No Results Found' : 'No Records Available'}
                 </h3>
-                <p style={{ fontSize: '14px' }}>
+                <p style={{ fontSize: '18px', fontWeight: '500' }}>
                   {searchTerm || filterCounty 
                     ? 'Try adjusting your search or filter criteria.'
-                    : 'There are currently no deceased member records in the database.'
+                    : 'There are currently no historical member records in the database.'
                   }
                 </p>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', fontSize: '14px' }}>
+                  <table style={{ width: '100%', fontSize: '17px', borderCollapse: 'separate', borderSpacing: '0' }}>
                     <thead>
-                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                      <tr style={{ background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', borderBottom: '3px solid #14b8a6' }}>
                         <SortableHeader column="lastName">
                           Surname
                         </SortableHeader>
@@ -397,11 +307,11 @@ export default function DeceasedMembers() {
                           Years Active
                         </SortableHeader>
                         <th style={{ 
-                          padding: '16px', 
+                          padding: '22px 24px', 
                           textAlign: 'center', 
-                          fontWeight: '600',
-                          color: '#374151',
-                          fontSize: '12px',
+                          fontWeight: '700',
+                          color: '#0f766e',
+                          fontSize: '17px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}>
@@ -414,43 +324,43 @@ export default function DeceasedMembers() {
                         <tr 
                           key={member.id || index}
                           style={{ 
-                            borderBottom: '1px solid #f1f5f9',
+                            borderBottom: '2px solid #f0fdfa',
                             transition: 'all 0.2s ease'
                           }}
-                          onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f8fafc'}
+                          onMouseEnter={(e) => e.target.closest('tr').style.backgroundColor = '#f0fdfa'}
                           onMouseLeave={(e) => e.target.closest('tr').style.backgroundColor = 'transparent'}
                         >
-                          <td style={{ padding: '16px', color: '#0f172a', fontWeight: '500' }}>
+                          <td style={{ padding: '20px 24px', color: '#0f172a', fontWeight: '700', fontSize: '17px' }}>
                             {member.lastName || '—'}
                           </td>
-                          <td style={{ padding: '16px', color: '#64748b' }}>
+                          <td style={{ padding: '20px 24px', color: '#374151', fontWeight: '600', fontSize: '17px' }}>
                             {member.firstName || '—'}
                           </td>
-                          <td style={{ padding: '16px', color: '#64748b' }}>
+                          <td style={{ padding: '20px 24px', color: '#64748b', fontWeight: '500', fontSize: '17px' }}>
                             {member.dateOfBirth || '—'}
                           </td>
-                          <td style={{ padding: '16px', color: '#64748b' }}>
+                          <td style={{ padding: '20px 24px', color: '#64748b', fontWeight: '500', fontSize: '17px' }}>
                             {member.county || '—'}
                           </td>
-                          <td style={{ padding: '16px', color: '#64748b' }}>
+                          <td style={{ padding: '20px 24px', color: '#64748b', fontWeight: '500', fontSize: '17px' }}>
                             {member.membershipYears ? `${member.membershipYears} years` : '—'}
                           </td>
-                          <td style={{ padding: '16px', textAlign: 'center' }}>
+                          <td style={{ padding: '20px 24px', textAlign: 'center' }}>
                             <Link
                               to={`/members/${member.id}`}
                               style={{
                                 display: 'inline-block',
-                                padding: '8px 16px',
+                                padding: '12px 24px',
                                 background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
                                 color: 'white',
                                 textDecoration: 'none',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontWeight: '500',
-                                transition: 'all 0.2s ease'
+                                borderRadius: '10px',
+                                fontSize: '16px',
+                                fontWeight: '700',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 2px 8px rgba(20,184,166,0.3)',
+                                whiteSpace: 'nowrap'
                               }}
-                              onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
-                              onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                             >
                               View Profile
                             </Link>

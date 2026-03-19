@@ -99,14 +99,24 @@ logger = logging.getLogger(__name__)
 # Import get_db_connection from db_config
 from db_config import get_db_connection
 
-app = Flask(__name__)
+# Serve the built React frontend from the dist/ folder
+DIST_DIR = os.path.join(os.path.dirname(__file__), 'dist')
+
+app = Flask(
+    __name__,
+    static_folder=DIST_DIR,
+    static_url_path='',
+)
 app.secret_key = 'your-secret-key-change-this'
-# Configure session to be persistent
-app.config['SESSION_COOKIE_SECURE'] = True  # Must be True for cross-origin and HTTPS
+# Configure session cookies — SameSite=Lax works for same-origin (prod) and is
+# also fine for the Vite dev proxy (all requests appear to come from 127.0.0.1).
+app.config['SESSION_COOKIE_SECURE'] = False   # set True only when running HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Must be None for cross-origin
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour sessions
-CORS(app, supports_credentials=True, origins=['http://localhost:3000', 'http://localhost:5173'])
+# CORS only needed for the Vite dev server (port 5173); in production everything
+# is same-origin so CORS is irrelevant.
+CORS(app, supports_credentials=True, origins=['http://localhost:5173', 'http://localhost:3000'])
 
 # Helper Functions
 def get_session_timeout_seconds():
@@ -267,7 +277,7 @@ def dashboard_stats():
             'activeMembers': category_counts['Active'],
             'inactiveMembers': category_counts['Inactive'],
             'honoraryMembers': category_counts['Honorary'],
-            'deceasedMembers': category_counts['Deceased'],
+            'historicalMembers': category_counts['Historical'],
             'newThisMonth': new_this_month
         }
         
@@ -2540,6 +2550,46 @@ def create_member():
         date_joined = data.get('dateJoined')
         if not date_joined or date_joined == '' or date_joined == 'null':
             date_joined = datetime.now().strftime('%Y-%m-%d')
+
+        # Duplicate check: block creation if a member with the same identity already exists
+        first_name = (data.get('firstName') or '').strip()
+        last_name = (data.get('lastName') or '').strip()
+        email = (data.get('email') or '').strip() or None
+        phone = (data.get('phoneNumber') or '').strip() or None
+        dob = convert_to_date_or_none(data.get('dateOfBirth'))
+
+        duplicate_msg = None
+        if email:
+            cursor.execute(
+                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND Email = ?",
+                (first_name, last_name, email)
+            )
+            if cursor.fetchone():
+                duplicate_msg = f"A member named {first_name} {last_name} with that email already exists."
+        if not duplicate_msg and phone:
+            cursor.execute(
+                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND PhoneNumber = ?",
+                (first_name, last_name, phone)
+            )
+            if cursor.fetchone():
+                duplicate_msg = f"A member named {first_name} {last_name} with that phone number already exists."
+        if not duplicate_msg and dob:
+            cursor.execute(
+                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND [Date of Birth] = ?",
+                (first_name, last_name, dob)
+            )
+            if cursor.fetchone():
+                duplicate_msg = f"A member named {first_name} {last_name} with that date of birth already exists."
+        if not duplicate_msg and not email and not phone and not dob:
+            cursor.execute(
+                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ?",
+                (first_name, last_name)
+            )
+            if cursor.fetchone():
+                duplicate_msg = f"A member named {first_name} {last_name} already exists. Provide an email, phone, or date of birth to confirm this is a different person."
+        if duplicate_msg:
+            conn.close()
+            return jsonify({'error': 'duplicate', 'message': duplicate_msg}), 409
 
         # Create member record
         cursor.execute("""
@@ -6602,7 +6652,7 @@ def import_members_preview():
             if dob and not is_duplicate:
                 cursor.execute("""
                     SELECT MemberID FROM Members
-                    WHERE FirstName = ? AND LastName = ? AND 'Date of Birth' = ?
+                    WHERE FirstName = ? AND LastName = ? AND [Date of Birth] = ?
                 """, (first_name, last_name, dob))
                 if cursor.fetchone():
                     row_errors.append("Duplicate: already exists in database (by name + date of birth)")
@@ -8075,5 +8125,26 @@ def get_sync_status():
         }), 500
 
 
+# ── Frontend catch-all ────────────────────────────────────────────────────────
+# Any path that isn't an /api/* route or a real static file (CSS, JS, images)
+# gets served index.html so React Router can handle client-side navigation.
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    # Let Flask serve real static assets (JS chunks, CSS, favicons …)
+    if path and os.path.exists(os.path.join(DIST_DIR, path)):
+        return send_from_directory(DIST_DIR, path)
+    # Everything else → hand off to React Router
+    index_path = os.path.join(DIST_DIR, 'index.html')
+    if os.path.exists(index_path):
+        return send_from_directory(DIST_DIR, 'index.html')
+    # dist/ not built yet — helpful message instead of a 404
+    return (
+        "<h2>Frontend not built yet.</h2>"
+        "<p>Run <code>build.bat</code> first, then restart Flask.</p>",
+        503,
+    )
+
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='localhost')
+    app.run(debug=True, port=5000, host='0.0.0.0')

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import MainLayout from "../../components/mainlayout";
 import ConfirmModal from "../../components/confirmmodal";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function AdminApprovals() {
   const [pending, setPending] = useState([]);
@@ -11,7 +12,7 @@ export default function AdminApprovals() {
   const [confirmAction, setConfirmAction] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/approvals", {
+    fetch(`${API_BASE_URL}/api/admin/approvals`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -28,7 +29,7 @@ export default function AdminApprovals() {
   const handleAction = async (userID, action) => {
     setProcessingId(userID);
     try {
-      const res = await fetch("http://localhost:5000/api/admin/approvals", {
+      const res = await fetch(`${API_BASE_URL}/api/admin/approvals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

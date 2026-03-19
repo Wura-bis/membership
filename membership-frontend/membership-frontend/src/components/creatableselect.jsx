@@ -48,13 +48,45 @@ export default function CreatableSelect({ label, name, value, options, onChange,
     <div style={{ position: "relative" }}>
       <label htmlFor={name}>{label}</label>
       {isMulti && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 4 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
           {multiValue.map(val => {
             const opt = safeOptions.find(o => o.value === val);
             return (
-              <span key={val} style={{ background: "#e5e7eb", borderRadius: 12, padding: "2px 8px", display: "flex", alignItems: "center", marginRight: 4 }}>
+              <span key={val} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+                border: '2px solid #14b8a6',
+                borderRadius: 20,
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#0f766e'
+              }}>
                 {opt ? opt.label : val}
-                <button type="button" style={{ marginLeft: 4, color: "#888", background: "none", border: "none", cursor: "pointer" }} onClick={() => handleRemove(val)} aria-label="Remove">×</button>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(val)}
+                  aria-label="Remove"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    background: '#14b8a6',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    padding: 0,
+                    flexShrink: 0
+                  }}
+                >×</button>
               </span>
             );
           })}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import MainLayout from "../components/mainlayout";
 import ConfirmModal from "../components/confirmmodal";
 import { useAuth } from "../hooks/useauth";
+import { API_BASE_URL } from '../utils/api';
 
 export default function UserManagement() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function UserManagement() {
   }
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/users", {
+    fetch(`${API_BASE_URL}/api/users`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -66,7 +67,7 @@ export default function UserManagement() {
     };
     try {
       const res = await fetch(
-        `http://localhost:5000/api/users/${id}/${endpointMap[action]}`,
+        `${API_BASE_URL}/api/users/${id}/${endpointMap[action]}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

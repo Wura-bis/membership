@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { Link } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function EnhancedAdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -28,7 +29,7 @@ export default function EnhancedAdminDashboard() {
 
   // Fetch dashboard overview data
   useEffect(() => {
-    fetch("http://localhost:5000/api/admin/dashboard", {
+    fetch(`${API_BASE_URL}/api/admin/dashboard`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -58,7 +59,7 @@ export default function EnhancedAdminDashboard() {
         category,
       }).toString();
 
-      const res = await fetch(`http://localhost:5000/api/admin/stats?${query}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/stats?${query}`, {
         credentials: "include",
       });
       const data = await res.json();

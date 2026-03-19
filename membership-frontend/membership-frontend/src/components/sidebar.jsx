@@ -22,7 +22,7 @@ const linksByRole = {
   ],
   public: [
     { to: "/public", label: "Public Dashboard", icon: "🌐" },
-    { to: "/members/deceased", label: "Member Directory", icon: "📋" },
+    { to: "/members/historical", label: "Member Directory", icon: "📋" },
     { to: "/my-profile", label: "My Profile", icon: "👤" },
     { to: "/app-settings", label: "App Settings", icon: "⚙️" },
   ],

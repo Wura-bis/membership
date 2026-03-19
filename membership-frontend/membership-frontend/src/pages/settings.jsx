@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import MainLayout from "../components/mainlayout";
+import { API_BASE_URL } from '../utils/api';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -22,7 +23,7 @@ export default function Settings() {
 
   useEffect(() => {
     // Simulate loading settings from backend
-    fetch("http://localhost:5000/api/admin/settings", {
+    fetch(`${API_BASE_URL}/api/admin/settings`, {
       credentials: "include",
     })
       .then((res) => res.json())
@@ -42,7 +43,7 @@ export default function Settings() {
     setSuccess("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/admin/settings", {
+      const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { API_BASE_URL } from '../utils/api';
 
 const OFFLINE_DB_KEY = 'bis_offline_data';
 const SYNC_QUEUE_KEY = 'bis_sync_queue';
@@ -133,7 +134,7 @@ export function useOfflineSync() {
   const exportOfflineData = useCallback(async () => {
     try {
       setSyncStatus('exporting');
-      const response = await fetch('http://localhost:5000/api/sync/export', {
+      const response = await fetch(`${API_BASE_URL}/api/sync/export`, {
         credentials: 'include'
       });
 
@@ -185,7 +186,7 @@ export function useOfflineSync() {
         return acc;
       }, {});
 
-      const response = await fetch('http://localhost:5000/api/sync/import', {
+      const response = await fetch(`${API_BASE_URL}/api/sync/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -224,7 +225,7 @@ export function useOfflineSync() {
    */
   const checkSyncStatus = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/sync/status', {
+      const response = await fetch(`${API_BASE_URL}/api/sync/status`, {
         credentials: 'include'
       });
 

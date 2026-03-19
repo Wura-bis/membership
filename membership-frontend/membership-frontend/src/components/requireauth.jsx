@@ -1,10 +1,13 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useauth";
 
 export default function RequireAuth({ children, allowedRoles }) {
   const { user } = useAuth();
+  const location = useLocation();
 
   if (!user) {
+    // Save where the user was so we can redirect back after login
+    sessionStorage.setItem("redirectAfterLogin", location.pathname + location.search);
     return <Navigate to="/login" replace />;
   }
 

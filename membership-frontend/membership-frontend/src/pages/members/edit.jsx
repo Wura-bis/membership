@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
 import MemberForm from "../../components/memberform";
 import { useAuth } from "../../hooks/useauth";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function EditMember() {
   const { id } = useParams();
@@ -70,7 +71,7 @@ export default function EditMember() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/members/${id}`, { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/members/${id}`, { credentials: "include" })
       .then(res => res.json())
       .then(data => {
         // Sanitize all fields to ensure controlled inputs
@@ -138,7 +139,7 @@ export default function EditMember() {
         setIsLoading(false);
       });
 
-    fetch("http://localhost:5000/api/lookups", { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/lookups`, { credentials: "include" })
       .then(res => res.json())
       .then(setLookups)
       .catch(() => setError("Failed to load lookup data"));
@@ -246,7 +247,7 @@ export default function EditMember() {
         }));
       }
       
-      const res = await fetch(`http://localhost:5000/api/members/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/members/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json"
@@ -313,7 +314,7 @@ export default function EditMember() {
           return { value, label: value };
       }
       
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -378,21 +379,15 @@ export default function EditMember() {
   return (
     <MainLayout>
       <div className="dashboard-container">
-          <main style={{ maxWidth: '700px', margin: '0 auto' }} aria-label="Edit Member Form">
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <h1 className="dashboard-title">✏️ Edit Member</h1>
+            <p className="dashboard-subtitle">Update member information and records</p>
             <section
               className="dashboard-card"
-              style={{ maxWidth: '900px', margin: '32px auto', padding: '32px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 24px rgba(20,184,166,0.08)', border: '1px solid #e5e7eb' }}
+              style={{ margin: '32px auto', padding: '36px', border: '2px solid #5eead4' }}
               role="form"
               aria-labelledby="edit-member-title"
             >
-              <h2
-                id="edit-member-title"
-                className="dashboard-card-title"
-                style={{ marginBottom: '24px', fontSize: '2rem', fontWeight: '700', color: '#14b8a6', letterSpacing: '0.5px' }}
-                tabIndex={0}
-              >
-                Edit Member
-              </h2>
               {/* Accessibility: Announce error/success messages to screen readers */}
               {error && (
                 <div role="alert" aria-live="assertive" style={{ color: '#dc2626', marginBottom: '16px' }}>
@@ -419,7 +414,7 @@ export default function EditMember() {
                 onCreateLookup={handleCreateLookup}
               />
             </section>
-          </main>
+          </div>
       </div>
     </MainLayout>
   );

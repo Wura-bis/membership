@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import PublicLayout from "../../components/publiclayout";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
+import { API_BASE_URL } from '../../utils/api';
 import {
   PieChart, Pie, Cell, Legend,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
@@ -10,7 +11,7 @@ import {
 // High contrast color palette for better accessibility with 4 categories
 const COLORS = [
   "#0891b2", // Cyan 600 - Active
-  "#dc2626", // Red 600 - Deceased
+  "#dc2626", // Red 600 - Historical
   "#f59e0b", // Amber 500 - Inactive
   "#7c3aed", // Violet 600 - Honorary
 ];
@@ -25,7 +26,7 @@ export default function PublicDashboard() {
   const Layout = user ? MainLayout : PublicLayout;
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/public/dashboard")
+    fetch(`${API_BASE_URL}/api/public/dashboard`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();

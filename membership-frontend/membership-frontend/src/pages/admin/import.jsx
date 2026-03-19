@@ -1,6 +1,7 @@
 import { useState } from "react";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function BulkImport() {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export default function BulkImport() {
 
   const downloadTemplate = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/import/members/template", {
+      const response = await fetch(`${API_BASE_URL}/api/import/members/template`, {
         credentials: "include"
       });
       
@@ -60,7 +61,7 @@ export default function BulkImport() {
       formData.append('file', file);
 
       // First, preview the import
-      const previewResponse = await fetch("http://localhost:5000/api/import/members/preview", {
+      const previewResponse = await fetch(`${API_BASE_URL}/api/import/members/preview`, {
         method: "POST",
         credentials: "include",
         body: formData
@@ -103,7 +104,7 @@ export default function BulkImport() {
         !uploadResult.errors.some(err => parseInt(err.row) === index + 1)
       );
 
-      const response = await fetch("http://localhost:5000/api/import/members/confirm", {
+      const response = await fetch(`${API_BASE_URL}/api/import/members/confirm`, {
         method: "POST",
         credentials: "include",
         headers: {

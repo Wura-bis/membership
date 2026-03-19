@@ -1,5 +1,8 @@
 // API configuration and utility functions
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// In production (built into Flask), VITE_API_URL is '' so all paths are relative.
+// In development, VITE_API_URL is undefined so ?? returns '' and the Vite proxy
+// forwards /api/* to http://localhost:5000.
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 
 // Test API connection
 export const testApiConnection = async () => {

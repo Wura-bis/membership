@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function Signup() {
   const [form, setForm] = useState({
@@ -80,7 +81,7 @@ export default function Signup() {
         noEmail: form.noEmail,
       };
 
-      const res = await fetch("http://localhost:5000/api/signup", {
+      const res = await fetch(`${API_BASE_URL}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import { LoadingSpinner, TableSkeleton } from "../../components/loading";
 import { ActionButton, StatusBadge } from "../../components/ui";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function SupportTickets() {
   const { user } = useAuth();
@@ -48,7 +49,7 @@ export default function SupportTickets() {
       if (filters.status !== 'all') params.append('status', filters.status);
       if (filters.priority !== 'all') params.append('priority', filters.priority);
       
-      const res = await fetch(`http://localhost:5000/api/admin/support/tickets?${params}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets?${params}`, {
         credentials: "include"
       });
       
@@ -74,7 +75,7 @@ export default function SupportTickets() {
   const createTable = async () => {
     setCreatingTable(true);
     try {
-      const res = await fetch('http://localhost:5000/api/admin/support/create-table', {
+      const res = await fetch(`${API_BASE_URL}/api/admin/support/create-table`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -109,7 +110,7 @@ export default function SupportTickets() {
     setSubmittingResponse(true);
     
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/support/tickets/${selectedTicket.ticket_id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${selectedTicket.ticket_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

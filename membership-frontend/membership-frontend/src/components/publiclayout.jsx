@@ -82,7 +82,7 @@ export default function PublicLayout({ children }) {
               🏠 Home
             </Link>
             <Link
-              to="/members/deceased"
+              to="/members/historical"
               style={{
                 color: '#64748b',
                 textDecoration: 'none',

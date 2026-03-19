@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useauth";
 import { useToast } from "../components/toast";
 import { ActionButton, FormField } from "../components/ui";
 import { LoadingSpinner } from "../components/loading";
+import { API_BASE_URL } from '../utils/api';
 
 export default function Support() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function Support() {
   const fetchMyTickets = async () => {
     setLoadingTickets(true);
     try {
-      const res = await fetch("http://localhost:5000/api/support/my-tickets", {
+      const res = await fetch(`${API_BASE_URL}/api/support/my-tickets`, {
         credentials: "include"
       });
       
@@ -56,7 +57,7 @@ export default function Support() {
     setIsSubmitting(true);
     
     try {
-      const res = await fetch("http://localhost:5000/api/support/contact", {
+      const res = await fetch(`${API_BASE_URL}/api/support/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -85,7 +86,7 @@ export default function Support() {
     try {
       showToast("Generating user guide...", "info");
       
-      const response = await fetch("http://localhost:5000/api/user-guide/download", {
+      const response = await fetch(`${API_BASE_URL}/api/user-guide/download`, {
         method: "GET",
         credentials: "include"
       });
@@ -202,10 +203,8 @@ export default function Support() {
                     background: activeTab === tab.id ? '#14b8a6' : '#ffffff',
                     color: activeTab === tab.id ? 'white' : '#64748b',
                     borderRadius: '10px',
-                    fontSize: '16px',
+                    fontSize: '17px',
                     fontWeight: '700',
-                    fontSize: '14px',
-                    fontWeight: '500',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     marginBottom: '16px'
@@ -413,10 +412,12 @@ export default function Support() {
                         marginTop: '16px',
                         background: '#14b8a6',
                         color: 'white',
-                        padding: '12px 24px',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer'
+                        padding: '16px 32px',
+                        border: '2px solid #0f766e',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: '17px',
+                        fontWeight: '700'
                       }}
                     >
                       Submit Your First Ticket
@@ -426,27 +427,27 @@ export default function Support() {
                   <div style={{ display: 'grid', gap: '16px' }}>
                     {myTickets.map((ticket) => (
                       <div key={ticket.ticket_id} style={{
-                        background: '#f8fafc',
-                        padding: '20px',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0'
+                        background: '#f0fdfa',
+                        padding: '24px 28px',
+                        borderRadius: '12px',
+                        border: '2px solid #ccfbf1'
                       }}>
                         <div style={{ 
                           display: 'flex', 
                           justifyContent: 'space-between', 
                           alignItems: 'flex-start',
-                          marginBottom: '12px'
+                          marginBottom: '14px'
                         }}>
                           <div>
                             <h4 style={{
-                              fontSize: '16px',
-                              fontWeight: '600',
-                              color: '#1e293b',
-                              margin: '0 0 4px 0'
+                              fontSize: '18px',
+                              fontWeight: '700',
+                              color: '#0f766e',
+                              margin: '0 0 8px 0'
                             }}>
                               Ticket #{ticket.ticket_id}: {ticket.subject}
                             </h4>
-                            <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#64748b' }}>
+                            <div style={{ display: 'flex', gap: '16px', fontSize: '15px', color: '#64748b', fontWeight: '600' }}>
                               <span>Created: {new Date(ticket.date_created).toLocaleDateString()}</span>
                               <span>Priority: {ticket.priority.toUpperCase()}</span>
                             </div>
@@ -458,11 +459,12 @@ export default function Support() {
                             color: ticket.status === 'open' ? '#dc2626' : 
                                    ticket.status === 'in-progress' ? '#d97706' :
                                    ticket.status === 'resolved' ? '#166534' : '#64748b',
-                            padding: '4px 12px',
+                            padding: '8px 16px',
                             borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            textTransform: 'uppercase'
+                            fontSize: '15px',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            whiteSpace: 'nowrap'
                           }}>
                             {ticket.status.replace('-', ' ')}
                           </span>
@@ -470,8 +472,10 @@ export default function Support() {
                         
                         <p style={{
                           margin: '12px 0',
-                          color: '#475569',
-                          lineHeight: 1.5
+                          color: '#334155',
+                          lineHeight: 1.6,
+                          fontSize: '17px',
+                          fontWeight: '500'
                         }}>
                           {ticket.message}
                         </p>
@@ -479,23 +483,25 @@ export default function Support() {
                         {ticket.admin_response && (
                           <div style={{
                             marginTop: '16px',
-                            padding: '16px',
+                            padding: '20px',
                             background: '#ecfdf5',
-                            borderRadius: '8px',
-                            border: '1px solid #bbf7d0'
+                            borderRadius: '10px',
+                            border: '2px solid #bbf7d0'
                           }}>
                             <h5 style={{
-                              margin: '0 0 8px 0',
+                              margin: '0 0 10px 0',
                               color: '#166534',
-                              fontSize: '14px',
-                              fontWeight: '600'
+                              fontSize: '17px',
+                              fontWeight: '700'
                             }}>
                               💬 Admin Response:
                             </h5>
                             <p style={{
                               margin: 0,
                               color: '#166534',
-                              lineHeight: 1.5
+                              lineHeight: 1.6,
+                              fontSize: '17px',
+                              fontWeight: '500'
                             }}>
                               {ticket.admin_response}
                             </p>

@@ -2,6 +2,7 @@ import { useAuth } from "../../hooks/useauth";
 import MainLayout from "../../components/mainlayout";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { API_BASE_URL } from '../../utils/api';
 import {
   PieChart,
   Pie,
@@ -36,7 +37,7 @@ export default function PrivateDashboard() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/health", {
+        const res = await fetch(`${API_BASE_URL}/api/health`, {
           credentials: "include",
         });
         setBackendStatus(res.ok ? "connected" : "disconnected");
@@ -52,7 +53,7 @@ export default function PrivateDashboard() {
     const loadStats = async () => {
       try {
         // Load basic dashboard stats
-        const res = await fetch("http://localhost:5000/api/dashboard-stats", {
+        const res = await fetch(`${API_BASE_URL}/api/dashboard-stats`, {
           credentials: "include",
         });
         if (res.ok) {
@@ -66,7 +67,7 @@ export default function PrivateDashboard() {
         if (filters.category) params.push(`category=${encodeURIComponent(filters.category)}`);
         const query = params.length ? `?${params.join("&")}` : "";
         // Load analytics data (accessible to private users)
-        const analyticsRes = await fetch(`http://localhost:5000/api/stats${query}`, {
+        const analyticsRes = await fetch(`${API_BASE_URL}/api/stats${query}`, {
           credentials: "include",
         });
         if (analyticsRes.ok) {
@@ -191,7 +192,7 @@ export default function PrivateDashboard() {
                   <option value="">All</option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
-                  <option value="Deceased">Deceased</option>
+                  <option value="Historical">Historical</option>
                 </select>
               </div>
               <button type="submit" className="btn-primary" style={{ 
@@ -354,7 +355,7 @@ export default function PrivateDashboard() {
                     fontWeight: '700',
                     borderRadius: '8px'
                   }}
-                  onClick={() => window.open('http://localhost:5000/api/export/members/csv', '_blank')}
+                  onClick={() => window.open(`${API_BASE_URL}/api/export/members/csv`, '_blank')}
                 >
                   <span>📄</span>
                   Export CSV
@@ -372,7 +373,7 @@ export default function PrivateDashboard() {
                     fontWeight: '700',
                     borderRadius: '8px'
                   }}
-                  onClick={() => window.open('http://localhost:5000/api/export/members/pdf', '_blank')}
+                  onClick={() => window.open(`${API_BASE_URL}/api/export/members/pdf`, '_blank')}
                 >
                   <span>📑</span>
                   Export PDF

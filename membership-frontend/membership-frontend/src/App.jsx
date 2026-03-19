@@ -11,7 +11,7 @@ import SupportTickets from "./pages/admin/support-tickets";
 import EditMember from "./pages/members/edit";
 import SearchResults from "./pages/search/search-results";
 import MemberProfile from "./pages/members/profile";
-import DeceasedMembers from "./pages/members/deceased";
+import HistoricalMembers from "./pages/members/historical";
 import ExpiredMembers from "./pages/members/expired";
 import MyProfile from "./pages/myprofile";
 import RequireAuth from "./components/requireauth";
@@ -46,7 +46,7 @@ function App() {
         <Route path="/members/new" element={<RequireAuth allowedRoles={["admin"]}><AddMember /></RequireAuth>} />
         <Route path="/members/edit/:id" element={<RequireAuth allowedRoles={["admin"]}><EditMember /></RequireAuth>} />
         <Route path="/members/:id" element={<RequireAuth allowedRoles={["admin","private","public"]}><MemberProfile /></RequireAuth>} />
-        <Route path="/members/deceased" element={<RequireAuth allowedRoles={["admin","private","public"]}><DeceasedMembers /></RequireAuth>} />
+        <Route path="/members/historical" element={<RequireAuth allowedRoles={["admin","private","public"]}><HistoricalMembers /></RequireAuth>} />
         <Route path="/members/expired" element={<RequireAuth allowedRoles={["admin"]}><ExpiredMembers /></RequireAuth>} />
         <Route path="/search" element={<RequireAuth allowedRoles={["admin","private","public"]}><SearchResults /></RequireAuth>} />
         <Route path="/public" element={<PublicDashboard />} />

@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
 import ConfirmModal from "../components/confirmmodal";
 import React from 'react';
+import { API_BASE_URL } from '../utils/api';
 
 export default function MyProfile() {
   const { user: authUser } = useAuth();
@@ -22,7 +23,7 @@ export default function MyProfile() {
   const [showExportData, setShowExportData] = useState(false);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/my-profile", { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/my-profile`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -62,7 +63,7 @@ export default function MyProfile() {
       return;
     }
     try {
-      const res = await fetch("http://localhost:5000/api/my-profile", {
+      const res = await fetch(`${API_BASE_URL}/api/my-profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -85,7 +86,7 @@ export default function MyProfile() {
     setError("");
     setSuccess("");
     try {
-      const res = await fetch('http://localhost:5000/api/my-profile/request-private-access', {
+      const res = await fetch(`${API_BASE_URL}/api/my-profile/request-private-access`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -698,7 +699,7 @@ export default function MyProfile() {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
-                  window.open('http://localhost:5000/api/my-data/export', '_blank');
+                  window.open(`${API_BASE_URL}/api/my-data/export`, '_blank');
                   setShowExportData(false);
                 }}
                 style={{

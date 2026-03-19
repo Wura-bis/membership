@@ -5,6 +5,7 @@ import MemberForm from "../../components/memberform";
 import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import { LoadingSpinner } from "../../components/loading";
+import { API_BASE_URL } from '../../utils/api';
 
 export default function AddMember() {
   const navigate = useNavigate();
@@ -39,10 +40,16 @@ export default function AddMember() {
     );
   }
 
+  const defaultDOB = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split("T")[0];
+  })();
+
     const [formData, setFormData] = useState({
       firstName: "",
       lastName: "",
-      dateOfBirth: "",
+      dateOfBirth: defaultDOB,
       placeOfBirth: "",
       occupationId: "",
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
@@ -72,7 +79,7 @@ export default function AddMember() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/lookups", { credentials: "include" })
+    fetch(`${API_BASE_URL}/api/lookups`, { credentials: "include" })
       .then(res => res.json())
       .then(setLookups)
       .catch(() => setError("Failed to load form data"));
@@ -177,14 +184,14 @@ export default function AddMember() {
           }
         });
         data.append("photo", formData.photo);
-        res = await fetch("http://localhost:5000/api/members", {
+        res = await fetch(`${API_BASE_URL}/api/members`, {
           method: "POST",
           body: data,
           credentials: "include"
         });
       } else {
         // Use JSON if no file
-        res = await fetch("http://localhost:5000/api/members", {
+        res = await fetch(`${API_BASE_URL}/api/members`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(cleanData),
@@ -196,6 +203,9 @@ export default function AddMember() {
         setTimeout(() => {
           navigate("/members");
         }, 1500);
+      } else if (res.status === 409) {
+        const errorData = await res.json();
+        showToast(errorData.message || "A duplicate member already exists.", "warning", 8000);
       } else {
         const errorData = await res.json();
         showToast(errorData.message || "Failed to add member", "error");
@@ -250,7 +260,7 @@ export default function AddMember() {
           return { value, label: value };
       }
       
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -318,8 +328,7 @@ export default function AddMember() {
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
           <h1 className="dashboard-title">➕ Add New Member</h1>
           <p className="dashboard-subtitle">Create a new member record in the database</p>
-            <div className="dashboard-card" style={{ maxWidth: '900px', margin: '32px auto', padding: '32px', background: '#fff', borderRadius: '16px', boxShadow: '0 4px 24px rgba(20,184,166,0.08)', border: '1px solid #e5e7eb' }}>
-              <h2 className="dashboard-card-title" style={{ marginBottom: '24px', fontSize: '2rem', fontWeight: '700', color: '#14b8a6', letterSpacing: '0.5px' }}>Add New Member</h2>
+            <div className="dashboard-card" style={{ maxWidth: '900px', margin: '32px auto', padding: '36px', border: '2px solid #5eead4' }}>
               <MemberForm
                 formData={formData}
                 lookups={lookups}

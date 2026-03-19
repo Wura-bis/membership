@@ -2591,6 +2591,15 @@ def create_member():
             conn.close()
             return jsonify({'error': 'duplicate', 'message': duplicate_msg}), 409
 
+        # Derive IsActive from category (Active/Honorary → True, Inactive/Historical → False)
+        _cat_id = convert_to_int_or_none(data.get('memberCategoryId'))
+        is_active = True
+        if _cat_id:
+            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = ?", (_cat_id,))
+            _cat_row = cursor.fetchone()
+            if _cat_row:
+                is_active = _cat_row[0].lower() in ('active', 'honorary')
+
         # Create member record
         cursor.execute("""
             INSERT INTO Members (
@@ -2614,7 +2623,7 @@ def create_member():
             convert_to_int_or_none(data.get('surnameId')),
             convert_to_int_or_none(data.get('occupationId')),
             data.get('notes') or '',
-            bool(data.get('isActive', True)),
+            is_active,
             data.get('otherSocieties') or None,
             date_joined,
             convert_to_date_or_none(data.get('dateEnded')),
@@ -2794,6 +2803,15 @@ def update_member(member_id):
             except (ValueError, TypeError):
                 return None
 
+        # Derive IsActive from category (Active/Honorary → True, Inactive/Historical → False)
+        _cat_id_upd = convert_to_int_or_none(data.get('memberCategoryId'))
+        is_active_upd = True
+        if _cat_id_upd:
+            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = ?", (_cat_id_upd,))
+            _cat_row_upd = cursor.fetchone()
+            if _cat_row_upd:
+                is_active_upd = _cat_row_upd[0].lower() in ('active', 'honorary')
+
         # Update member record
         try:
             cursor.execute("""
@@ -2833,7 +2851,7 @@ def update_member(member_id):
                 convert_to_int_or_none(data.get('surnameId')),
                 convert_to_int_or_none(data.get('occupationId')),
                 data.get('notes', ''),
-                data.get('isActive', True),
+                is_active_upd,
                 data.get('otherSocieties', None),
                 convert_to_date_or_none(data.get('dateJoined')),
                 convert_to_date_or_none(data.get('dateEnded')),

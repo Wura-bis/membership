@@ -100,17 +100,20 @@ export default function MemberProfile() {
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{
-                padding: '6px 16px', fontSize: '0.9rem', fontWeight: 700, borderRadius: 16,
-                background: member.isActive ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f1f5f9',
-                color: member.isActive ? 'white' : '#64748b',
-                border: member.isActive ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
-              }}>{member.isActive ? '● Active' : '○ Inactive'}</span>
-              {member.category && (
-                <span style={{ padding: '6px 16px', fontSize: '0.9rem', fontWeight: 700, borderRadius: 16, background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', color: '#0f766e', border: '1.5px solid #14b8a6' }}>
-                  {member.category}
-                </span>
-              )}
+              {member.category && (() => {
+                const cat = member.category.toLowerCase();
+                const isActiveCategory = cat === 'active' || cat === 'honorary';
+                return (
+                  <span style={{
+                    padding: '6px 16px', fontSize: '0.9rem', fontWeight: 700, borderRadius: 16,
+                    background: isActiveCategory ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f1f5f9',
+                    color: isActiveCategory ? 'white' : '#64748b',
+                    border: isActiveCategory ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
+                  }}>
+                    {isActiveCategory ? '● ' : '○ '}{member.category}
+                  </span>
+                );
+              })()}
             </div>
           </div>
 

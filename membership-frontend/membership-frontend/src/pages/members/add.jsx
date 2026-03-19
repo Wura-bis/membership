@@ -53,7 +53,7 @@ export default function AddMember() {
       placeOfBirth: "",
       occupationId: "",
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
-      email: "",
+      email: "bisofpeilibrary@gmail.com",
       phoneNumbers: [{ type: "", number: "", isPreferred: true }],
       addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
       otherSocieties: "",

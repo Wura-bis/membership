@@ -81,7 +81,7 @@ export default function EditMember() {
           dateOfBirth: data.dateOfBirth ?? "",
           placeOfBirth: data.placeOfBirth ?? "",
           occupationId: data.occupationID ?? "",
-          email: data.email ?? "",
+          email: data.email || "bisofpeilibrary@gmail.com",
           phoneNumbers: Array.isArray(data.phoneNumbers) && data.phoneNumbers.length > 0
             ? data.phoneNumbers.map((phone, idx) => ({
                 type: phone.type ?? "",

@@ -53,6 +53,20 @@ The **View** and **Deactivate** buttons in the member table rows were visually i
 - Log in as a **private** or **public** user
 - Navigate to Member Directory — only the **👁️ View** button should appear (no Deactivate) ✓
 
+### 2. Default Email Address for Members Without Email
+**Files:** `src/pages/members/add.jsx`, `src/pages/members/edit.jsx`
+
+Members without a personal email address were being saved with a blank email field. A default email address is now pre-filled in both the Add and Edit forms.
+
+**Changes made:**
+- **Add Member form:** email field now pre-populates with `bisofpeilibrary@gmail.com` (same pattern as the DOB default)
+- **Edit Member form:** if a member's record has no email stored, the edit form loads with `bisofpeilibrary@gmail.com` as the default
+
+**How to test:**
+1. Go to **Add Member** — the email field should already show `bisofpeilibrary@gmail.com` ✓
+2. Go to **Edit Member** for a member with no email — field should show `bisofpeilibrary@gmail.com` ✓
+3. Go to **Edit Member** for a member who has their own email — their existing email should show (not the default) ✓
+
 ---
 
 ## Known Remaining Issues / Upcoming Work

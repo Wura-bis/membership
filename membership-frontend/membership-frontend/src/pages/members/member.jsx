@@ -550,9 +550,6 @@ export default function Members() {
                     <SortableHeader column="role">
                       Role
                     </SortableHeader>
-                    <SortableHeader column="status">
-                      Status
-                    </SortableHeader>
                     <th style={{ 
                       padding: '20px', 
                       textAlign: 'left',
@@ -569,7 +566,7 @@ export default function Members() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan="8" style={{ 
+                      <td colSpan="7" style={{ 
                         textAlign: 'center', 
                         padding: '80px 48px'
                       }}>
@@ -611,32 +608,6 @@ export default function Members() {
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.address || 'N/A'}</td>
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.category}</td>
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.role || 'N/A'}</td>
-                        <td style={{ padding: '20px' }}>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            fontWeight: '700',
-                            borderRadius: '10px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.6px',
-                            ...(m.isActive 
-                              ? { 
-                                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
-                                  color: 'white',
-                                  border: '2px solid #059669',
-                                  boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
-                                }
-                              : { 
-                                  background: '#f1f5f9', 
-                                  color: '#64748b',
-                                  border: '2px solid #cbd5e1'
-                                }
-                            )
-                          }}>
-                            {m.isActive ? "✅ Active" : "❌ Inactive"}
-                          </span>
-                        </td>
                         <td style={{ padding: '16px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {/* View button for all roles */}
                           <Link

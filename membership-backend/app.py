@@ -255,9 +255,8 @@ def submit_support_request():
         
         conn.commit()
         
-        # Get the auto-generated TicketID using @@IDENTITY (Access equivalent)
-        cursor.execute("SELECT @@IDENTITY")
-        ticket_id = cursor.fetchone()[0]
+        # Get the auto-generated TicketID
+        ticket_id = cursor.lastrowid
         
         # Get user details for email
         cursor.execute("SELECT Username, Email FROM User WHERE UserID = ?", (user_id,))
@@ -2368,11 +2367,7 @@ def create_member():
 
         conn.commit()
 
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        member_id = row[0] if row is not None else None
-        if member_id is None:
-            return jsonify({'error': 'Failed to retrieve new member ID'}), 500
+        member_id = cursor.lastrowid
 
         # Handle multiple addresses
         if 'addresses' in data and data['addresses']:
@@ -2738,11 +2733,7 @@ def delete_member(member_id):
             data.get('nonProfitNumber')
         ))
         conn.commit()
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        society_id = row[0] if row is not None else None
-        if society_id is None:
-            return jsonify({'error': 'Failed to retrieve new society ID'}), 500
+        society_id = cursor.lastrowid
         return jsonify({'success': True, 'society_id': society_id}), 201
     except Exception as e:
         return jsonify({'error': f'Failed to create society: {str(e)}'}), 500
@@ -3125,11 +3116,7 @@ def create_user():
         conn.commit()
 
         # Get the new user ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        user_id = row[0] if row is not None else None
-        if user_id is None:
-            return jsonify({'error': 'Failed to retrieve new user ID'}), 500
+        user_id = cursor.lastrowid
 
         # Log audit event
         log_audit_event(session['user_id'], 'CREATE', 'User', user_id,
@@ -3362,11 +3349,7 @@ def upload_photo(member_id):
         conn.commit()
 
         # Get photo ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        photo_id = row[0] if row is not None else None
-        if photo_id is None:
-            return jsonify({'error': 'Failed to retrieve new photo ID'}), 500
+        photo_id = cursor.lastrowid
 
         # Log audit event
         log_audit_event(session['user_id'], 'UPLOAD_PHOTO', 'Photos', photo_id,
@@ -4456,9 +4439,7 @@ def create_category():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -4511,9 +4492,7 @@ def create_role():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -4555,9 +4534,7 @@ def create_society_lookup():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -4599,9 +4576,7 @@ def create_occupation():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -4654,9 +4629,7 @@ def create_surname():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -5251,11 +5224,7 @@ def submit_support_message():
         conn.commit()
 
         # Get ID for audit log
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        support_id = row[0] if row is not None else None
-        if support_id is None:
-            return jsonify({'error': 'Failed to retrieve new support ID'}), 500
+        support_id = cursor.lastrowid
 
         log_audit_event(
             session['user_id'],

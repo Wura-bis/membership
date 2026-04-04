@@ -28,11 +28,15 @@ export default function CreatableSelect({ label, name, value, options, onChange,
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (input.trim()) {
-      onCreate(input.trim());
-      setInput("");
-      setShowOptions(false);
+      const newItem = await onCreate(input.trim());
+      if (newItem && newItem.value !== undefined && newItem.value !== null) {
+        handleSelect(newItem.value);
+      } else {
+        setInput("");
+        setShowOptions(false);
+      }
     }
   };
 

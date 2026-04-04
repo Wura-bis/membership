@@ -261,12 +261,13 @@ export default function AddMember() {
       const result = await response.json();
       
       if (response.ok) {
-        // Update local lookups state
+        // Update local lookups state — use the integer ID as `value` to match
+        // the format returned by /api/lookups (value: ID, label: name).
         const newItem = { 
           id: result.id, 
           name: value,
           label: value,
-          value: value
+          value: result.id
         };
         
         const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 

@@ -288,7 +288,7 @@ export default function AddMember() {
           id: result.id, 
           name: value,
           label: value,
-          value: value
+          value: result.id
         };
         
         const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 

@@ -28,11 +28,20 @@ export default function CreatableSelect({ label, name, value, options, onChange,
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (input.trim()) {
-      onCreate(input.trim());
+      const newItem = await onCreate(input.trim());
       setInput("");
       setShowOptions(false);
+      if (newItem) {
+        if (isMulti) {
+          if (!multiValue.includes(newItem.value)) {
+            onChange({ target: { name, value: [...multiValue, newItem.value] } });
+          }
+        } else {
+          onChange({ target: { name, value: newItem.value } });
+        }
+      }
     }
   };
 

@@ -77,6 +77,16 @@ export default function AddMember() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [dobTouched, setDobTouched] = useState(false);
+
+  // When dateJoined changes, auto-update DOB to 18 years before it (unless admin manually set DOB)
+  useEffect(() => {
+    if (dobTouched) return;
+    const base = formData.dateJoined || null;
+    const d = base ? new Date(base) : new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    setFormData(prev => ({ ...prev, dateOfBirth: d.toISOString().split('T')[0] }));
+  }, [formData.dateJoined]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/lookups`, { credentials: "include" })
@@ -94,6 +104,7 @@ export default function AddMember() {
     if (name === "category") mappedName = "categoryId";
     if (name === "irishConnection") mappedName = "irishConnectionId";
     setFormData((prev) => ({ ...prev, [mappedName]: type === "checkbox" ? checked : value }));
+    if (mappedName === "dateOfBirth") setDobTouched(true);
   };
   const handleAddressChange = (index, field, value) => {
     const updated = [...formData.addresses];
@@ -277,7 +288,7 @@ export default function AddMember() {
           id: result.id, 
           name: value,
           label: value,
-          value: value
+          value: result.id
         };
         
         const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 

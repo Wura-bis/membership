@@ -21,6 +21,8 @@ export default function Members() {
   const [isLoading, setIsLoading] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [countyOptions, setCountyOptions] = useState([]);
+  const [volunteeringFilter, setVolunteeringFilter] = useState("all");
+  const [volunteeringOptions, setVolunteeringOptions] = useState([]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,6 +38,11 @@ export default function Members() {
       .then((data) => {
         setMembers(Array.isArray(data) ? data : []);
         if (!Array.isArray(data) && data.error) setError(data.error);
+        // Derive unique volunteering interests from loaded member data
+        if (Array.isArray(data)) {
+          const allInterests = [...new Set(data.flatMap(m => m.volunteeringInterests || []))].sort();
+          setVolunteeringOptions(allInterests);
+        }
         setIsLoading(false);
       })
       .catch(() => {
@@ -75,7 +82,7 @@ export default function Members() {
     // Role-based filtering: Admin sees ALL members, others see backend-filtered results
     // The backend already handles role-based filtering, so don't filter by isActive here
     
-    const matchesSearch = [m.firstName, m.lastName, m.county, m.address, m.role]
+    const matchesSearch = [m.firstName, m.lastName, m.county, m.address, m.role, ...(m.volunteeringInterests || [])]
       .join(" ")
       .toLowerCase()
       .includes(search.toLowerCase());
@@ -93,7 +100,10 @@ export default function Members() {
     const matchesCounty =
       countyFilter === "all" || m.county === countyFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory && matchesCounty;
+    const matchesVolunteering =
+      volunteeringFilter === "all" || (m.volunteeringInterests || []).includes(volunteeringFilter);
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesCounty && matchesVolunteering;
   }).sort((a, b) => {
     let aValue, bValue;
     
@@ -404,13 +414,14 @@ export default function Members() {
                   borderRadius: '10px'
                 }}
               />
-              {(search || statusFilter !== "all" || categoryFilter !== "all" || countyFilter !== "all" || sortBy !== "lastName" || sortOrder !== "asc") && (
+              {(search || statusFilter !== "all" || categoryFilter !== "all" || countyFilter !== "all" || volunteeringFilter !== "all" || sortBy !== "lastName" || sortOrder !== "asc") && (
                 <button
                   onClick={() => {
                     setSearch("");
                     setStatusFilter("all");
                     setCategoryFilter("all");
                     setCountyFilter("all");
+                    setVolunteeringFilter("all");
                     setSortBy("lastName");
                     setSortOrder("asc");
                   }}
@@ -484,6 +495,22 @@ export default function Members() {
                   ))}
                 </select>
               </div>
+              {user && (user.role === 'admin' || user.role === 'private') && volunteeringOptions.length > 0 && (
+                <div>
+                  <label className="form-label" style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px', display: 'block' }}>Volunteering Interest</label>
+                  <select
+                    value={volunteeringFilter}
+                    onChange={(e) => setVolunteeringFilter(e.target.value)}
+                    className="form-input"
+                    style={{ fontSize: '17px', padding: '18px 24px', border: '2px solid #5eead4', borderRadius: '10px', fontWeight: '600' }}
+                  >
+                    <option value="all">All Interests</option>
+                    {volunteeringOptions.map((v) => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
           </div>
@@ -550,6 +577,17 @@ export default function Members() {
                     <SortableHeader column="role">
                       Role
                     </SortableHeader>
+                    <th style={{
+                      padding: '20px',
+                      textAlign: 'left',
+                      fontWeight: '700',
+                      color: '#0f766e',
+                      fontSize: '16px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      Volunteering
+                    </th>
                     <th style={{ 
                       padding: '20px', 
                       textAlign: 'left',
@@ -566,7 +604,7 @@ export default function Members() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ 
+                      <td colSpan="8" style={{ 
                         textAlign: 'center', 
                         padding: '80px 48px'
                       }}>
@@ -608,6 +646,26 @@ export default function Members() {
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.address || 'N/A'}</td>
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.category}</td>
                         <td style={{ padding: '20px', color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{m.role || 'N/A'}</td>
+                        <td style={{ padding: '16px 20px' }}>
+                          {Array.isArray(m.volunteeringInterests) && m.volunteeringInterests.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {m.volunteeringInterests.map((interest, idx) => (
+                                <span key={idx} style={{
+                                  padding: '4px 10px',
+                                  background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+                                  border: '1.5px solid #14b8a6',
+                                  borderRadius: '10px',
+                                  fontSize: '13px',
+                                  fontWeight: '600',
+                                  color: '#0f766e',
+                                  whiteSpace: 'nowrap'
+                                }}>{interest}</span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#cbd5e1', fontSize: '15px' }}>—</span>
+                          )}
+                        </td>
                         <td style={{ padding: '16px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                           {/* View button for all roles */}
                           <Link

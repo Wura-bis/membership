@@ -2203,6 +2203,33 @@ def get_members():
             }
             members.append(member_data)
 
+        # Batch fetch volunteering interests for all members (single query, no N+1)
+        if members:
+            cursor.execute("""
+                SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'
+            """)
+            field_result = cursor.fetchone()
+            if field_result:
+                field_id = field_result[0]
+                member_ids = [m['id'] for m in members]
+                placeholders = ','.join(['?' for _ in member_ids])
+                cursor.execute(f"""
+                    SELECT MemberID, ValueText FROM UserDefinedFieldValue
+                    WHERE FieldID = ? AND MemberID IN ({placeholders}) AND ValueText IS NOT NULL
+                    ORDER BY MemberID, ValueText ASC
+                """, [field_id] + member_ids)
+                interests_map = {}
+                for irow in cursor.fetchall():
+                    mid = irow[0]
+                    if mid not in interests_map:
+                        interests_map[mid] = []
+                    interests_map[mid].append(irow[1])
+                for m in members:
+                    m['volunteeringInterests'] = interests_map.get(m['id'], [])
+            else:
+                for m in members:
+                    m['volunteeringInterests'] = []
+
         return jsonify(members)
 
     except Exception as e:
@@ -4842,14 +4869,29 @@ def get_lookups():
         occupations = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(occupations)} occupations')
 
-        # Volunteering Interests (all unique values that have been used)
+        # Volunteering Interests (predefined + any unique values that have been used)
+        predefined_interests = [
+            'Building Maintenance',
+            'Ceilidh Activities',
+            'Cultural Activities',
+            'Finance and Admin',
+            'Other',
+            'Social Activities',
+            'St. Patrick\'s Festival',
+        ]
         cursor.execute("""
             SELECT DISTINCT ValueText FROM UserDefinedFieldValue 
             WHERE FieldID = (SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests')
             AND ValueText IS NOT NULL
             ORDER BY ValueText ASC
         """)
-        volunteering_interests = [row[0] for row in cursor.fetchall()]
+        db_interests = [row[0] for row in cursor.fetchall()]
+        # Merge predefined with DB values, deduplicate (case-insensitive), sort
+        merged = {v.lower(): v for v in predefined_interests}
+        for v in db_interests:
+            if v.lower() not in merged:
+                merged[v.lower()] = v
+        volunteering_interests = sorted(merged.values(), key=lambda x: x.lower())
         print(f'DEBUG: Found {len(volunteering_interests)} unique volunteering interests')
 
         response_data = {

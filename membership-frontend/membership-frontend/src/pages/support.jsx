@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import MainLayout from "../components/mainlayout";
 import { useAuth } from "../hooks/useauth";
 import { useToast } from "../components/toast";
@@ -619,21 +620,21 @@ export default function Support() {
                       🔗 Quick Links
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <a href="/my-profile" style={{ 
-                        color: '#14b8a6', 
+                      <Link to="/my-profile" style={{
+                        color: '#14b8a6',
                         textDecoration: 'none',
                         fontSize: '14px'
-                      }}>→ Update My Profile</a>
-                      <a href="/members" style={{ 
-                        color: '#14b8a6', 
+                      }}>→ Update My Profile</Link>
+                      <Link to="/members" style={{
+                        color: '#14b8a6',
                         textDecoration: 'none',
                         fontSize: '14px'
-                      }}>→ Member Directory</a>
-                      <a href="/account-settings" style={{ 
-                        color: '#14b8a6', 
+                      }}>→ Member Directory</Link>
+                      <Link to="/account-settings" style={{
+                        color: '#14b8a6',
                         textDecoration: 'none',
                         fontSize: '14px'
-                      }}>→ Account Settings</a>
+                      }}>→ Account Settings</Link>
                     </div>
                   </div>
                 </div>

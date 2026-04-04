@@ -347,7 +347,7 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
           </h2>
           {/* Province/State and Country options from global Provinces table */}
           {(formData.addresses && formData.addresses.length > 0 ? formData.addresses : [{
-            street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true
+            street: "", city: "", province: "", country: "", postalCode: "", isCurrent: true
           }]).map((addr, idx) => {
             // Universal country list — Canada, United States, Ireland pinned first, rest alphabetical
             const allCountries = [
@@ -390,10 +390,6 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                     <input value={addr.street} onChange={e => onAddressChange(idx, "street", e.target.value)} placeholder="Address Line 1" style={inputStyle} aria-label="Address Line 1" autoComplete="off" />
                   </div>
                   <div>
-                    <label style={labelStyle}>Address Line 2</label>
-                    <input value={addr.addressLine2} onChange={e => onAddressChange(idx, "addressLine2", e.target.value)} placeholder="Address Line 2" style={inputStyle} aria-label="Address Line 2" autoComplete="off" />
-                  </div>
-                  <div>
                     <label style={labelStyle}>City/Town</label>
                     <input value={addr.city} onChange={e => onAddressChange(idx, "city", e.target.value)} placeholder="City/Town" style={inputStyle} aria-label="City/Town" autoComplete="off" />
                   </div>
@@ -429,10 +425,6 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                 <div>
                   <label style={labelStyle}>Postal Code</label>
                   <input value={addr.postalCode} onChange={e => onAddressChange(idx, "postalCode", e.target.value)} placeholder="Postal Code" style={inputStyle} aria-label="Postal Code" autoComplete="off" />
-                </div>
-                <div>
-                  <label style={labelStyle}>Date in Residence</label>
-                  <input type="date" value={addr.dateInResidence} onChange={e => onAddressChange(idx, "dateInResidence", e.target.value)} style={inputStyle} aria-label="Date in Residence" placeholder="Date in Residence" />
                 </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '16px' }}>
@@ -734,24 +726,6 @@ export default function MemberForm({ formData, lookups, onChange, onAddressChang
                   lineHeight: '1.6'
                 }}
               />
-            </div>
-            <div>
-              <label htmlFor="isActive" style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                <input 
-                  name="isActive" 
-                  id="isActive" 
-                  type="checkbox" 
-                  checked={!!formData.isActive} 
-                  onChange={e => onChange({ target: { name: 'isActive', value: e.target.checked } })} 
-                  style={{
-                    width: '22px',
-                    height: '22px',
-                    accentColor: '#14b8a6',
-                    cursor: 'pointer'
-                  }}
-                />
-                <span>Is Active</span>
-              </label>
             </div>
             <div>
               <label htmlFor="photo" style={labelStyle}>Member Photo</label>

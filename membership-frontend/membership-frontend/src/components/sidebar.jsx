@@ -42,7 +42,7 @@ export default function Sidebar() {
         </div>
       </div>
       <nav className="sidebar-nav">
-            {links.filter(link => link.label !== "Recognitions").map((link) => (
+            {links.map((link) => (
           <Link key={link.to} to={link.to} className={`sidebar-link ${location.pathname === link.to ? 'active' : ''}`}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '16px' }}>{link.icon}</span>

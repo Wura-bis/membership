@@ -161,9 +161,9 @@ export default function MyProfile() {
                   Manage your personal information and account settings
                 </p>
               </div>
-              <Link 
-                to="/dashboard" 
-                className="btn-primary" 
+              <Link
+                to={authUser?.role === 'admin' ? '/dashboard' : authUser?.role === 'private' ? '/dashboard/private' : '/public'}
+                className="btn-primary"
                 style={{ 
                   textDecoration: 'none',
                   background: '#64748b',

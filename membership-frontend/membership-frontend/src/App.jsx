@@ -24,6 +24,7 @@ import Support from "./pages/support";
 import AppSettings from "./pages/app-settings";
 import BulkImport from "./pages/admin/import";
 import AdminRecognitions from "./pages/admin/recognitions";
+import AccountSettings from "./pages/account-settings";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Route path="/admin/import" element={<RequireAuth allowedRoles={["admin"]}><BulkImport /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth allowedRoles={["admin"]}><Settings /></RequireAuth>} />
         <Route path="/app-settings" element={<RequireAuth allowedRoles={["private","admin","public"]}><AppSettings /></RequireAuth>} />
+        <Route path="/account-settings" element={<RequireAuth allowedRoles={["admin","private","public"]}><AccountSettings /></RequireAuth>} />
         <Route path="/my-profile" element={<RequireAuth allowedRoles={["admin","private","public"]}><MyProfile /></RequireAuth>} />
         <Route path="/members" element={<RequireAuth allowedRoles={["admin","private","public"]}><Members /></RequireAuth>} />
         <Route path="/support" element={<RequireAuth allowedRoles={["admin","private"]}><Support /></RequireAuth>} />

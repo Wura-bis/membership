@@ -55,9 +55,9 @@ export default function AddMember() {
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
       email: "bisofpeilibrary@gmail.com",
       phoneNumbers: [{ type: "", number: "", isPreferred: true }],
-      addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+      addresses: [{ street: "", city: "", province: "", country: "", postalCode: "", isCurrent: true }],
       otherSocieties: "",
-      categoryId: "",
+      memberCategoryId: "",
       dateJoined: "",
       dateEnded: "",
       applicationDate: "",
@@ -77,6 +77,16 @@ export default function AddMember() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [dobTouched, setDobTouched] = useState(false);
+
+  // When dateJoined changes, auto-update DOB to 18 years before it (unless admin manually set DOB)
+  useEffect(() => {
+    if (dobTouched) return;
+    const base = formData.dateJoined || null;
+    const d = base ? new Date(base) : new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    setFormData(prev => ({ ...prev, dateOfBirth: d.toISOString().split('T')[0] }));
+  }, [formData.dateJoined]);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/lookups`, { credentials: "include" })
@@ -91,9 +101,9 @@ export default function AddMember() {
     let mappedName = name;
     if (name === "county") mappedName = "countyId";
     if (name === "surname") mappedName = "surnameId";
-    if (name === "category") mappedName = "categoryId";
     if (name === "irishConnection") mappedName = "irishConnectionId";
     setFormData((prev) => ({ ...prev, [mappedName]: type === "checkbox" ? checked : value }));
+    if (mappedName === "dateOfBirth") setDobTouched(true);
   };
   const handleAddressChange = (index, field, value) => {
     const updated = [...formData.addresses];
@@ -105,12 +115,10 @@ export default function AddMember() {
       ...prev,
       addresses: [...prev.addresses, {
         street: "",
-        addressLine2: "",
         city: "",
         province: "",
         country: "",
         postalCode: "",
-        dateInResidence: "",
         isCurrent: false, // User sets this manually as needed
         fiscalYear: ""
       }]
@@ -152,6 +160,15 @@ export default function AddMember() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Warn about incomplete role entries (both role and fiscal year required)
+    const incompleteRoles = (formData.roleFiscalYears || []).filter(rf => {
+      const hasRole = rf.role !== "" && rf.role != null;
+      const hasFY = rf.fiscalYear !== "" && rf.fiscalYear != null;
+      return (hasRole && !hasFY) || (!hasRole && hasFY);
+    });
+    if (incompleteRoles.length > 0) {
+      showToast("Some role entries are incomplete — both a role and fiscal year are required. Those entries will not be saved.", "warning", 6000);
+    }
     setIsLoading(true);
     try {
       // Coerce types for backend
@@ -160,7 +177,7 @@ export default function AddMember() {
       const toBool = v => v === true || v === "true" || v === 1 ? true : false;
       const cleanData = {
         ...formData,
-        categoryId: toInt(formData.categoryId),
+        memberCategoryId: toInt(formData.memberCategoryId),
         countyId: toInt(formData.countyId),
         surnameId: toInt(formData.surnameId),
         occupationId: toInt(formData.occupationId),
@@ -273,11 +290,11 @@ export default function AddMember() {
       
       if (response.ok) {
         // Update local lookups state
-        const newItem = { 
-          id: result.id, 
+        const newItem = {
+          id: result.id,
           name: value,
           label: value,
-          value: value
+          value: result.id
         };
         
         const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 

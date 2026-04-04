@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
 import MemberForm from "../../components/memberform";
 import { useAuth } from "../../hooks/useauth";
+import { useToast } from "../../components/toast";
 import { API_BASE_URL } from '../../utils/api';
 
 export default function EditMember() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Admin access check
   if (!user || user.role !== "admin") {
@@ -47,9 +49,9 @@ export default function EditMember() {
       irishConnections: [{ type: "", countyId: "", surnameId: "" }],
       email: "",
       phoneNumbers: [{ type: "", number: "", isPreferred: false }],
-      addresses: [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+      addresses: [{ street: "", city: "", province: "", country: "", postalCode: "", isCurrent: true }],
       otherSocieties: "",
-      categoryId: "",
+      memberCategoryId: "",
       dateJoined: "",
       dateEnded: "",
       applicationDate: "",
@@ -100,17 +102,15 @@ export default function EditMember() {
           addresses: Array.isArray(data.addresses) && data.addresses.length > 0
             ? data.addresses.map(addr => ({
                 street: addr.street ?? "",
-                addressLine2: addr.addressLine2 ?? "",
                 city: addr.city ?? "",
                 province: addr.province ?? "",
                 country: addr.country ?? "",
                 postalCode: addr.postalCode ?? "",
-                dateInResidence: addr.dateInResidence ?? "",
                 isCurrent: typeof addr.isCurrent === "boolean" ? addr.isCurrent : true
               }))
-            : [{ street: "", addressLine2: "", city: "", province: "", country: "", postalCode: "", dateInResidence: "", isCurrent: true }],
+            : [{ street: "", city: "", province: "", country: "", postalCode: "", isCurrent: true }],
           otherSocieties: data.otherSocieties ?? "",
-          categoryId: data.memberCategoryID ?? "",
+          memberCategoryId: data.memberCategoryID ?? "",
           dateJoined: data.dateJoined ?? "",
           dateEnded: data.dateEnded ?? "",
           applicationDate: data.applicationDate ?? "",
@@ -178,12 +178,10 @@ export default function EditMember() {
         ...prev,
         addresses: arr.map(addr => ({
           street: addr.street ?? "",
-          addressLine2: addr.addressLine2 ?? "",
           city: addr.city ?? "",
           province: addr.province ?? "",
           country: addr.country ?? "",
           postalCode: addr.postalCode ?? "",
-          dateInResidence: addr.dateInResidence ?? "",
           isCurrent: typeof addr.isCurrent === "boolean" ? addr.isCurrent : true
         }))
       }));
@@ -212,12 +210,10 @@ export default function EditMember() {
       ...prev,
       addresses: [...prev.addresses, {
         street: "",
-        addressLine2: "",
         city: "",
         province: "",
         country: "",
         postalCode: "",
-        dateInResidence: "",
         isCurrent: false,
         fiscalYear: ""
       }]
@@ -234,6 +230,15 @@ export default function EditMember() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    // Warn about incomplete role entries (both role and fiscal year required)
+    const incompleteRoles = (formData.roleFiscalYears || []).filter(rf => {
+      const hasRole = rf.role !== "" && rf.role != null;
+      const hasFY = rf.fiscalYear !== "" && rf.fiscalYear != null;
+      return (hasRole && !hasFY) || (!hasRole && hasFY);
+    });
+    if (incompleteRoles.length > 0) {
+      showToast("Some role entries are incomplete — both a role and fiscal year are required. Those entries will not be saved.", "warning", 6000);
+    }
     setIsLoading(true);
     try {
       // Remove photo from payload if not needed for JSON
@@ -327,11 +332,11 @@ export default function EditMember() {
       
       if (response.ok) {
         // Update local lookups state
-        const newItem = { 
-          id: result.id, 
+        const newItem = {
+          id: result.id,
           name: value,
           label: value,
-          value: value
+          value: result.id
         };
         
         const lookupKey = type === 'fiscalYear' ? 'fiscalYears' : 

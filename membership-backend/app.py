@@ -2185,7 +2185,7 @@ def get_members():
             except Exception as e:
                 print(f"DEBUG: Role query failed for member {member_id}: {e}")
                 role_info = ""
-            
+
             member_data = {
                 'id': row[0],
                 'firstName': row[1],
@@ -2199,9 +2199,34 @@ def get_members():
                 'dateEnded': row[8].strftime('%Y-%m-%d') if row[8] and hasattr(row[8], 'strftime') else str(row[8]) if row[8] else None,
                 'membershipYears': calculate_membership_years(row[7], row[8]) if row[7] else None,
                 'address': address_info,
-                'role': role_info
+                'role': role_info,
+                'volunteeringInterests': []
             }
             members.append(member_data)
+
+        # Batch fetch volunteering interests for all members (single query, no N+1)
+        if members:
+            cursor.execute("""
+                SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'
+            """)
+            field_result = cursor.fetchone()
+            if field_result:
+                field_id = field_result[0]
+                member_ids = [m['id'] for m in members]
+                placeholders = ','.join(['?' for _ in member_ids])
+                cursor.execute(f"""
+                    SELECT MemberID, ValueText FROM UserDefinedFieldValue
+                    WHERE FieldID = ? AND MemberID IN ({placeholders}) AND ValueText IS NOT NULL
+                    ORDER BY MemberID, ValueText ASC
+                """, [field_id] + member_ids)
+                interests_map = {}
+                for irow in cursor.fetchall():
+                    mid = irow[0]
+                    if mid not in interests_map:
+                        interests_map[mid] = []
+                    interests_map[mid].append(irow[1])
+                for m in members:
+                    m['volunteeringInterests'] = interests_map.get(m['id'], [])
 
         return jsonify(members)
 
@@ -2347,11 +2372,11 @@ def get_member(member_id):
         for addr in address_rows:
             # Get province name from database
             province_name = addr[4] or ''
-            
-            # Handle country - 0 typically means Canada for historical data
-            country_name = ''
-            if addr[5] == '0' or addr[5] == 0:
-                country_name = 'Canada'
+
+            # Handle country — legacy numeric IDs or direct text name
+            legacy_country_map = {'0': 'Canada', '1': 'Canada', '2': 'United States', '3': 'Ireland', '4': 'United Kingdom', '5': 'Other'}
+            raw_country = str(addr[5]) if addr[5] is not None else ''
+            country_name = legacy_country_map.get(raw_country, raw_country)
             
             addresses.append({
                 'id': addr[0],
@@ -2645,35 +2670,27 @@ def create_member():
 
         # Handle multiple addresses
         if 'addresses' in data and data['addresses']:
-            # Simple country mapping (since no Country lookup table exists)
-            def map_country_to_id(country_name):
-                if not country_name:
-                    return None
-                # For now, use simple mapping - can be expanded later
-                country_mapping = {
-                    'Canada': 1,
-                    'United States': 2, 
-                    'Ireland': 3,
-                    'United Kingdom': 4,
-                    'Other': 5
-                }
-                return country_mapping.get(country_name, 5)  # Default to 'Other'
-                
             for address in data['addresses']:
-                if address.get('street') or address.get('city'):  # Only if there's actual address data
-                    # Handle both old countryID format and new country text format
-                    country_id = address.get('countryID')
-                    if country_id is None and address.get('country'):
-                        country_id = map_country_to_id(address.get('country'))
-                        
+                if any([address.get('street'), address.get('city'), address.get('province'), address.get('country'), address.get('postalCode')]):
+                    # Look up ProvinceID from province name
+                    province_id = None
+                    if address.get('province'):
+                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = ?", (address.get('province'),))
+                        prow = cursor.fetchone()
+                        province_id = prow[0] if prow else None
+
+                    # Store country as plain text
+                    country_text = address.get('country') or None
+
                     cursor.execute("""
-                        INSERT INTO MemberAddress (MemberID, Street, City, CountryID, PostalCode, FiscalYearID, IsCurrent)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO MemberAddress (MemberID, Street, City, ProvinceID, CountryID, PostalCode, FiscalYearID, IsCurrent)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         member_id,
                         address.get('street') or None,
                         address.get('city') or None,
-                        country_id,
+                        province_id,
+                        country_text,
                         address.get('postalCode') or None,
                         convert_to_int_or_none(address.get('fiscalYearID')),
                         bool(address.get('isCurrent', True))
@@ -2702,8 +2719,8 @@ def create_member():
         # Handle member roles for fiscal years
         if 'roleFiscalYears' in data and data['roleFiscalYears']:
             for role_assignment in data['roleFiscalYears']:
-                role_id = convert_to_int_or_none(role_assignment.get('roleID'))
-                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYearID'))
+                role_id = convert_to_int_or_none(role_assignment.get('role') or role_assignment.get('roleID'))
+                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYear') or role_assignment.get('fiscalYearID'))
                 if role_id and fiscal_year_id:
                     cursor.execute("""
                         INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
@@ -2747,6 +2764,8 @@ def create_member():
             member_id,
             f'Created member: {data.get("firstName")} {data.get("lastName")}')
 
+        if hasattr(dashboard_stats, 'cache'):
+            dashboard_stats.cache.clear()
         return jsonify({'success': True, 'member_id': member_id}), 201
 
     except Exception as e:
@@ -2873,37 +2892,29 @@ def update_member(member_id):
         if 'addresses' in data:
             # Delete existing addresses
             cursor.execute("DELETE FROM MemberAddress WHERE MemberID = ?", (member_id,))
-            
-            # Simple country mapping (since no Country lookup table exists)
-            def map_country_to_id(country_name):
-                if not country_name:
-                    return None
-                # For now, use simple mapping - can be expanded later
-                country_mapping = {
-                    'Canada': 1,
-                    'United States': 2, 
-                    'Ireland': 3,
-                    'United Kingdom': 4,
-                    'Other': 5
-                }
-                return country_mapping.get(country_name, 5)  # Default to 'Other'
-            
+
             # Add new addresses
             for address in data['addresses']:
-                if address.get('street') or address.get('city'):  # Only if there's actual address data
-                    # Handle both old countryID format and new country text format
-                    country_id = address.get('countryID')
-                    if country_id is None and address.get('country'):
-                        country_id = map_country_to_id(address.get('country'))
-                    
+                if any([address.get('street'), address.get('city'), address.get('province'), address.get('country'), address.get('postalCode')]):
+                    # Look up ProvinceID from province name
+                    province_id = None
+                    if address.get('province'):
+                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = ?", (address.get('province'),))
+                        prow = cursor.fetchone()
+                        province_id = prow[0] if prow else None
+
+                    # Store country as plain text
+                    country_text = address.get('country') or None
+
                     cursor.execute("""
-                        INSERT INTO MemberAddress (MemberID, Street, City, CountryID, PostalCode, FiscalYearID, IsCurrent)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO MemberAddress (MemberID, Street, City, ProvinceID, CountryID, PostalCode, FiscalYearID, IsCurrent)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
                         member_id,
                         address.get('street') or None,
                         address.get('city') or None,
-                        country_id,
+                        province_id,
+                        country_text,
                         address.get('postalCode') or None,
                         convert_to_int_or_none(address.get('fiscalYearID')),
                         bool(address.get('isCurrent', True))
@@ -2951,8 +2962,8 @@ def update_member(member_id):
             # Add new role assignments
             for role_assignment in data['roleFiscalYears']:
                 print(f"DEBUG: Processing role assignment: {role_assignment}")
-                role_id = convert_to_int_or_none(role_assignment.get('roleID'))
-                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYearID'))
+                role_id = convert_to_int_or_none(role_assignment.get('role') or role_assignment.get('roleID'))
+                fiscal_year_id = convert_to_int_or_none(role_assignment.get('fiscalYear') or role_assignment.get('fiscalYearID'))
                 print(f"DEBUG: Converted IDs - roleID: {role_id}, fiscalYearID: {fiscal_year_id}")
                 if role_id and fiscal_year_id:
                     cursor.execute("""
@@ -3017,6 +3028,8 @@ def update_member(member_id):
         conn.commit()
         print("Transaction committed successfully!")
 
+        if hasattr(dashboard_stats, 'cache'):
+            dashboard_stats.cache.clear()
         return jsonify({'success': True})
 
     except Exception as e:
@@ -3082,9 +3095,7 @@ def delete_member(member_id):
             data.get('nonProfitNumber')
         ))
         conn.commit()
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        society_id = row[0] if row is not None else None
+        society_id = cursor.lastrowid
         if society_id is None:
             return jsonify({'error': 'Failed to retrieve new society ID'}), 500
         return jsonify({'success': True, 'society_id': society_id}), 201
@@ -3469,9 +3480,7 @@ def create_user():
         conn.commit()
 
         # Get the new user ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        user_id = row[0] if row is not None else None
+        user_id = cursor.lastrowid
         if user_id is None:
             return jsonify({'error': 'Failed to retrieve new user ID'}), 500
 
@@ -3706,9 +3715,7 @@ def upload_photo(member_id):
         conn.commit()
 
         # Get photo ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        photo_id = row[0] if row is not None else None
+        photo_id = cursor.lastrowid
         if photo_id is None:
             return jsonify({'error': 'Failed to retrieve new photo ID'}), 500
 
@@ -4842,14 +4849,29 @@ def get_lookups():
         occupations = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(occupations)} occupations')
 
-        # Volunteering Interests (all unique values that have been used)
+        # Volunteering Interests (predefined + any unique values that have been used)
+        predefined_interests = [
+            'Building Maintenance',
+            'Ceilidh Activities',
+            'Cultural Activities',
+            'Finance and Admin',
+            'Other',
+            'Social Activities',
+            'St. Patrick\'s Festival',
+        ]
         cursor.execute("""
-            SELECT DISTINCT ValueText FROM UserDefinedFieldValue 
+            SELECT DISTINCT ValueText FROM UserDefinedFieldValue
             WHERE FieldID = (SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests')
             AND ValueText IS NOT NULL
             ORDER BY ValueText ASC
         """)
-        volunteering_interests = [row[0] for row in cursor.fetchall()]
+        db_interests = [row[0] for row in cursor.fetchall()]
+        # Merge predefined with DB values, deduplicate (case-insensitive), sort
+        merged = {v.lower(): v for v in predefined_interests}
+        for v in db_interests:
+            if v.lower() not in merged:
+                merged[v.lower()] = v
+        volunteering_interests = sorted(merged.values(), key=lambda x: x.lower())
         print(f'DEBUG: Found {len(volunteering_interests)} unique volunteering interests')
 
         response_data = {
@@ -5012,9 +5034,7 @@ def create_category():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -5067,9 +5087,7 @@ def create_role():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -5111,9 +5129,7 @@ def create_society_lookup():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -5155,9 +5171,7 @@ def create_occupation():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -5210,9 +5224,7 @@ def create_surname():
         conn.commit()
         
         # Get the new ID
-        cursor.execute("SELECT @@IDENTITY")
-        row = cursor.fetchone()
-        new_id = row[0] if row else None
+        new_id = cursor.lastrowid
         
         return jsonify({
             'success': True,
@@ -7104,7 +7116,11 @@ def get_public_dashboard():
 
     try:
         # Total number of HISTORICAL members (public view shows only historical)
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE IsActive = '0' OR IsActive = 0")
+        cursor.execute("""
+            SELECT COUNT(*) FROM Members m
+            INNER JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            WHERE mc.CategoryName = 'Historical'
+        """)
         row = cursor.fetchone()
         total_historical = row[0] if row is not None else 0
         

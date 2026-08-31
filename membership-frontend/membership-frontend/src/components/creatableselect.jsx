@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
+import { T } from '../utils/theme';
 
 export default function CreatableSelect({ label, name, value, options, onChange, onCreate, placeholder, isMulti }) {
   const [input, setInput] = useState("");
@@ -41,10 +42,11 @@ export default function CreatableSelect({ label, name, value, options, onChange,
 
   // Find the label for the current value
   const getDisplayValue = () => {
-    if (isMulti) return input;  // Show input text for multi-select instead of empty string
-    if (!singleValue) return input;
+    if (isMulti) return input;
+    if (showOptions) return input;  // User is actively searching — show what they're typing
+    if (!singleValue) return "";
     const selectedOption = safeOptions.find(opt => opt.value == singleValue);
-    return selectedOption ? selectedOption.label : input;
+    return selectedOption ? selectedOption.label : "";
   };
 
   return (
@@ -59,13 +61,13 @@ export default function CreatableSelect({ label, name, value, options, onChange,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '6px 12px',
-                background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-                border: '2px solid #14b8a6',
+                padding: '4px 10px',
+                background: `linear-gradient(135deg, ${T.primaryBg} 0%, ${T.primaryMid} 100%)`,
+                border: `2px solid ${T.primaryLight}`,
                 borderRadius: 20,
-                fontSize: 14,
+                fontSize: T.fontSm,
                 fontWeight: 600,
-                color: '#0f766e'
+                color: T.primary
               }}>
                 {opt ? opt.label : val}
                 <button
@@ -79,7 +81,7 @@ export default function CreatableSelect({ label, name, value, options, onChange,
                     width: 18,
                     height: 18,
                     borderRadius: '50%',
-                    background: '#14b8a6',
+                    background: '#4e5d2e',
                     color: 'white',
                     border: 'none',
                     cursor: 'pointer',
@@ -106,64 +108,70 @@ export default function CreatableSelect({ label, name, value, options, onChange,
           setInput(e.target.value);
           setShowOptions(true);
         }}
+        onKeyDown={e => {
+          if (isMulti && (e.key === 'Enter' || e.key === 'Tab') && input.trim()) {
+            e.preventDefault();
+            handleCreate();
+          }
+        }}
         onBlur={() => setTimeout(() => setShowOptions(false), 150)}
         style={{
           width: '100%',
-          padding: '14px 16px',
-          border: '2px solid #5eead4',
-          borderRadius: '10px',
-          fontSize: '17px',
+          padding: '8px 10px',
+          border: `2px solid ${T.primaryBorder}`,
+          borderRadius: T.radiusMd,
+          fontSize: T.fontBase,
           fontWeight: '500',
-          background: 'white',
+          background: T.white,
           outline: 'none',
           transition: 'border-color 0.2s'
         }}
-        onMouseOver={(e) => e.target.style.borderColor = '#14b8a6'}
-        onMouseOut={(e) => e.target.style.borderColor = '#5eead4'}
+        onMouseOver={(e) => e.target.style.borderColor = T.primaryLight}
+        onMouseOut={(e) => e.target.style.borderColor = T.primaryBorder}
       />
       {showOptions && (
-        <div style={{ 
-          position: "absolute", 
-          zIndex: 10, 
-          background: "#fff", 
-          border: "2px solid #5eead4", 
-          borderRadius: '10px',
-          width: "100%", 
-          maxHeight: 200, 
+        <div style={{
+          position: "absolute",
+          zIndex: 10,
+          background: T.white,
+          border: `2px solid ${T.primaryBorder}`,
+          borderRadius: T.radiusMd,
+          width: "100%",
+          maxHeight: 200,
           overflowY: "auto",
           marginTop: '4px',
-          boxShadow: '0 4px 12px rgba(20,184,166,0.15)'
+          boxShadow: '0 4px 12px rgba(78,93,46,0.15)'
         }}>
           {filtered.map(opt => (
-            <div 
-              key={opt.value} 
-              style={{ 
-                padding: '12px 16px', 
+            <div
+              key={opt.value}
+              style={{
+                padding: '8px 12px',
                 cursor: "pointer",
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#0f766e',
-                borderBottom: '1px solid #f0fdfa',
+                color: T.primary,
+                borderBottom: `1px solid ${T.primaryBg}`,
                 transition: 'background 0.2s'
-              }} 
+              }}
               onMouseDown={() => handleSelect(opt.value)}
-              onMouseOver={(e) => e.target.style.background = '#f0fdfa'}
-              onMouseOut={(e) => e.target.style.background = 'white'}
+              onMouseOver={(e) => e.target.style.background = T.primaryBg}
+              onMouseOut={(e) => e.target.style.background = T.white}
             >
               {opt.label}
             </div>
           ))}
           {input && !filtered.some(opt => opt.label.toLowerCase() === input.toLowerCase()) && (
-            <div 
-              style={{ 
-                padding: '12px 16px', 
-                cursor: "pointer", 
-                color: '#14b8a6',
-                fontSize: '16px',
+            <div
+              style={{
+                padding: '8px 12px',
+                cursor: "pointer",
+                color: T.primaryLight,
+                fontSize: T.fontBase,
                 fontWeight: '700',
-                background: '#f0fdfa',
-                borderTop: '2px solid #5eead4'
-              }} 
+                background: T.primaryBg,
+                borderTop: `2px solid ${T.primaryBorder}`
+              }}
               onMouseDown={handleCreate}
             >
               ➕ Add "{input}"

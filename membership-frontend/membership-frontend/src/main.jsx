@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+﻿import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/authcontext";
@@ -12,15 +12,18 @@ import "./index.css";
     if (!saved) return;
     const s = JSON.parse(saved);
     const fontSizes = { small: '14px', medium: '16px', large: '18px', 'extra-large': '22px' };
+    const zooms     = { small: '1.0',  medium: '1.1',  large: '1.2',  'extra-large': '1.4' };
     if (fontSizes[s.fontSize]) {
       document.documentElement.style.fontSize = fontSizes[s.fontSize];
     }
+    const rootEl = document.getElementById('root');
+    if (rootEl && zooms[s.fontSize]) rootEl.style.zoom = zooms[s.fontSize];
     const themes = {
       dark: {
         '--bg-primary': '#0f172a', '--bg-secondary': '#1e293b',
         '--bg-gradient-start': '#0f172a', '--bg-gradient-mid': '#1e293b', '--bg-gradient-end': '#0f172a',
         '--text-primary': '#f1f5f9', '--text-secondary': '#94a3b8', '--text-accent': '#5eead4',
-        '--border-primary': '#334155', '--border-accent': '#14b8a6',
+        '--border-primary': '#334155', '--border-accent': '#4e5d2e',
         '--card-bg': '#1e293b', '--card-hover': '#334155'
       },
       'high-contrast': {

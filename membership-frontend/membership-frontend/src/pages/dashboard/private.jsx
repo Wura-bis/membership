@@ -1,8 +1,9 @@
-import { useAuth } from "../../hooks/useauth";
+﻿import { useAuth } from "../../hooks/useauth";
 import MainLayout from "../../components/mainlayout";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, badge, pageHeader } from '../../utils/theme';
 import {
   PieChart,
   Pie,
@@ -84,7 +85,7 @@ export default function PrivateDashboard() {
   // Standardized chart data for membership breakdown
   const breakdown = analyticsData?.breakdown || {};
   const pieData = [
-    { name: 'Active', value: breakdown.active || 0, color: '#14b8a6' },
+    { name: 'Active', value: breakdown.active || 0, color: '#4e5d2e' },
     { name: 'Inactive', value: breakdown.inactive || 0, color: '#ef4444' },
     { name: 'Historical', value: breakdown.historical || 0, color: '#8b5cf6' },
     { name: 'Honorary', value: breakdown.honorary || 0, color: '#f59e0b' }
@@ -96,131 +97,15 @@ export default function PrivateDashboard() {
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           {/* Welcome Section */}
-          <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <h1 className="dashboard-title" style={{
-                  fontSize: '38px',
-                  fontWeight: '700',
-                  color: '#0f766e',
-                  marginBottom: '8px'
-                }}>
-                  Welcome back, {user?.firstName || 'Member'}! 👋
-                </h1>
-                <p className="dashboard-subtitle" style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#64748b'
-                }}>
-                  Access member resources, view directory, and manage your profile.
-                </p>
-              </div>
-              <div style={{
-                background: '#14b8a6',
-                color: 'white',
-                padding: '14px 24px',
-                borderRadius: '20px',
-                fontSize: '16px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Private User
-              </div>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>Welcome back, {user?.firstName || 'Member'}! 👋</h1>
+              <p style={pageHeader.subtitle}>Access member resources, view directory, and manage your profile.</p>
             </div>
+            <span style={user?.role === 'admin' ? badge.admin : badge.private}>
+              {user?.role === 'admin' ? 'Administrator' : 'Private'}
+            </span>
           </div>
-          {/* Analytics & Reports Filters */}
-          <div className="dashboard-card" style={{ marginBottom: '24px', marginTop: '32px', padding: '36px', background: '#f0fdfa', borderRadius: '12px', boxShadow: '0 2px 12px rgba(20,184,166,0.08)', border: '2px solid #5eead4' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e', marginBottom: '24px' }}>📊 Analytics & Reports</h2>
-            <form
-              style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}
-              onSubmit={e => { e.preventDefault(); setFilters(filters); }}
-              aria-label="Analytics Filters"
-            >
-              <div>
-                <label htmlFor="startDate" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>Start Date</label>
-                <input
-                  type="date"
-                  id="startDate"
-                  name="startDate"
-                  value={filters.startDate}
-                  onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                  style={{ 
-                    padding: '14px',
-                    fontSize: '17px',
-                    fontWeight: '500',
-                    border: '2px solid #5eead4',
-                    borderRadius: '8px',
-                    minWidth: '180px'
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="endDate" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>End Date</label>
-                <input
-                  type="date"
-                  id="endDate"
-                  name="endDate"
-                  value={filters.endDate}
-                  onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                  style={{ 
-                    padding: '14px',
-                    fontSize: '17px',
-                    fontWeight: '500',
-                    border: '2px solid #5eead4',
-                    borderRadius: '8px',
-                    minWidth: '180px'
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="category" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', display: 'block', marginBottom: '8px' }}>Category</label>
-                <select
-                  id="category"
-                  name="category"
-                  value={filters.category}
-                  onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
-                  style={{ 
-                    padding: '14px',
-                    fontSize: '17px',
-                    fontWeight: '500',
-                    border: '2px solid #5eead4',
-                    borderRadius: '8px',
-                    minWidth: '180px'
-                  }}
-                >
-                  <option value="">All</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Historical">Historical</option>
-                </select>
-              </div>
-              <button type="submit" className="btn-primary" style={{ 
-                minWidth: '180px',
-                padding: '16px 24px',
-                fontSize: '16px',
-                fontWeight: '700',
-                borderRadius: '8px'
-              }}>Apply Filters</button>
-              <button 
-                type="button"
-                onClick={() => setFilters({ startDate: "", endDate: "", category: "" })}
-                className="btn-primary" 
-                style={{ 
-                  minWidth: '180px',
-                  padding: '16px 24px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '8px',
-                  background: '#64748b',
-                  border: 'none'
-                }}
-              >
-                🔄 Clear Filters
-              </button>
-            </form>
-          </div>
-
           {error && (
             <div className="alert alert-error" style={{ marginBottom: '32px' }}>
               {error}
@@ -230,43 +115,28 @@ export default function PrivateDashboard() {
           {/* Main Dashboard Grid */}
           <div className="dashboard-grid">
             {/* Quick Overview */}
-            <div className="dashboard-card" style={{
-              padding: '36px',
-              background: '#f0fdfa',
-              borderRadius: '12px',
-              border: '2px solid #5eead4',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
               <h2 className="dashboard-card-title" style={{
-                fontSize: '22px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '24px'
+                color: T.textMain,
+                marginBottom: '20px'
               }}>📊 Member Directory</h2>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
-                  fontSize: '64px',
+                  fontSize: 'clamp(32px, 6vw, 48px)',
                   fontWeight: '800',
-                  color: '#14b8a6',
+                  color: T.primaryLight,
                   marginBottom: '8px'
                 }}>
                   {memberStats?.totalMembers || analyticsData?.total || 0}
                 </div>
-                <p style={{ color: '#64748b', fontSize: '17px', fontWeight: '600', marginBottom: '24px' }}>
+                <p style={{ color: T.textMuted, fontSize: T.fontBase, fontWeight: '600', marginBottom: '20px' }}>
                   Total registered members
                 </p>
-                <Link 
-                  to="/members" 
-                  className="btn-primary" 
-                  style={{ 
-                    textDecoration: 'none',
-                    width: '100%',
-                    display: 'block',
-                    padding: '18px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
+                <Link
+                  to="/members"
+                  style={{ ...btn.primary, textDecoration: 'none', width: '100%', justifyContent: 'center' }}
                 >
                   📋 View Member Directory
                 </Link>
@@ -274,188 +144,163 @@ export default function PrivateDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="dashboard-card" style={{
-              padding: '36px',
-              background: '#f0fdfa',
-              borderRadius: '12px',
-              border: '2px solid #5eead4',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
               <h2 className="dashboard-card-title" style={{
-                fontSize: '22px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '24px'
+                color: T.textMain,
+                marginBottom: '20px'
               }}>⚡ Quick Actions</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <Link
                   to="/my-profile"
-                  className="btn-primary"
-                  style={{
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    padding: '18px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
+                  style={{ ...btn.primary, textDecoration: 'none', width: '100%', justifyContent: 'center' }}
                 >
-                  <span>👤</span>
-                  Edit My Profile
+                  👤 Edit My Profile
                 </Link>
                 <Link
                   to="/support"
-                  className="btn-primary"
-                  style={{
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    padding: '18px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
+                  style={{ ...btn.ghost, textDecoration: 'none', width: '100%', justifyContent: 'center' }}
                 >
-                  <span>🎧</span>
-                  Get Support
+                  🎧 Get Support
                 </Link>
               </div>
             </div>
 
             {/* Export Data */}
-            <div className="dashboard-card" style={{
-              padding: '36px',
-              background: '#f0fdfa',
-              borderRadius: '12px',
-              border: '2px solid #5eead4',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
               <h2 className="dashboard-card-title" style={{
-                fontSize: '22px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '24px'
+                color: T.textMain,
+                marginBottom: '20px'
               }}>📊 Export Data</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <button 
-                  className="btn-primary" 
-                  style={{ 
-                    background: '#059669',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    padding: '18px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
+                <button
+                  style={{ ...btn.exportCsv, width: '100%', justifyContent: 'center' }}
                   onClick={() => window.open(`${API_BASE_URL}/api/export/members/csv`, '_blank')}
                 >
-                  <span>📄</span>
-                  Export CSV
+                  📄 Export CSV
                 </button>
-                <button 
-                  className="btn-primary" 
-                  style={{ 
-                    background: '#dc2626',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    padding: '18px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
+                <button
+                  style={{ ...btn.exportPdf, width: '100%', justifyContent: 'center' }}
                   onClick={() => window.open(`${API_BASE_URL}/api/export/members/pdf`, '_blank')}
                 >
-                  <span>📑</span>
-                  Export PDF
+                  📑 Export PDF
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Society Analytics - Full Width */}
-          <div className="dashboard-card" style={{ 
-            marginTop: '32px',
-            padding: '36px',
-            background: '#f0fdfa',
-            borderRadius: '12px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-          }}>
-            <h2 className="dashboard-card-title" style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px'
-            }}>📈 Society Analytics</h2>
-            
+          {/* Analytics & Reports - Full Width */}
+          <div className="dashboard-card" style={{ ...card, marginTop: '32px', padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, marginBottom: '20px' }}>📊 Analytics & Reports</h2>
+
+            {/* Filters */}
+            <form
+              style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '24px', paddingBottom: '24px', borderBottom: `2px solid ${T.primaryMid}` }}
+              onSubmit={e => { e.preventDefault(); setFilters(filters); }}
+              aria-label="Analytics Filters"
+            >
+              <div>
+                <label htmlFor="startDate" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>Start Date</label>
+                <input
+                  type="date"
+                  id="startDate"
+                  name="startDate"
+                  value={filters.startDate}
+                  onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                  style={{ padding: '8px 10px', fontSize: T.fontBase, fontWeight: '500', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, minWidth: '160px', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="endDate" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>End Date</label>
+                <input
+                  type="date"
+                  id="endDate"
+                  name="endDate"
+                  value={filters.endDate}
+                  onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                  style={{ padding: '8px 10px', fontSize: T.fontBase, fontWeight: '500', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, minWidth: '160px', outline: 'none' }}
+                />
+              </div>
+              <div>
+                <label htmlFor="category" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>Category</label>
+                <select
+                  id="category"
+                  name="category"
+                  value={filters.category}
+                  onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}
+                  style={{ padding: '8px 10px', fontSize: T.fontBase, fontWeight: '500', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, minWidth: '150px', outline: 'none' }}
+                >
+                  <option value="">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Historical">Historical</option>
+                </select>
+              </div>
+              <button type="submit" style={btn.primary}>Apply Filters</button>
+              <button
+                type="button"
+                onClick={() => setFilters({ startDate: "", endDate: "", category: "" })}
+                style={btn.ghost}
+              >
+                🔄 Clear
+              </button>
+            </form>
+
             {analyticsData ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px' }}>
                 {/* Membership Breakdown */}
                 <div className="dashboard-card" style={{
                   padding: '28px',
-                  background: '#ffffff',
-                  borderRadius: '12px',
-                  border: '2px solid #ccfbf1'
+                  background: T.white,
+                  borderRadius: T.radiusLg,
+                  border: `2px solid ${T.primaryMid}`
                 }}>
                   <h2 className="dashboard-card-title" style={{
-                    fontSize: '20px',
+                    fontSize: T.fontMd,
                     fontWeight: '700',
-                    color: '#0f766e',
-                    marginBottom: '20px'
+                    color: T.textMain,
+                    marginBottom: '16px'
                   }}>Membership Breakdown</h2>
                   <ResponsiveContainer width="100%" height={280}>
                     <PieChart>
-                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label style={{ fontSize: '16px', fontWeight: '600' }}>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} label style={{ fontSize: T.fontLg, fontWeight: '600' }}>
                         {pieData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={{ fontSize: '16px', fontWeight: '600', padding: '12px', borderRadius: '8px' }} />
+                      <Tooltip contentStyle={{ fontSize: T.fontLg, fontWeight: '600', padding: '12px', borderRadius: T.radiusMd }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 {/* Yearly Growth */}
                 <div className="dashboard-card" style={{
                   padding: '28px',
-                  background: '#ffffff',
-                  borderRadius: '12px',
-                  border: '2px solid #ccfbf1'
+                  background: T.white,
+                  borderRadius: T.radiusLg,
+                  border: `2px solid ${T.primaryMid}`
                 }}>
                   <h2 className="dashboard-card-title" style={{
-                    fontSize: '20px',
+                    fontSize: T.fontMd,
                     fontWeight: '700',
-                    color: '#0f766e',
-                    marginBottom: '20px'
+                    color: T.textMain,
+                    marginBottom: '16px'
                   }}>Yearly Membership Growth</h2>
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={yearlyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#ccfbf1" />
-                      <XAxis dataKey="year" style={{ fontSize: '14px', fontWeight: '600' }} />
-                      <YAxis style={{ fontSize: '14px', fontWeight: '600' }} />
-                      <Tooltip contentStyle={{ fontSize: '16px', fontWeight: '600', padding: '12px', borderRadius: '8px' }} />
-                      <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={4} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={T.primaryMid} />
+                      <XAxis dataKey="year" style={{ fontSize: T.fontBase, fontWeight: '600' }} />
+                      <YAxis style={{ fontSize: T.fontBase, fontWeight: '600' }} />
+                      <Tooltip contentStyle={{ fontSize: T.fontLg, fontWeight: '600', padding: '12px', borderRadius: T.radiusMd }} />
+                      <Line type="monotone" dataKey="value" stroke={T.primaryLight} strokeWidth={4} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '48px', 
-                color: '#94a3b8',
-                fontSize: '17px',
-                fontWeight: '600'
-              }}>
+              <div style={{ textAlign: 'center', padding: '40px', color: T.textLight, fontSize: T.fontBase, fontWeight: '600' }}>
                 Loading analytics...
               </div>
             )}

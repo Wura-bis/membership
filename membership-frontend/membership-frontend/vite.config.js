@@ -4,24 +4,40 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/membership/',
   server: {
     open: true,
-    // In development, proxy /api and /uploads to the Flask backend
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-      },
-      '/uploads': {
-        target: 'http://localhost:5000',
-        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            console.log(`[PROXY] --> ${req.method} ${req.url}`);
+          });
+          proxy.on('proxyRes', (proxyRes, req) => {
+            console.log(`[PROXY] <-- ${proxyRes.statusCode} ${req.method} ${req.url}`);
+          });
+          proxy.on('error', (err, req) => {
+            console.log(`[PROXY] ERROR ${req.method} ${req.url}:`, err.message);
+          });
+        },
       },
     },
   },
   build: {
-    // Output directly into the Flask backend's static serving folder
-    outDir: path.resolve(__dirname, '../../membership-backend/dist'),
-    emptyOutDir: true,
+    outDir: path.resolve(__dirname, '../../membership-php'),
+    emptyOutDir: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/index.js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name?.endsWith('.css')) return 'assets/index.css';
+          return 'assets/[name][extname]';
+        },
+      },
+    },
   },
   resolve: {
     alias: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 export function FormField({ 
   label, 
@@ -52,7 +52,7 @@ export function FormField({
           disabled={disabled}
           className={`form-input ${showError ? 'error' : ''} ${showSuccess ? 'success' : ''}`}
           style={{
-            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#14b8a6' : '#e2e8f0'
+            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#4e5d2e' : '#e2e8f0'
           }}
           {...props}
         >
@@ -75,7 +75,7 @@ export function FormField({
           placeholder={placeholder}
           className={`form-input ${showError ? 'error' : ''} ${showSuccess ? 'success' : ''}`}
           style={{
-            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#14b8a6' : '#e2e8f0',
+            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#4e5d2e' : '#e2e8f0',
             minHeight: '100px',
             resize: 'vertical'
           }}
@@ -94,7 +94,7 @@ export function FormField({
           placeholder={placeholder}
           className={`form-input ${showError ? 'error' : ''} ${showSuccess ? 'success' : ''}`}
           style={{
-            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#14b8a6' : '#e2e8f0'
+            borderColor: showError ? '#ef4444' : showSuccess ? '#10b981' : focused ? '#4e5d2e' : '#e2e8f0'
           }}
           {...props}
         />

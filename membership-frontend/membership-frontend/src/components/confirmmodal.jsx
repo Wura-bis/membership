@@ -1,6 +1,7 @@
 import { useEffect } from "react";
+import { T, btn, card } from '../utils/theme';
 
-export default function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = "Delete" }) {
+export default function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = "Delete", loading = false, error = "" }) {
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") onCancel();
@@ -12,22 +13,23 @@ export default function ConfirmModal({ isOpen, title, message, onConfirm, onCanc
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-        <h2 className="text-lg font-semibold mb-2">{title}</h2>
-        <p className="mb-4">{message}</p>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100"
-          >
-            Cancel
-          </button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }}>
+      <div style={{ ...card, padding: '24px', maxWidth: '440px', width: '100%' }}>
+        <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0 0 8px 0' }}>{title}</h2>
+        <p style={{ fontSize: T.fontBase, color: T.textMuted, margin: '0 0 16px 0' }}>{message}</p>
+        {error && (
+          <div style={{ fontSize: T.fontBase, color: T.red, background: T.redLight, border: `1px solid ${T.redBorder}`, borderRadius: T.radiusSm, padding: '8px 12px', marginBottom: '16px' }}>
+            {error}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button onClick={onCancel} style={btn.ghost} disabled={loading}>Cancel</button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            style={{ ...btn.danger, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+            disabled={loading}
           >
-            {confirmLabel}
+            {loading ? 'Processing...' : confirmLabel}
           </button>
         </div>
       </div>

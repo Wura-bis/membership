@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
+import { T, card, btn, pageHeader } from '../utils/theme';
 
 export default function AppSettings() {
   const { user } = useAuth();
   const [settings, setSettings] = useState({
     theme: 'light',
-    fontSize: 'medium',
+    fontSize: 'small',
     contrast: 'normal',
     animations: true
   });
@@ -50,42 +51,52 @@ export default function AppSettings() {
   const applySettings = (settings) => {
     // Apply font size to body
     const fontSizes = {
+      'compact': '13px',
       'small': '14px',
       'medium': '16px',
       'large': '18px',
       'extra-large': '22px'
     };
-    document.documentElement.style.fontSize = fontSizes[settings.fontSize] || '16px';
+    const zooms = {
+      'compact': '1.0',
+      'small': '1.0',
+      'medium': '1.1',
+      'large': '1.2',
+      'extra-large': '1.4'
+    };
+    document.documentElement.style.fontSize = fontSizes[settings.fontSize] || '14px';
+    const rootEl = document.getElementById('root');
+    if (rootEl) rootEl.style.zoom = zooms[settings.fontSize] || '1.0';
     
     // Apply theme colors
     const themes = {
       light: {
         '--bg-primary': '#ffffff',
         '--bg-secondary': '#f8fafc',
-        '--bg-gradient-start': '#f0fdfa',
-        '--bg-gradient-mid': '#e6fffa',
-        '--bg-gradient-end': '#f0fdfa',
+        '--bg-gradient-start': '#f8f9fa',
+        '--bg-gradient-mid': '#f8f9fa',
+        '--bg-gradient-end': '#f8f9fa',
         '--text-primary': '#1e293b',
         '--text-secondary': '#64748b',
-        '--text-accent': '#0f766e',
+        '--text-accent': '#4e5d2e',
         '--border-primary': '#e2e8f0',
-        '--border-accent': '#5eead4',
+        '--border-accent': '#a4b870',
         '--card-bg': '#ffffff',
         '--card-hover': '#f8fafc'
       },
       dark: {
-        '--bg-primary': '#0f172a',
-        '--bg-secondary': '#1e293b',
-        '--bg-gradient-start': '#0f172a',
-        '--bg-gradient-mid': '#1e293b',
-        '--bg-gradient-end': '#0f172a',
-        '--text-primary': '#f1f5f9',
-        '--text-secondary': '#94a3b8',
-        '--text-accent': '#5eead4',
-        '--border-primary': '#334155',
-        '--border-accent': '#14b8a6',
-        '--card-bg': '#1e293b',
-        '--card-hover': '#334155'
+        '--bg-primary': '#111827',
+        '--bg-secondary': '#1f2937',
+        '--bg-gradient-start': '#111827',
+        '--bg-gradient-mid': '#1a2332',
+        '--bg-gradient-end': '#111827',
+        '--text-primary': '#e2e8f0',
+        '--text-secondary': '#9ca3af',
+        '--text-accent': '#8fb147',
+        '--border-primary': '#374151',
+        '--border-accent': '#6b8040',
+        '--card-bg': '#1f2937',
+        '--card-hover': '#374151'
       },
       'high-contrast': {
         '--bg-primary': '#ffffff',
@@ -107,6 +118,7 @@ export default function AppSettings() {
     Object.entries(themeColors).forEach(([property, value]) => {
       document.documentElement.style.setProperty(property, value);
     });
+    document.documentElement.setAttribute('data-theme', settings.theme);
     
     // Apply contrast
     if (settings.contrast === 'high') {
@@ -142,20 +154,9 @@ export default function AppSettings() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div style={{ 
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #f0fdfa 100%)',
-          padding: '32px 24px'
-        }}>
-          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              height: '400px'
-            }}>
-              <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
-            </div>
+        <div className="dashboard-container">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+            <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
           </div>
         </div>
       </MainLayout>
@@ -164,80 +165,47 @@ export default function AppSettings() {
 
   return (
     <MainLayout>
-      <div style={{ 
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #f0fdfa 100%)',
-        padding: '32px 24px'
-      }}>
+      <div className="dashboard-container">
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{
-              fontSize: '38px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              🎨 App Settings
-            </h1>
-            <p style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#64748b',
-              margin: '0'
-            }}>
-              Customize your viewing experience
-            </p>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>🎨 App Settings</h1>
+              <p style={pageHeader.subtitle}>Customize your viewing experience</p>
+            </div>
           </div>
 
-          {/* Success Message */}
           {success && (
-            <div style={{
-              background: '#f0fdf4',
-              border: '2px solid #bbf7d0',
-              color: '#166534',
-              padding: '18px',
-              borderRadius: '10px',
-              marginBottom: '24px',
-              fontSize: '16px',
-              fontWeight: '600'
-            }}>
-              ✅ {success}
+            <div style={{ background: T.greenLight, border: `2px solid ${T.greenBorder}`, color: T.green, padding: '12px 16px', borderRadius: T.radiusMd, marginBottom: '24px', fontSize: T.fontBase, fontWeight: '600' }}>
+              {success}
             </div>
           )}
 
           {/* Settings Form */}
           <div style={{
-            background: '#f0fdfa',
-            border: '2px solid #5eead4',
-            borderRadius: '12px',
-            padding: '36px',
+            ...card,
+            padding: '24px',
             marginBottom: '28px',
-            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
           }}>
             
             {/* Font Size Setting */}
             <div style={{ marginBottom: '36px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '20px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
                 🔤 Font Size
               </h2>
-              
+
               <div style={{ marginBottom: '16px' }}>
                 <p style={{
-                  fontSize: '16px',
+                  fontSize: T.fontLg,
                   fontWeight: '500',
-                  color: '#64748b',
+                  color: T.textMuted,
                   marginBottom: '16px',
                   lineHeight: '1.6'
                 }}>
@@ -246,10 +214,11 @@ export default function AppSettings() {
                 
                 <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
                   {[
-                    { value: 'small', label: 'Small', example: '14px - Best for large screens' },
-                    { value: 'medium', label: 'Medium (Default)', example: '16px - Balanced and comfortable' },
-                    { value: 'large', label: 'Large', example: '18px - Easier to read' },
-                    { value: 'extra-large', label: 'Extra Large', example: '22px - Maximum readability' }
+                    { value: 'compact', label: 'Compact (85%)', example: 'Smaller size — fits more content on screen' },
+                    { value: 'small', label: 'Normal (Default)', example: 'Standard size — suits most screens' },
+                    { value: 'medium', label: 'Medium (110%)', example: 'Slightly larger — good for larger screens' },
+                    { value: 'large', label: 'Large (120%)', example: 'Larger — ideal for wide/high-res screens' },
+                    { value: 'extra-large', label: 'Extra Large (140%)', example: 'Maximum size — best for very large screens or accessibility' }
                   ].map(option => (
                     <label
                       key={option.value}
@@ -258,8 +227,8 @@ export default function AppSettings() {
                         alignItems: 'center',
                         padding: '16px 20px',
                         background: settings.fontSize === option.value ? '#ffffff' : '#ffffff',
-                        border: settings.fontSize === option.value ? '3px solid #14b8a6' : '2px solid #e2e8f0',
-                        borderRadius: '10px',
+                        border: settings.fontSize === option.value ? `2px solid ${T.primaryBorder}` : `2px solid ${T.slateBorder}`,
+                        borderRadius: T.radiusMd,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
@@ -274,21 +243,21 @@ export default function AppSettings() {
                           width: '20px',
                           height: '20px',
                           marginRight: '16px',
-                          accentColor: '#14b8a6'
+                          accentColor: T.primaryLight
                         }}
                       />
                       <div style={{ flex: 1 }}>
                         <div style={{
-                          fontSize: '17px',
+                          fontSize: T.fontBase,
                           fontWeight: '700',
-                          color: settings.fontSize === option.value ? '#0f766e' : '#1e293b',
+                          color: settings.fontSize === option.value ? T.textMain : T.textMuted,
                           marginBottom: '4px'
                         }}>
                           {option.label}
                         </div>
                         <div style={{
-                          fontSize: '15px',
-                          color: '#64748b',
+                          fontSize: T.fontMd,
+                          color: T.textMuted,
                           fontWeight: '500'
                         }}>
                           {option.example}
@@ -303,22 +272,22 @@ export default function AppSettings() {
             {/* Theme Setting */}
             <div style={{ marginBottom: '36px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '20px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
                 🎨 Color Theme
               </h2>
-              
+
               <p style={{
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#64748b',
-                marginBottom: '16px',
+                color: T.textMuted,
+                marginBottom: '12px',
                 lineHeight: '1.6'
               }}>
                 Select your preferred color scheme
@@ -326,7 +295,7 @@ export default function AppSettings() {
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 {[
-                  { value: 'light', label: '☀️ Light Mode', desc: 'Default bright theme', gradient: 'linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%)' },
+                  { value: 'light', label: '☀️ Light Mode', desc: 'Default bright theme', gradient: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)' },
                   { value: 'dark', label: '🌙 Dark Mode', desc: 'Easy on the eyes', gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }
                 ].map(theme => (
                   <label
@@ -335,9 +304,9 @@ export default function AppSettings() {
                       display: 'flex',
                       flexDirection: 'column',
                       padding: '20px',
-                      background: '#ffffff',
-                      border: settings.theme === theme.value ? '3px solid #14b8a6' : '2px solid #e2e8f0',
-                      borderRadius: '10px',
+                      background: T.white,
+                      border: settings.theme === theme.value ? `2px solid ${T.primaryBorder}` : `2px solid ${T.slateBorder}`,
+                      borderRadius: T.radiusMd,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
@@ -346,10 +315,10 @@ export default function AppSettings() {
                       width: '100%',
                       height: '80px',
                       background: theme.gradient,
-                      borderRadius: '8px',
+                      borderRadius: T.radiusMd,
                       marginBottom: '12px',
-                      border: '2px solid #e2e8f0',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      border: `2px solid ${T.slateBorder}`,
+                      boxShadow: T.shadowSm
                     }}></div>
                     <input
                       type="radio"
@@ -360,16 +329,16 @@ export default function AppSettings() {
                       style={{ display: 'none' }}
                     />
                     <div style={{
-                      fontSize: '16px',
+                      fontSize: T.fontLg,
                       fontWeight: '700',
-                      color: settings.theme === theme.value ? '#0f766e' : '#1e293b',
+                      color: settings.theme === theme.value ? T.textMain : T.textMuted,
                       marginBottom: '4px'
                     }}>
                       {theme.label}
                     </div>
                     <div style={{
-                      fontSize: '14px',
-                      color: '#64748b',
+                      fontSize: T.fontBase,
+                      color: T.textMuted,
                       fontWeight: '500'
                     }}>
                       {theme.desc}
@@ -382,22 +351,22 @@ export default function AppSettings() {
             {/* Contrast Setting */}
             <div style={{ marginBottom: '36px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '20px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
                 ⚡ Contrast
               </h2>
-              
+
               <p style={{
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#64748b',
-                marginBottom: '16px',
+                color: T.textMuted,
+                marginBottom: '12px',
                 lineHeight: '1.6'
               }}>
                 Adjust text contrast for better visibility
@@ -414,9 +383,9 @@ export default function AppSettings() {
                       display: 'flex',
                       alignItems: 'center',
                       padding: '16px 20px',
-                      background: settings.contrast === option.value ? '#ffffff' : '#ffffff',
-                      border: settings.contrast === option.value ? '3px solid #14b8a6' : '2px solid #e2e8f0',
-                      borderRadius: '10px',
+                      background: T.white,
+                      border: settings.contrast === option.value ? `2px solid ${T.primaryBorder}` : `2px solid ${T.slateBorder}`,
+                      borderRadius: T.radiusMd,
                       cursor: 'pointer'
                     }}
                   >
@@ -430,21 +399,21 @@ export default function AppSettings() {
                         width: '20px',
                         height: '20px',
                         marginRight: '16px',
-                        accentColor: '#14b8a6'
+                        accentColor: T.primaryLight
                       }}
                     />
                     <div>
                       <div style={{
-                        fontSize: '17px',
+                        fontSize: T.fontLg,
                         fontWeight: '700',
-                        color: settings.contrast === option.value ? '#0f766e' : '#1e293b',
+                        color: settings.contrast === option.value ? T.textMain : T.textMuted,
                         marginBottom: '4px'
                       }}>
                         {option.label}
                       </div>
                       <div style={{
-                        fontSize: '15px',
-                        color: '#64748b',
+                        fontSize: T.fontMd,
+                        color: T.textMuted,
                         fontWeight: '500'
                       }}>
                         {option.desc}
@@ -458,10 +427,10 @@ export default function AppSettings() {
             {/* Animations Setting */}
             <div style={{ marginBottom: '32px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '20px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
@@ -472,10 +441,10 @@ export default function AppSettings() {
               <label style={{
                 display: 'flex',
                 alignItems: 'center',
-                padding: '16px 20px',
-                background: '#ffffff',
-                border: '2px solid #e2e8f0',
-                borderRadius: '10px',
+                padding: '14px 16px',
+                background: T.white,
+                border: `2px solid ${T.slateBorder}`,
+                borderRadius: T.radiusMd,
                 cursor: 'pointer'
               }}>
                 <input
@@ -486,21 +455,21 @@ export default function AppSettings() {
                     width: '22px',
                     height: '22px',
                     marginRight: '16px',
-                    accentColor: '#14b8a6'
+                    accentColor: '#4e5d2e'
                   }}
                 />
                 <div>
                   <div style={{
-                    fontSize: '17px',
+                    fontSize: T.fontBase,
                     fontWeight: '700',
-                    color: '#1e293b',
+                    color: T.textMuted,
                     marginBottom: '4px'
                   }}>
                     Enable Animations
                   </div>
                   <div style={{
-                    fontSize: '15px',
-                    color: '#64748b',
+                    fontSize: T.fontMd,
+                    color: T.textMuted,
                     fontWeight: '500',
                     lineHeight: '1.5'
                   }}>
@@ -510,90 +479,29 @@ export default function AppSettings() {
               </label>
             </div>
 
-            {/* Action Buttons */}
-            <div style={{
-              display: 'flex',
-              gap: '16px',
-              paddingTop: '32px',
-              borderTop: '3px solid #ccfbf1',
-              flexWrap: 'wrap'
-            }}>
-              <button
-                onClick={handlePreview}
-                style={{
-                  background: '#ffffff',
-                  color: '#0f766e',
-                  border: '2px solid #14b8a6',
-                  padding: '18px 32px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '24px', borderTop: `2px solid ${T.primaryMid}`, flexWrap: 'wrap' }}>
+              <button onClick={handlePreview} style={btn.ghost}>
                 👁️ Preview Changes
               </button>
-              
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                style={{
-                  background: isSaving ? '#94a3b8' : '#14b8a6',
-                  color: 'white',
-                  border: '2px solid ' + (isSaving ? '#94a3b8' : '#0f766e'),
-                  padding: '18px 32px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '10px',
-                  cursor: isSaving ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
+              <button onClick={handleSave} disabled={isSaving} style={{ ...btn.primary, opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}>
                 {isSaving ? '💾 Saving...' : '💾 Save Settings'}
               </button>
-              
               <button
                 onClick={() => {
-                  const defaultSettings = {
-                    theme: 'light',
-                    fontSize: 'medium',
-                    contrast: 'normal',
-                    animations: true
-                  };
+                  const defaultSettings = { theme: 'light', fontSize: 'small', contrast: 'normal', animations: true };
                   setSettings(defaultSettings);
                   applySettings(defaultSettings);
                   setSuccess("✅ Reset to default settings!");
                   setTimeout(() => setSuccess(""), 3000);
                 }}
-                style={{
-                  background: '#ffffff',
-                  color: '#64748b',
-                  border: '2px solid #e2e8f0',
-                  padding: '18px 32px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                style={btn.ghost}
               >
                 🔄 Reset to Default
               </button>
             </div>
           </div>
 
-          {/* Info Box */}
-          <div style={{
-            background: '#fffbeb',
-            border: '2px solid #fde68a',
-            borderRadius: '10px',
-            padding: '20px',
-            fontSize: '16px',
-            fontWeight: '500',
-            color: '#92400e',
-            lineHeight: '1.6'
-          }}>
+          <div style={{ background: T.amberLight, border: `2px solid ${T.amberBorder}`, borderRadius: T.radiusMd, padding: '16px', fontSize: T.fontBase, fontWeight: '500', color: T.amber, lineHeight: '1.6' }}>
             <strong>💡 Tip:</strong> These settings are saved to your browser. If you use a different device or browser, you'll need to set your preferences again.
           </div>
         </div>

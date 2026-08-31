@@ -1,6 +1,7 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from '../../utils/api';
+import { T, btn } from '../../utils/theme';
 
 export default function ForgotNoEmail() {
   const [userID, setUserID] = useState("");
@@ -35,7 +36,7 @@ export default function ForgotNoEmail() {
       const res = await fetch(`${API_BASE_URL}/api/reset-password-noemail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userID, password: password, confirm_password: confirm }),
+        body: JSON.stringify({ userID: userID, password: password }),
       });
 
       if (res.ok) {
@@ -45,7 +46,7 @@ export default function ForgotNoEmail() {
         setConfirm("");
       } else {
         const err = await res.json();
-        setError(err.message || "Reset failed");
+        setError(err.error || err.message || "Reset failed");
       }
     } catch {
       setError("Server error");
@@ -61,7 +62,7 @@ export default function ForgotNoEmail() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)'
+      background: 'linear-gradient(135deg, #f8f9fa 0%, #e5e7eb 100%)'
     }}>
       <div style={{ 
         width: '100%', 
@@ -69,8 +70,8 @@ export default function ForgotNoEmail() {
         backgroundColor: 'white',
         borderRadius: '16px',
         padding: '56px',
-        boxShadow: '0 20px 40px rgba(20, 184, 166, 0.15)',
-        border: '3px solid #14b8a6'
+        boxShadow: '0 20px 40px rgba(78, 93, 46, 0.15)',
+        border: '3px solid #4e5d2e'
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
@@ -78,20 +79,20 @@ export default function ForgotNoEmail() {
             width: '100px',
             height: '100px',
             margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+            background: 'linear-gradient(135deg, #4e5d2e, #0d9488)',
             borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 8px 20px rgba(20, 184, 166, 0.3)',
-            fontSize: '42px',
+            boxShadow: '0 8px 20px rgba(78, 93, 46, 0.3)',
+            fontSize: 'clamp(22px, 4vw, 28px)',
             fontWeight: '800',
             color: 'white'
           }}>
             🔧
           </div>
           <h1 style={{ 
-            fontSize: '38px', 
+            fontSize: 'clamp(20px, 3.5vw, 26px)', 
             fontWeight: '800', 
             color: '#0f172a', 
             marginBottom: '10px',
@@ -100,8 +101,8 @@ export default function ForgotNoEmail() {
             Reset Password
           </h1>
           <p style={{ 
-            color: '#64748b', 
-            fontSize: '18px',
+            color: T.textMuted,
+            fontSize: T.fontXl,
             fontWeight: '600'
           }}>
             Enter your User ID and new password
@@ -117,9 +118,9 @@ export default function ForgotNoEmail() {
               border: '2px solid #ef4444',
               borderRadius: '10px',
               marginBottom: '24px',
-              fontSize: '16px',
+              fontSize: T.fontLg,
               fontWeight: '600',
-              color: '#dc2626',
+              color: T.red,
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -135,7 +136,7 @@ export default function ForgotNoEmail() {
               border: '2px solid #22c55e',
               borderRadius: '10px',
               marginBottom: '24px',
-              fontSize: '16px',
+              fontSize: T.fontLg,
               fontWeight: '600',
               color: '#16a34a',
               display: 'flex',
@@ -150,7 +151,7 @@ export default function ForgotNoEmail() {
             <div style={{ marginBottom: '28px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 color: '#0f172a',
                 marginBottom: '10px'
@@ -167,9 +168,9 @@ export default function ForgotNoEmail() {
                 style={{
                   width: '100%',
                   padding: '16px 20px',
-                  border: '2px solid #14b8a6',
+                  border: '2px solid #4e5d2e',
                   borderRadius: '10px',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '600',
                   outline: 'none',
                   transition: 'all 0.2s ease',
@@ -177,12 +178,12 @@ export default function ForgotNoEmail() {
                   boxSizing: 'border-box'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#0f766e';
+                  e.target.style.borderColor = '#4e5d2e';
                   e.target.style.backgroundColor = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#14b8a6';
+                  e.target.style.borderColor = '#4e5d2e';
                   e.target.style.backgroundColor = '#f9fafb';
                   e.target.style.boxShadow = 'none';
                 }}
@@ -192,7 +193,7 @@ export default function ForgotNoEmail() {
             <div style={{ marginBottom: '28px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 color: '#0f172a',
                 marginBottom: '10px'
@@ -211,9 +212,9 @@ export default function ForgotNoEmail() {
                     width: '100%',
                     padding: '16px 20px',
                     paddingRight: '60px',
-                    border: '2px solid #14b8a6',
+                    border: '2px solid #4e5d2e',
                     borderRadius: '10px',
-                    fontSize: '17px',
+                    fontSize: T.fontXl,
                     fontWeight: '600',
                     outline: 'none',
                     transition: 'all 0.2s ease',
@@ -221,12 +222,12 @@ export default function ForgotNoEmail() {
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = '#f9fafb';
                     e.target.style.boxShadow = 'none';
                   }}
@@ -242,24 +243,24 @@ export default function ForgotNoEmail() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#14b8a6',
-                    fontSize: '20px',
+                    color: T.primaryLight,
+                    fontSize: 'clamp(14px, 1.8vw, 17px)',
                     padding: '8px',
                     borderRadius: '6px',
                     transition: 'all 0.2s ease'
                   }}
                   tabIndex={-1}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 >
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
               <p style={{ 
-                fontSize: '14px',
+                fontSize: T.fontBase,
                 fontWeight: '600',
-                color: '#64748b', 
-                marginTop: '8px' 
+                color: T.textMuted,
+                marginTop: '8px'
               }}>
                 💡 At least 8 characters with a number
               </p>
@@ -268,7 +269,7 @@ export default function ForgotNoEmail() {
             <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 color: '#0f172a',
                 marginBottom: '10px'
@@ -287,9 +288,9 @@ export default function ForgotNoEmail() {
                     width: '100%',
                     padding: '16px 20px',
                     paddingRight: '60px',
-                    border: '2px solid #14b8a6',
+                    border: '2px solid #4e5d2e',
                     borderRadius: '10px',
-                    fontSize: '17px',
+                    fontSize: T.fontXl,
                     fontWeight: '600',
                     outline: 'none',
                     transition: 'all 0.2s ease',
@@ -297,12 +298,12 @@ export default function ForgotNoEmail() {
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = '#f9fafb';
                     e.target.style.boxShadow = 'none';
                   }}
@@ -318,14 +319,14 @@ export default function ForgotNoEmail() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#14b8a6',
-                    fontSize: '20px',
+                    color: T.primaryLight,
+                    fontSize: 'clamp(14px, 1.8vw, 17px)',
                     padding: '8px',
                     borderRadius: '6px',
                     transition: 'all 0.2s ease'
                   }}
                   tabIndex={-1}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                   onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 >
                   {showConfirm ? '👁️' : '👁️‍🗨️'}
@@ -336,20 +337,18 @@ export default function ForgotNoEmail() {
             <button
               type="submit"
               disabled={isLoading}
-              style={{ 
-                width: '100%', 
+              style={{
+                ...btn.primary,
+                width: '100%',
                 marginBottom: '28px',
                 padding: '18px 24px',
-                background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
-                border: 'none',
                 borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: '700',
-                color: 'white',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: T.fontXl,
+                justifyContent: 'center',
                 letterSpacing: '0.5px',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)',
+                boxShadow: '0 4px 12px rgba(78, 93, 46, 0.3)',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 opacity: isLoading ? 0.7 : 1
               }}
               onMouseEnter={(e) => !isLoading && (e.target.style.transform = 'translateY(-2px)')}
@@ -375,56 +374,56 @@ export default function ForgotNoEmail() {
 
           <div style={{ 
             padding: '24px',
-            backgroundColor: '#f0fdfa',
+            backgroundColor: '#f8f9fa',
             borderRadius: '12px',
-            border: '2px solid #ccfbf1',
-            boxShadow: '0 2px 8px rgba(20, 184, 166, 0.1)'
+            border: '2px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(78, 93, 46, 0.1)'
           }}>
             <p style={{ 
               color: '#475569', 
-              fontSize: '16px',
+              fontSize: T.fontLg,
               fontWeight: '600',
               margin: '0 0 12px 0'
             }}>
               Remember your password?{" "}
               <Link to="/login" style={{
-                color: '#14b8a6',
+                color: T.primaryLight,
                 textDecoration: 'none',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = '#0f766e';
+                e.target.style.color = T.textMain;
                 e.target.style.textDecoration = 'underline';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = '#14b8a6';
+                e.target.style.color = T.primaryLight;
                 e.target.style.textDecoration = 'none';
               }}>
                 🚀 Back to sign in
               </Link>
             </p>
-            <p style={{ 
-              color: '#475569', 
-              fontSize: '16px',
+            <p style={{
+              color: '#475569',
+              fontSize: T.fontLg,
               fontWeight: '600',
               margin: '12px 0 0 0'
             }}>
               Have email access?{" "}
               <Link to="/forgot-password/email" style={{
-                color: '#14b8a6',
+                color: T.primaryLight,
                 textDecoration: 'none',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                e.target.style.color = '#0f766e';
+                e.target.style.color = T.textMain;
                 e.target.style.textDecoration = 'underline';
               }}
               onMouseLeave={(e) => {
-                e.target.style.color = '#14b8a6';
+                e.target.style.color = T.primaryLight;
                 e.target.style.textDecoration = 'none';
               }}>
                 📧 Reset via email
@@ -438,11 +437,11 @@ export default function ForgotNoEmail() {
             textAlign: 'center' 
           }}>
             <p style={{ 
-              fontSize: '14px',
+              fontSize: T.fontBase,
               fontWeight: '600',
               color: '#94a3b8' 
             }}>
-              © 2025 Membership System. All rights reserved.
+              © 2026 Benevolent Irish Society of PEI · Designed &amp; developed by Wuraola
             </p>
           </div>
         </div>

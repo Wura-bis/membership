@@ -1,0 +1,245 @@
+💾 DEPLOYMENT GUIDE - Phase 2 Features (First 4 Requirements)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📦 ZIP FILE INFO:
+   • Filename: membership_phase2_update_20260528_094222.zip
+   • Size: 0.24 MB (~244 KB)
+   • Location: c:\Users\user\Documents\membership\
+   • Contents: 6 files (see breakdown below)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 WHAT'S IN THE ZIP (File-by-File Breakdown)
+
+┌─ FRONTEND ASSETS (Update these in membership-php/assets/) ─────────────────┐
+│                                                                             │
+│  ✓ index-sdg82H1k.js (884 KB)                                             │
+│    └─ Main React bundle with:                                              │
+│       • Notes display on member detail                                      │
+│       • Bulk selection checkboxes                                           │
+│       • Expanded columns (email, entry date, status, occupation)           │
+│       • Bulk action bar (export, deactivate, clear)                        │
+│       • Font sizing CSS variables                                           │
+│                                                                             │
+│  ✓ index-DSL1sqsF.css (22 KB)                                             │
+│    └─ Updated stylesheet with:                                             │
+│       • Font sizing system (CSS variables)                                  │
+│       • Bulk action bar styling                                             │
+│       • Enhanced checkbox styling                                           │
+│       • Status badge styling                                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ ROOT/CONFIGURATION FILES ────────────────────────────────────────────────┐
+│                                                                            │
+│  ✓ index.html (1 KB) → Replace existing                                  │
+│    └─ ONLY CHANGE: Asset references updated                              │
+│       FROM: index-Dqo5HCsJ.js & index-DekY_rKG.css                       │
+│       TO: index-sdg82H1k.js & index-DSL1sqsF.css                         │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ PHP API BACKEND FILES ──────────────────────────────────────────────────┐
+│                                                                           │
+│  ✓ api/index.php → MERGE CHANGES (6 lines modified in export section)   │
+│    └─ Updated to support: ?ids=1,2,3 query parameter                    │
+│       Added conditional: If ids present, use bulk export                 │
+│       If no ids, use full export (existing behavior)                     │
+│                                                                           │
+│  ✓ api/handlers/export.php → ADD NEW FUNCTION                           │
+│    └─ New function: export_selected_members_csv()                        │
+│       Handles comma-separated member IDs                                 │
+│       Prevents SQL injection via parameterized queries                   │
+│       ~80 lines of code added                                             │
+│                                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ DOCUMENTATION ──────────────────────────────────────────────────────────┐
+│                                                                           │
+│  ✓ PHASE2_IMPLEMENTATION_SUMMARY.md                                      │
+│    └─ Full documentation of all changes                                   │
+│       Testing checklist, rollback instructions, etc.                     │
+│                                                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 DEPLOYMENT INSTRUCTIONS (STEP-BY-STEP)
+
+┌─ STEP 1: BACKUP CURRENT FILES ───────────────────────────────────────────┐
+│ Before uploading, backup these files on hosting:                          │
+│   • membership-php/index.html                                             │
+│   • membership-php/api/index.php                                          │
+│   • membership-php/api/handlers/export.php                                │
+│   • membership-php/assets/index-Dqo5HCsJ.js (old JS)                     │
+│   • membership-php/assets/index-DekY_rKG.css (old CSS)                   │
+│                                                                            │
+│ Store backups in a safe location for rollback if needed                  │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STEP 2: EXTRACT ZIP FILE ───────────────────────────────────────────────┐
+│ Extract membership_phase2_update_*.zip to a temporary folder               │
+│ You'll see nested directory structure:                                     │
+│   • membership-php/                                                        │
+│   • PHASE2_IMPLEMENTATION_SUMMARY.md                                      │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STEP 3: UPLOAD FRONTEND ASSETS ──────────────────────────────────────────┐
+│ Use phpMyAdmin File Manager:                                               │
+│   1. Navigate to: public_html/membership/assets/                          │
+│   2. Delete OLD files:                                                     │
+│      ✗ index-Dqo5HCsJ.js (old JS)                                        │
+│      ✗ index-DekY_rKG.css (old CSS)                                      │
+│   3. Upload NEW files:                                                     │
+│      ✓ index-sdg82H1k.js                                                  │
+│      ✓ index-DSL1sqsF.css                                                 │
+│                                                                            │
+│ IMPORTANT: Complete file names must match exactly (including hash!)        │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STEP 4: UPDATE ROOT INDEX.HTML ──────────────────────────────────────────┐
+│ Use phpMyAdmin File Manager:                                               │
+│   1. Navigate to: public_html/membership/                                 │
+│   2. Replace index.html with new version from ZIP                         │
+│                                                                            │
+│ Note: Only 2 lines change (asset references)                              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STEP 5: UPDATE API FILES ────────────────────────────────────────────────┐
+│ Use phpMyAdmin File Manager or FTP:                                       │
+│   1. Update: public_html/membership/api/index.php                         │
+│      Location: Lines 133-138 (export section)                             │
+│      Option A: Copy entire file and replace                               │
+│      Option B: Manually merge the 6-line change (see summary doc)         │
+│                                                                            │
+│   2. Update: public_html/membership/api/handlers/export.php               │
+│      Location: Insert new export_selected_members_csv() function          │
+│      Before: export_member_csv() function                                 │
+│      Option A: Copy entire file and replace                               │
+│      Option B: Manually copy function (~80 lines)                         │
+│                                                                            │
+│ SAFEST APPROACH: Copy entire files to avoid alignment issues              │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STEP 6: CLEAR BROWSER CACHE & TEST ──────────────────────────────────────┐
+│ After all files uploaded:                                                  │
+│   1. Clear browser cache completely:                                       │
+│      • Chrome: Ctrl+Shift+Delete → Clear all                             │
+│      • Firefox: Ctrl+Shift+Delete → Everything                           │
+│      • Safari: Develop → Clear Caches                                     │
+│                                                                            │
+│   2. Hard refresh website:                                                │
+│      • Chrome/Firefox: Ctrl+F5                                            │
+│      • Safari: Cmd+Option+E                                               │
+│                                                                            │
+│   3. Test these features:                                                 │
+│      ✓ Member list shows checkboxes on left                              │
+│      ✓ New columns visible: Email, Entry Date, Status, Occupation        │
+│      ✓ Click checkbox → bulk action bar appears above table               │
+│      ✓ Select multiple members → action bar shows count                   │
+│      ✓ Click "Export CSV" → downloads members_export.csv                 │
+│      ✓ Open member detail → Notes section displays (if any)               │
+│      ✓ No JavaScript errors in browser console                            │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ VERIFICATION CHECKLIST (After Deployment)
+
+Member List Page:
+  ☐ Checkboxes appear on all member rows (first column)
+  ☐ Select-all checkbox in table header works
+  ☐ Email column shows email addresses (or — if blank)
+  ☐ Entry Date column shows dates in DD/MM/YYYY format
+  ☐ Status column shows "✓ Active" or "○ Inactive" badges
+  ☐ Occupation column shows job titles (or — if blank)
+  ☐ Click checkbox → row highlights light blue
+  ☐ Bulk action bar appears above table when any selected
+  ☐ Bulk action bar shows count of selected members
+  ☐ "Export CSV" and "Deactivate" buttons visible in action bar
+  ☐ "Clear" button in action bar works and hides action bar
+
+Member Detail Page:
+  ☐ Notes section appears (only for admin/private users)
+  ☐ Notes display with proper formatting
+  ☐ Notes section only shows if member has notes content
+
+Browser Console:
+  ☐ No red error messages
+  ☐ No warnings about missing assets
+  ☐ Network tab shows successful downloads of JS/CSS files
+
+Performance:
+  ☐ Page loads quickly (< 3 seconds)
+  ☐ No lag when clicking checkboxes
+  ☐ No lag when scrolling member list
+  ☐ Export completes in reasonable time (< 5 seconds)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+⚠️ TROUBLESHOOTING
+
+Problem: "Member list looks broken / CSS not loading"
+Solution: 
+  1. Hard refresh browser (Ctrl+F5)
+  2. Clear browser cache completely
+  3. Verify index.html has correct asset file names
+  4. Check that CSS file was uploaded completely
+
+Problem: "Checkboxes missing / bulk action doesn't work"
+Solution:
+  1. Verify index-sdg82H1k.js uploaded completely (should be 884 KB)
+  2. Check browser console for JavaScript errors
+  3. Hard refresh page (Ctrl+F5)
+
+Problem: "Bulk export button doesn't work / 404 error"
+Solution:
+  1. Verify api/index.php was updated correctly
+  2. Verify api/handlers/export.php was updated correctly
+  3. Check if export route matches: /api/export/members/csv?ids=...
+  4. Test with single member export first
+
+Problem: "Bulk deactivate shows error"
+Solution:
+  1. Verify api/handlers/members.php has bulk_deactivate_handler()
+  2. Test that members can be deactivated individually first
+  3. Check browser console for specific error message
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🔄 ROLLBACK PROCEDURE (If Issues Occur)
+
+If anything goes wrong:
+
+1. Restore backed-up index.html
+2. Restore backed-up api/index.php
+3. Restore backed-up api/handlers/export.php
+4. Restore old asset files:
+   • index-Dqo5HCsJ.js
+   • index-DekY_rKG.css
+5. Clear browser cache and hard refresh
+6. Test previous functionality still works
+
+═══════════════════════════════════════════════════════════════════════════════
+
+📞 SUPPORT NOTES
+
+For questions about:
+• Feature implementation details → See PHASE2_IMPLEMENTATION_SUMMARY.md
+• Testing scenarios → See PHASE2_IMPLEMENTATION_SUMMARY.md
+• API compatibility → All existing endpoints unchanged
+• Database schema → No schema changes required
+• Security → Uses parameterized queries, no SQL injection vulnerability
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Generated: 2026-05-28
+Version: Phase 2 (Requirements 1-4)
+Status: ✅ Ready for Production Deployment

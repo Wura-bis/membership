@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
       const data = await response.json();
       
       if (data.authenticated) {
-        setUser({ ...data.user, role: data.user.role.toLowerCase() });
+        setUser({ ...data, role: data.role.toLowerCase() });
       } else {
         setUser(null);
         clearSessionRefresh();
@@ -73,6 +73,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    if (user) sessionStorage.setItem("redirectUserId", String(user.user_id ?? user.id ?? ""));
     setUser(null);
     clearSessionRefresh();
     fetch(`${API_BASE_URL}/api/logout`, { method: "POST", credentials: "include" });

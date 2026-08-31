@@ -46,21 +46,42 @@ function DarkModeToggle() {
 }
 
 export default function MainLayout({ children }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebarCollapsed') === 'true'; } catch { return false; }
+  });
+
+  const handleMenuToggle = () => {
+    if (window.innerWidth <= 768) {
+      setSidebarOpen(o => !o);
+    } else {
+      setSidebarCollapsed(o => {
+        const next = !o;
+        try { localStorage.setItem('sidebarCollapsed', String(next)); } catch {}
+        return next;
+      });
+    }
+  };
+
   return (
-    <div style={{ 
-      display: 'flex', 
+    <div style={{
+      display: 'flex',
       height: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%)'
+      background: 'linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-mid) 50%, var(--bg-gradient-end) 100%)'
     }}>
-      <Sidebar />
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} collapsed={sidebarCollapsed} />
+      <div style={{
+        flex: 1,
+        display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        minWidth: 0
       }}>
-        <Navbar />
-        <main style={{ 
+        <Navbar onMenuToggle={handleMenuToggle} />
+        <main style={{
           flex: 1,
           overflowY: 'auto',
           background: 'transparent'

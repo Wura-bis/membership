@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
 import ConfirmModal from "../components/confirmmodal";
 import React from 'react';
 import { API_BASE_URL } from '../utils/api';
+import { T, card, btn, badge, pageHeader } from '../utils/theme';
 
 export default function MyProfile() {
   const { user: authUser } = useAuth();
@@ -21,6 +22,13 @@ export default function MyProfile() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showExportData, setShowExportData] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/my-profile`, { credentials: "include" })
@@ -124,6 +132,26 @@ export default function MyProfile() {
     setShowDeleteModal(false);
   };
 
+  const handleChangePassword = async () => {
+    setPwError(""); setPwSuccess("");
+    if (!pwForm.currentPassword || !pwForm.newPassword) { setPwError("All fields are required."); return; }
+    if (pwForm.newPassword !== pwForm.confirmPassword) { setPwError("New passwords do not match."); return; }
+    if (pwForm.newPassword.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    setPwLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/my-profile/change-password`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwError(data.error || 'Failed to change password.'); return; }
+      setPwSuccess("Password changed successfully!");
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch { setPwError("Network error. Please try again."); }
+    finally { setPwLoading(false); }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -152,30 +180,17 @@ export default function MyProfile() {
     <MainLayout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          {/* Header */}
-          <div className="dashboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <h1 className="dashboard-title" style={{ fontSize: '38px', fontWeight: '700', color: '#0f766e' }}>👤 My Profile</h1>
-                <p className="dashboard-subtitle" style={{ fontSize: '20px', fontWeight: '600', color: '#64748b' }}>
-                  Manage your personal information and account settings
-                </p>
-              </div>
-              <Link
-                to={authUser?.role === 'admin' ? '/dashboard' : authUser?.role === 'private' ? '/dashboard/private' : '/public'}
-                className="btn-primary"
-                style={{ 
-                  textDecoration: 'none',
-                  background: '#64748b',
-                  padding: '18px 28px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '8px'
-                }}
-              >
-                ← Back to Dashboard
-              </Link>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>👤 My Profile</h1>
+              <p style={pageHeader.subtitle}>Manage your personal information and account settings</p>
             </div>
+            <Link
+              to={authUser?.role === 'admin' ? '/dashboard' : authUser?.role === 'private' ? '/dashboard/private' : '/public'}
+              style={{ ...btn.ghost, textDecoration: 'none' }}
+            >
+              ← Back to Dashboard
+            </Link>
           </div>
 
           {error && (
@@ -185,7 +200,7 @@ export default function MyProfile() {
           )}
 
           {user && user.notification && (
-            <div className="alert alert-warning" style={{ marginBottom: '32px', background: '#fef3c7', color: '#92400e', padding: '12px', borderRadius: '8px' }}>
+            <div style={{ marginBottom: '32px', background: 'var(--btn-warning-bg)', border: `2px solid ${T.amberBorder}`, color: T.amber, padding: '10px 14px', borderRadius: T.radiusMd, fontSize: T.fontBase, fontWeight: '600' }}>
               {user.notification}
             </div>
           )}
@@ -197,26 +212,14 @@ export default function MyProfile() {
           )}
 
           {/* Profile Card */}
-          <div className="dashboard-card" style={{ 
-            padding: '36px',
-            background: '#f0fdfa',
-            borderRadius: '12px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+          <div className="dashboard-card" style={{
+            ...card,
+            padding: '24px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
-              <h2 className="dashboard-card-title" style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e' }}>📋 Profile Information</h2>
+              <h2 className="dashboard-card-title" style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0' }}>📋 Profile Information</h2>
               {!editMode && (
-                <button
-                  onClick={() => setEditMode(true)}
-                  className="btn-primary"
-                  style={{ 
-                    fontSize: '16px', 
-                    padding: '16px 28px',
-                    fontWeight: '700',
-                    borderRadius: '8px'
-                  }}
-                >
+                <button onClick={() => setEditMode(true)} style={btn.primary}>
                   ✏️ Edit Profile
                 </button>
               )}
@@ -226,12 +229,12 @@ export default function MyProfile() {
               <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-                  gap: '20px',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                  gap: '16px',
                   marginBottom: '32px'
-                }}>
+                }} className="mobile-grid">
                   <div>
-                    <label className="form-label" htmlFor="firstName" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>First Name</label>
+                    <label className="form-label" htmlFor="firstName" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px', display: 'block' }}>First Name</label>
                     <input
                       id="firstName"
                       type="text"
@@ -240,12 +243,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your first name"
-                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
+                      style={{ fontSize: T.fontBase, fontWeight: '500', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                   
                   <div>
-                    <label className="form-label" htmlFor="lastName" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Last Name</label>
+                    <label className="form-label" htmlFor="lastName" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px', display: 'block' }}>Last Name</label>
                     <input
                       id="lastName"
                       type="text"
@@ -254,12 +257,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your last name"
-                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
+                      style={{ fontSize: T.fontBase, fontWeight: '500', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="username" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Username *</label>
+                    <label className="form-label" htmlFor="username" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px', display: 'block' }}>Username *</label>
                     <input
                       id="username"
                       type="text"
@@ -269,12 +272,12 @@ export default function MyProfile() {
                       required
                       className="form-input"
                       placeholder="Enter your username"
-                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
+                      style={{ fontSize: T.fontBase, fontWeight: '500', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="email" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Email Address</label>
+                    <label className="form-label" htmlFor="email" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px', display: 'block' }}>Email Address</label>
                     <input
                       id="email"
                       type="email"
@@ -283,12 +286,12 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="Enter your email"
-                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
+                      style={{ fontSize: T.fontBase, fontWeight: '500', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="phoneNumber" style={{ fontSize: '16px', fontWeight: '700', color: '#0f766e', marginBottom: '8px', display: 'block' }}>Phone Number</label>
+                    <label className="form-label" htmlFor="phoneNumber" style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px', display: 'block' }}>Phone Number</label>
                     <input
                       id="phoneNumber"
                       type="tel"
@@ -297,19 +300,18 @@ export default function MyProfile() {
                       onChange={handleChange}
                       className="form-input"
                       placeholder="+353 87 123 4567"
-                      style={{ fontSize: '17px', fontWeight: '500', padding: '16px', border: '2px solid #5eead4', borderRadius: '8px' }}
+                      style={{ fontSize: T.fontBase, fontWeight: '500', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, width: '100%', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={() => {
                       setEditMode(false);
                       setError("");
                       setSuccess("");
-                      // Reset form to original values
                       setForm({
                         username: user.username || "",
                         email: user.email || "",
@@ -318,63 +320,42 @@ export default function MyProfile() {
                         lastName: user.lastName || "",
                       });
                     }}
-                    className="btn-primary"
-                    style={{ 
-                      background: '#64748b',
-                      border: 'none',
-                      fontSize: '16px',
-                      padding: '18px 32px',
-                      fontWeight: '700',
-                      borderRadius: '8px'
-                    }}
+                    style={btn.ghost}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="btn-primary"
-                    style={{
-                      fontSize: '16px',
-                      padding: '18px 32px',
-                      fontWeight: '700',
-                      borderRadius: '8px'
-                    }}
+                    style={{ ...btn.primary, opacity: isSaving ? 0.7 : 1 }}
                   >
-                    {isSaving ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="spinner" style={{ width: '20px', height: '20px' }}></div>
-                        Saving...
-                      </div>
-                    ) : (
-                      "💾 Save Changes"
-                    )}
+                    {isSaving ? "Saving..." : "💾 Save Changes"}
                   </button>
                 </div>
               </form>
             ) : (
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                gap: '28px' 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+                gap: '20px' 
               }}>
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Full Name</div>
-                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Full Name</div>
+                  <div className="info-value" style={{ fontSize: T.fontBase, fontWeight: '500', color: T.textMain }}>
                     {[user.firstName, user.lastName].filter(Boolean).join(" ") || "—"}
                   </div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Username</div>
-                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>{user.username || "—"}</div>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Username</div>
+                  <div className="info-value" style={{ fontSize: T.fontBase, fontWeight: '500', color: T.textMain }}>{user.username || "\u2014"}</div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Email Address</div>
-                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500' }}>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Email Address</div>
+                  <div className="info-value" style={{ fontSize: T.fontBase, fontWeight: '500' }}>
                     {user.email ? (
-                      <a href={`mailto:${user.email}`} style={{ color: '#14b8a6', textDecoration: 'none', fontWeight: '600' }}>
+                      <a href={`mailto:${user.email}`} style={{ color: T.primaryLight, textDecoration: 'none', fontWeight: '600' }}>
                         {user.email}
                       </a>
                     ) : "—"}
@@ -382,44 +363,33 @@ export default function MyProfile() {
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Phone Number</div>
-                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>{user.phoneNumber || "—"}</div>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Phone Number</div>
+                  <div className="info-value" style={{ fontSize: T.fontBase, fontWeight: '500', color: T.textMain }}>{user.phoneNumber || "\u2014"}</div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>ACCOUNT ROLE</div>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>ACCOUNT ROLE</div>
                   <div className="info-value">
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '12px 20px',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      borderRadius: '20px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      background: user.role === 'admin'
-                        ? '#0d9488'
-                        : user.role === 'private' && user.isApproved === false
-                          ? '#f59e0b'
-                          : user.role === 'private' && user.isApproved === true
-                            ? '#6366f1'
-                            : '#10b981',
-                      color: 'white'
-                    }}>
+                    <span style={
+                      user.role === 'admin' ? badge.admin :
+                      user.role === 'private' && user.isApproved === false ? badge.pending :
+                      user.role === 'private' && user.isApproved === true ? badge.private :
+                      badge.public
+                    }>
                       {user.role === 'admin'
                         ? 'ADMINISTRATOR'
                         : user.role === 'private' && user.isApproved === false
                           ? 'PENDING APPROVAL'
                           : user.role === 'private' && user.isApproved === true
-                            ? 'PRIVATE MEMBER'
+                            ? 'PRIVATE USER'
                             : 'PUBLIC USER'}
                     </span>
                   </div>
                 </div>
 
                 <div className="info-item">
-                  <div className="info-label" style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Last Login</div>
-                  <div className="info-value" style={{ fontSize: '17px', fontWeight: '500', color: '#1e293b' }}>
+                  <div className="info-label" style={{ fontSize: T.fontSm, fontWeight: '600', color: T.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>Last Login</div>
+                  <div className="info-value" style={{ fontSize: T.fontBase, fontWeight: '500', color: T.textMain }}>
                     {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "—"}
                   </div>
                 </div>
@@ -429,139 +399,41 @@ export default function MyProfile() {
 
           {/* Account Actions */}
           {!editMode && (
-            <div className="dashboard-card" style={{ 
-              padding: '36px',
-              background: '#f0fdfa',
-              borderRadius: '12px',
-              border: '2px solid #5eead4',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
+            <div className="dashboard-card" style={{
+              ...card,
+              padding: '24px',
             }}>
-              <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f766e', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>🔧 Account Actions</h2>
-              <div className="account-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}>🔧 Account Actions</h2>
+              <div className="account-actions" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '10px' }}>
                 {user.role === 'admin' ? (
                   <>
-                    <button 
-                      className="action-btn" 
-                      onClick={() => setShowChangePassword(true)} 
-                      style={{ 
-                        padding: '14px 24px', 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        border: '2px solid #14b8a6', 
-                        borderRadius: '8px', 
-                        background: 'white', 
-                        color: '#14b8a6', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease' 
-                      }}
-                    >
+                    <button className="action-btn" onClick={() => setShowChangePassword(true)} style={btn.primary}>
                       🔑 Change Password
                     </button>
-                    <button 
-                      className="action-btn" 
-                      onClick={() => setShowExportData(true)} 
-                      style={{ 
-                        padding: '14px 24px', 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        border: '2px solid #059669', 
-                        borderRadius: '8px', 
-                        background: 'white', 
-                        color: '#059669', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease' 
-                      }}
-                    >
+                    <button className="action-btn" onClick={() => setShowExportData(true)} style={btn.exportCsv}>
                       📄 Export My Data
                     </button>
-                    <button
-                      className="action-btn delete-account-btn"
-                      style={{ 
-                        padding: '14px 24px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        border: '2px solid #dc2626', 
-                        color: '#dc2626', 
-                        background: 'white',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onClick={() => setShowDeleteModal(true)}
-                    >
+                    <button className="action-btn delete-account-btn" onClick={() => setShowDeleteModal(true)} style={btn.danger}>
                       🗑️ Delete Account
                     </button>
                   </>
                 ) : (user.role === 'private' && user.isApproved === true) ? (
                   <>
-                    <button 
-                      className="action-btn" 
-                      onClick={() => setShowChangePassword(true)} 
-                      style={{ 
-                        padding: '14px 24px', 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        border: '2px solid #14b8a6', 
-                        borderRadius: '8px', 
-                        background: 'white', 
-                        color: '#14b8a6', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease' 
-                      }}
-                    >
+                    <button className="action-btn" onClick={() => setShowChangePassword(true)} style={btn.primary}>
                       🔑 Change Password
                     </button>
-                    <button 
-                      className="action-btn" 
-                      onClick={() => setShowExportData(true)} 
-                      style={{ 
-                        padding: '14px 24px', 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        border: '2px solid #059669', 
-                        borderRadius: '8px', 
-                        background: 'white', 
-                        color: '#059669', 
-                        cursor: 'pointer', 
-                        transition: 'all 0.2s ease' 
-                      }}
-                    >
+                    <button className="action-btn" onClick={() => setShowExportData(true)} style={btn.exportCsv}>
                       📄 Export My Data
                     </button>
-                    <button
-                      className="action-btn delete-account-btn"
-                      style={{ 
-                        padding: '14px 24px',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        border: '2px solid #dc2626', 
-                        color: '#dc2626', 
-                        background: 'white',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onClick={() => setShowDeleteModal(true)}
-                    >
+                    <button className="action-btn delete-account-btn" onClick={() => setShowDeleteModal(true)} style={btn.danger}>
                       🗑️ Delete Account
                     </button>
                   </>
                 ) : (
-                  <button 
-                    onClick={() => setShowPrivateAccessConfirm(true)} 
-                    disabled={requestingPrivateAccess} 
-                    style={{ 
-                      padding: '14px 28px', 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      border: '2px solid #6366f1', 
-                      borderRadius: '8px', 
-                      background: 'white', 
-                      color: '#6366f1', 
-                      cursor: requestingPrivateAccess ? 'not-allowed' : 'pointer', 
-                      opacity: requestingPrivateAccess ? 0.6 : 1, 
-                      transition: 'all 0.2s ease' 
-                    }}
+                  <button
+                    onClick={() => setShowPrivateAccessConfirm(true)}
+                    disabled={requestingPrivateAccess}
+                    style={{ ...btn.primary, opacity: requestingPrivateAccess ? 0.6 : 1, cursor: requestingPrivateAccess ? 'not-allowed' : 'pointer' }}
                   >
                     {requestingPrivateAccess ? '⏳ Requesting...' : '🔐 Request Private Access'}
                   </button>
@@ -573,11 +445,11 @@ export default function MyProfile() {
                 <div style={{
                   marginTop: '24px',
                   padding: '16px 20px',
-                  background: '#f0f9ff',
-                  border: '2px solid #0891b2',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  color: '#0c4a6e'
+                  background: T.primaryBg,
+                  border: `2px solid ${T.primaryBorder}`,
+                  borderRadius: T.radiusMd,
+                  fontSize: T.fontBase,
+                  color: T.primary
                 }}>
                   <strong>ℹ️ Public Account:</strong> You're using a shared public account. To get individual account features like password management and data export, request private access above.
                 </div>
@@ -611,55 +483,37 @@ export default function MyProfile() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 9999
+          zIndex: 9999,
+          padding: '16px'
         }}>
           <div className="modal-content" style={{
-            background: 'white',
-            padding: '40px',
-            borderRadius: '16px',
+            background: 'var(--card-bg)',
+            padding: '24px',
+            borderRadius: T.radiusLg,
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-            minWidth: '400px',
+            minWidth: '280px',
             maxWidth: '90vw',
-            textAlign: 'center'
+            textAlign: 'center',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1f2937' }}>Permanently Delete Account</h3>
-            <p style={{ fontSize: '17px', marginBottom: '28px', color: '#64748b', lineHeight: '1.6' }}>
+            <div style={{ fontSize: '32px', marginBottom: '16px' }}>⚠️</div>
+            <h3 style={{ fontSize: T.fontLg, fontWeight: '700', marginBottom: '16px', color: T.textMain }}>Permanently Delete Account</h3>
+            <p style={{ fontSize: T.fontBase, marginBottom: '28px', color: T.textMuted, lineHeight: '1.6' }}>
               Are you sure you want to permanently delete your account? This action cannot be undone and all your data will be lost.
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button 
-                onClick={handleDeleteAccount} 
-                disabled={deleting} 
-                style={{
-                  background: '#dc2626', 
-                  color: 'white', 
-                  padding: '14px 28px', 
-                  borderRadius: '8px', 
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  border: 'none',
-                  cursor: deleting ? 'not-allowed' : 'pointer',
-                  opacity: deleting ? 0.6 : 1,
-                  transition: 'all 0.2s ease'
-                }}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{ ...btn.danger, opacity: deleting ? 0.6 : 1, cursor: deleting ? 'not-allowed' : 'pointer' }}
               >
                 {deleting ? '⏳ Deleting...' : '🗑️ Delete Account'}
               </button>
-              <button 
-                onClick={() => setShowDeleteModal(false)} 
-                disabled={deleting} 
-                style={{
-                  background: '#64748b', 
-                  color: 'white', 
-                  padding: '14px 28px', 
-                  borderRadius: '8px', 
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  border: 'none',
-                  cursor: deleting ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                style={btn.ghost}
               >
                 Cancel
               </button>
@@ -680,57 +534,78 @@ export default function MyProfile() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 9999
+          zIndex: 9999,
+          padding: '16px'
         }}>
           <div className="modal-content" style={{
-            background: 'white',
-            padding: '40px',
-            borderRadius: '16px',
+            background: 'var(--card-bg)',
+            padding: '24px',
+            borderRadius: T.radiusLg,
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-            minWidth: '400px',
+            minWidth: '280px',
             maxWidth: '90vw',
-            textAlign: 'center'
+            textAlign: 'center',
+            maxHeight: '90vh',
+            overflowY: 'auto'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
-            <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '16px', color: '#1f2937' }}>Export My Data</h3>
-            <p style={{ fontSize: '17px', marginBottom: '28px', color: '#64748b', lineHeight: '1.6' }}>
+            <div style={{ fontSize: '32px', marginBottom: '16px' }}>📄</div>
+            <h3 style={{ fontSize: T.fontLg, fontWeight: '700', marginBottom: '16px', color: T.textMain }}>Export My Data</h3>
+            <p style={{ fontSize: T.fontBase, marginBottom: '28px', color: T.textMuted, lineHeight: '1.6' }}>
               Download a PDF containing all personal data we have on file for your account.
             </p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
-                onClick={() => {
-                  window.open(`${API_BASE_URL}/api/my-data/export`, '_blank');
-                  setShowExportData(false);
-                }}
-                style={{
-                  background: '#059669', 
-                  color: 'white', 
-                  padding: '14px 28px', 
-                  borderRadius: '8px', 
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
+                onClick={() => { window.open(`${API_BASE_URL}/api/my-data/export`, '_blank'); setShowExportData(false); }}
+                style={btn.success}
               >
                 📥 Download PDF
               </button>
-              <button 
-                onClick={() => setShowExportData(false)} 
-                style={{
-                  background: '#64748b', 
-                  color: 'white', 
-                  padding: '14px 28px', 
-                  borderRadius: '8px', 
-                  fontWeight: 600,
-                  fontSize: '16px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
+              <button onClick={() => setShowExportData(false)} style={btn.ghost}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '28px', borderRadius: T.radiusLg, boxShadow: '0 8px 32px rgba(0,0,0,0.2)', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, marginBottom: '6px' }}>🔑 Change Password</h3>
+            <p style={{ fontSize: T.fontBase, color: T.textMuted, marginBottom: '20px' }}>Enter your current password and choose a new one.</p>
+
+            {pwError && <div style={{ background: T.redLight, border: `2px solid ${T.redBorder}`, color: T.red, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '14px', fontSize: T.fontBase }}>{pwError}</div>}
+            {pwSuccess && <div style={{ background: T.greenLight, border: `2px solid ${T.greenBorder}`, color: T.green, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '14px', fontSize: T.fontBase }}>{pwSuccess}</div>}
+
+            {[
+              { key: 'currentPassword', label: 'Current Password', show: showPwCurrent, toggle: setShowPwCurrent },
+              { key: 'newPassword',     label: 'New Password',     show: showPwNew,     toggle: setShowPwNew },
+              { key: 'confirmPassword', label: 'Confirm New Password', show: showPwNew, toggle: null },
+            ].map(({ key, label, show, toggle }) => (
+              <div key={key} style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px' }}>{label}</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={show ? "text" : "password"}
+                    autoComplete={key === 'currentPassword' ? 'current-password' : 'new-password'}
+                    value={pwForm[key]}
+                    onChange={e => { setPwForm(p => ({ ...p, [key]: e.target.value })); setPwError(""); setPwSuccess(""); }}
+                    style={{ width: '100%', padding: '9px 36px 9px 12px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, fontSize: T.fontBase, fontFamily: 'inherit', background: 'var(--card-bg)', color: T.textMain, boxSizing: 'border-box' }}
+                  />
+                  {toggle && (
+                    <button type="button" onClick={() => toggle(v => !v)} tabIndex={-1}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: T.textMuted, padding: '2px' }}>
+                      {show ? "👁️" : "👁️‍🗨️"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setShowChangePassword(false); setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); setPwError(""); setPwSuccess(""); setShowPwCurrent(false); setShowPwNew(false); }} style={btn.ghost}>Cancel</button>
+              <button type="button" onClick={handleChangePassword} disabled={pwLoading} style={{ ...btn.primary, opacity: pwLoading ? 0.6 : 1, cursor: pwLoading ? 'not-allowed' : 'pointer' }}>
+                {pwLoading ? 'Updating...' : 'Update Password'}
               </button>
             </div>
           </div>

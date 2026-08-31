@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import PublicLayout from "../../components/publiclayout";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, pageHeader } from '../../utils/theme';
 import {
   PieChart, Pie, Cell, Legend,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
@@ -73,12 +74,11 @@ export default function PublicDashboard() {
     <Layout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Header */}
-          <div className="dashboard-header">
-            <h1 className="dashboard-title" style={{ fontSize: '38px', marginBottom: '16px', fontWeight: '700', color: '#0f766e' }}>🌐 Public Dashboard</h1>
-            <p className="dashboard-subtitle" style={{ fontSize: '20px', lineHeight: '1.6', color: '#334155', fontWeight: '500' }}>
-              Welcome! Explore membership statistics and learn more about our community.
-            </p>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>🌐 Public Dashboard</h1>
+              <p style={pageHeader.subtitle}>Welcome! Explore membership statistics and learn more about our community.</p>
+            </div>
           </div>
 
           {error && (
@@ -92,33 +92,25 @@ export default function PublicDashboard() {
               {/* Main Stats Grid */}
               <div className="dashboard-grid">
                 {/* Total Members Card */}
-                <div className="dashboard-card" style={{ textAlign: 'center', padding: '36px', background: '#f0fdfa' }}>
-                  <h2 className="dashboard-card-title" style={{ fontSize: '24px', marginBottom: '20px', fontWeight: '700', color: '#0f766e' }}>👥 Membership Overview</h2>
+                <div className="dashboard-card" style={{ ...card, textAlign: 'center', padding: '24px' }}>
+                  <h2 className="dashboard-card-title" style={{ fontSize: T.fontLg, marginBottom: '16px', fontWeight: '700', color: T.textMain }}>👥 Membership Overview</h2>
                   <div style={{
-                    fontSize: '64px',
+                    fontSize: 'clamp(32px, 6vw, 48px)',
                     fontWeight: '800',
-                    color: '#14b8a6',
+                    color: T.primaryLight,
                     marginBottom: '12px'
                   }}>
                     {stats.totalMembers.toLocaleString()}
                   </div>
-                  <p style={{ color: '#475569', fontSize: '18px', marginBottom: '24px', fontWeight: '600' }}>
+                  <p style={{ color: T.textMuted, fontSize: T.fontBase, marginBottom: '24px', fontWeight: '600' }}>
                     Historical members honored
                   </p>
                   {stats.totalActive !== undefined && (
-                    <div style={{
-                      paddingTop: '24px',
-                      borderTop: '3px solid #5eead4'
-                    }}>
-                      <div style={{
-                        fontSize: '40px',
-                        fontWeight: '700',
-                        color: '#0f766e',
-                        marginBottom: '10px'
-                      }}>
+                    <div style={{ paddingTop: '20px', borderTop: `2px solid ${T.primaryBorder}` }}>
+                      <div style={{ fontSize: '28px', fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
                         {stats.totalActive.toLocaleString()}
                       </div>
-                      <p style={{ color: '#475569', fontSize: '17px', fontWeight: '600' }}>
+                      <p style={{ color: T.textMuted, fontSize: T.fontBase, fontWeight: '600' }}>
                         Current active members
                       </p>
                     </div>
@@ -126,8 +118,8 @@ export default function PublicDashboard() {
                 </div>
 
                 {/* Membership Categories */}
-                <div className="dashboard-card" style={{ padding: '32px', background: '#f0fdfa' }}>
-                  <h2 className="dashboard-card-title" style={{ fontSize: '24px', marginBottom: '20px', fontWeight: '700', color: '#0f766e' }}>📊 Membership Categories</h2>
+                <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
+                  <h2 className="dashboard-card-title" style={{ fontSize: T.fontLg, marginBottom: '16px', fontWeight: '700', color: T.textMain }}>📊 Membership Categories</h2>
                   {stats.categories && stats.categories.length > 0 ? (
                     <div style={{ height: '340px' }}>
                       <ResponsiveContainer width="100%" height="100%">
@@ -161,7 +153,7 @@ export default function PublicDashboard() {
                           <Tooltip 
                             contentStyle={{ 
                               backgroundColor: '#fff', 
-                              border: '3px solid #14b8a6',
+                              border: `2px solid ${T.primaryBorder}`,
                               borderRadius: '12px',
                               fontSize: '16px',
                               padding: '14px',
@@ -177,8 +169,8 @@ export default function PublicDashboard() {
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      color: '#475569',
-                      fontSize: '18px',
+                      color: T.textMuted,
+                      fontSize: T.fontBase,
                       fontWeight: '600'
                     }}>
                       No category data available
@@ -187,8 +179,8 @@ export default function PublicDashboard() {
                 </div>
 
                 {/* Regional Distribution */}
-                <div className="dashboard-card" style={{ padding: '32px', background: '#f0fdfa' }}>
-                  <h2 className="dashboard-card-title" style={{ fontSize: '24px', marginBottom: '20px', fontWeight: '700', color: '#0f766e' }}>📍 Provincial Distribution</h2>
+                <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
+                  <h2 className="dashboard-card-title" style={{ fontSize: T.fontLg, marginBottom: '16px', fontWeight: '700', color: T.textMain }}>📍 Provincial Distribution</h2>
                   {stats.regions && stats.regions.length > 0 ? (
                     <div style={{ height: '280px' }}>
                       <ResponsiveContainer width="100%" height="100%">
@@ -205,14 +197,14 @@ export default function PublicDashboard() {
                           <Tooltip 
                             contentStyle={{ 
                               backgroundColor: '#fff', 
-                              border: '3px solid #14b8a6',
+                              border: `2px solid ${T.primaryBorder}`,
                               borderRadius: '12px',
                               fontSize: '16px',
                               padding: '14px',
                               fontWeight: '600'
                             }}
                           />
-                          <Bar dataKey="value" fill="#14b8a6" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="value" fill="#4e5d2e" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -222,8 +214,8 @@ export default function PublicDashboard() {
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      color: '#475569',
-                      fontSize: '18px',
+                      color: T.textMuted,
+                      fontSize: T.fontBase,
                       fontWeight: '600'
                     }}>
                       No provincial data available
@@ -233,23 +225,18 @@ export default function PublicDashboard() {
               </div>
 
               {/* Historical Highlights */}
-              <div className="dashboard-card" style={{ padding: '32px', background: '#f0fdfa' }}>
-                <h2 className="dashboard-card-title" style={{ fontSize: '24px', marginBottom: '28px', fontWeight: '700', color: '#0f766e' }}>📜 Historical Membership Highlights</h2>
+              <div className="dashboard-card" style={{ ...card, padding: '24px' }}>
+                <h2 className="dashboard-card-title" style={{ fontSize: 'clamp(16px, 2.2vw, 20px)', marginBottom: '28px', fontWeight: '700', color: T.textMain }}>📜 Historical Membership Highlights</h2>
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                   gap: '24px'
                 }}>
-                  <div style={{
-                    padding: '28px',
-                    background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-                    borderRadius: '16px',
-                    border: '2px solid #5eead4'
-                  }}>
-                    <div style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px' }}>
+                  <div style={{ padding: '20px', background: T.primaryBg, borderRadius: T.radiusLg, border: `2px solid ${T.primaryBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
                       First Member Registered
                     </div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#134e4a' }}>
+                    <div style={{ fontSize: T.fontMd, fontWeight: '800', color: T.textMain }}>
                       {(() => {
                         const d = stats.historical.firstRegistered;
                         if (!d) return "-";
@@ -265,30 +252,20 @@ export default function PublicDashboard() {
                     </div>
                   </div>
                   
-                  <div style={{
-                    padding: '28px',
-                    background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-                    borderRadius: '16px',
-                    border: '2px solid #5eead4'
-                  }}>
-                    <div style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px' }}>
+                  <div style={{ padding: '20px', background: T.primaryBg, borderRadius: T.radiusLg, border: `2px solid ${T.primaryBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
                       Most Members in a Year
                     </div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#134e4a' }}>
+                    <div style={{ fontSize: T.fontMd, fontWeight: '800', color: T.textMain }}>
                       {stats.historical.mostInAYear}
                     </div>
                   </div>
                   
-                  <div style={{
-                    padding: '28px',
-                    background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-                    borderRadius: '16px',
-                    border: '2px solid #5eead4'
-                  }}>
-                    <div style={{ fontSize: '17px', fontWeight: '700', color: '#0f766e', marginBottom: '14px' }}>
-                      Lifetime Memberships
+                  <div style={{ padding: '20px', background: T.primaryBg, borderRadius: T.radiusLg, border: `2px solid ${T.primaryBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
+                      Honorary Memberships
                     </div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#134e4a' }}>
+                    <div style={{ fontSize: T.fontMd, fontWeight: '800', color: T.textMain }}>
                       {stats.historical.lifetime}
                     </div>
                   </div>

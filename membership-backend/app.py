@@ -8,7 +8,6 @@ from datetime import datetime
 from flask import jsonify, session
 from flask import Flask, request, jsonify, session, send_file, Response, send_from_directory
 from flask_cors import CORS
-import sqlite3
 import hashlib
 from datetime import datetime, timedelta
 from functools import wraps
@@ -32,12 +31,14 @@ def format_date_for_frontend(date_value):
     if isinstance(date_value, str):
         # Split on space to remove time component if present
         date_part = date_value.split(' ')[0]
+        if date_part == '0000-00-00':
+            return None
         # Validate it's in the right format
         try:
             datetime.strptime(date_part, '%Y-%m-%d')
             return date_part
         except ValueError:
-            return str(date_value)
+            return None
     
     return str(date_value)
 from werkzeug.utils import secure_filename
@@ -54,6 +55,10 @@ try:
     import pandas as pd
 except ImportError:
     pd = None
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
 try:
     from reportlab.lib.pagesizes import letter as reportlab_letter
     from reportlab.pdfgen import canvas as reportlab_canvas
@@ -82,7 +87,7 @@ ALLOWED_EXTENSIONS = {
 }
 PHOTO_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'txt', 'csv', 'xlsx'}
-SESSION_TIMEOUT = 7200  # 2 hours default (will be overridden by database setting)
+SESSION_TIMEOUT = 28800  # 8 hours default (will be overridden by database setting)
 EMAIL_CONFIG = {
     'smtp_server': 'smtp.gmail.com',
     'smtp_port': 587,
@@ -221,7 +226,7 @@ def fix_province_data():
         # Update Charlottetown address
         cursor.execute("""
             UPDATE MemberAddress 
-            SET ProvinceID = ?, IsCurrent = 1
+            SET ProvinceID = %s, IsCurrent = 1
             WHERE City = 'Charlottetown'
         """, (pe_id,))
         
@@ -262,12 +267,12 @@ def dashboard_stats():
             cursor.execute("""
                 SELECT COUNT(*) FROM Members m
                 INNER JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
-                WHERE mc.CategoryName = ?
+                WHERE mc.CategoryName = %s
             """, (cat,))
             category_counts[cat] = cursor.fetchone()[0]
 
         # Get new members this month
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE DateJoined >= ?", (datetime.now().replace(day=1).strftime('%Y-%m-%d'),))
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE DateJoined >= %s", (datetime.now().replace(day=1).strftime('%Y-%m-%d'),))
         new_this_month = cursor.fetchone()[0]
 
         conn.close()
@@ -324,7 +329,7 @@ def submit_support_request():
         
         cursor.execute("""
             INSERT INTO SupportTickets (UserID, Subject, Message, Priority, Status, DateCreated)
-            VALUES (?, ?, ?, ?, 'open', datetime('now'))
+            VALUES (%s, %s, %s, %s, 'open', datetime('now', 'localtime'))
         """, (user_id, subject, message, priority))
         
         conn.commit()
@@ -334,7 +339,7 @@ def submit_support_request():
         ticket_id = cursor.fetchone()[0]
         
         # Get user details for email
-        cursor.execute("SELECT Username, Email FROM User WHERE UserID = ?", (user_id,))
+        cursor.execute("SELECT Username, Email FROM User WHERE UserID = %s", (user_id,))
         user_row = cursor.fetchone()
         
         if user_row:
@@ -426,11 +431,11 @@ def get_support_tickets():
         params = []
         
         if status_filter != 'all':
-            where_conditions.append("st.Status = ?")
+            where_conditions.append("st.Status = %s")
             params.append(status_filter)
         
         if priority_filter != 'all':
-            where_conditions.append("st.Priority = ?")
+            where_conditions.append("st.Priority = %s")
             params.append(priority_filter)
         
         if where_conditions:
@@ -501,8 +506,8 @@ def update_support_ticket(ticket_id):
         # Use the correct column names from the actual table structure
         query = """
             UPDATE SupportTickets 
-            SET Status = ?, AdminResponse = ?, AdminUserID = ?, DateUpdated = ?
-            WHERE TicketID = ?
+            SET Status = %s, AdminResponse = %s, AdminUserID = %s, DateUpdated = %s
+            WHERE TicketID = %s
         """
         
         params = [
@@ -553,7 +558,7 @@ def get_my_support_tickets():
             SELECT TicketID, Subject, Message, Priority, Status, DateCreated, 
                    DateUpdated, AdminResponse
             FROM SupportTickets
-            WHERE UserID = ?
+            WHERE UserID = %s
             ORDER BY DateCreated DESC
         """, (user_id,))
         
@@ -698,7 +703,7 @@ def log_audit_event(user_id, action, table_name, record_id, details=None):
         # Direct insert without trying to create table every time
         cursor.execute("""
             INSERT INTO AuditLog (UserID, Action, TableName, RecordID, Details, Timestamp)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (user_id, action, table_name, record_id, details or '', datetime.now()))
         conn.commit()
     except Exception as e:
@@ -720,7 +725,7 @@ def log_audit_event(user_id, action, table_name, record_id, details=None):
                 # Retry the insert
                 cursor.execute("""
                     INSERT INTO AuditLog (UserID, Action, TableName, RecordID, Details, Timestamp)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                 """, (user_id, action, table_name, record_id, details or '', datetime.now()))
                 conn.commit()
                 logger.info("Created AuditLog table and logged event")
@@ -783,7 +788,7 @@ def change_password_me():
 
         # Verify old password
         cursor.execute(
-            "SELECT PasswordHash, Username FROM User WHERE UserID = ?",
+            "SELECT PasswordHash, Username FROM User WHERE UserID = %s",
             (session['user_id'],
              ))
         row = cursor.fetchone()
@@ -794,8 +799,8 @@ def change_password_me():
         hashed = hash_password(new_password)
         cursor.execute("""
             UPDATE User
-            SET PasswordHash = ?
-            WHERE UserID = ?
+            SET PasswordHash = %s
+            WHERE UserID = %s
         """, (hashed, session['user_id']))
         conn.commit()
 
@@ -826,7 +831,7 @@ def export_my_data():
         cursor = conn.cursor()
         
         # Get user profile information
-        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\", Role, IsApproved, CreatedAt, LastLogin FROM User WHERE UserID = ?", (session['user_id'],))
+        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\", Role, IsApproved, CreatedAt, LastLogin FROM User WHERE UserID = %s", (session['user_id'],))
         
         user_info = cursor.fetchone()
         if not user_info:
@@ -835,7 +840,7 @@ def export_my_data():
         # Get audit logs for this user if AuditLog table exists
         activity_history = []
         try:
-            cursor.execute("SELECT Action, TargetType, Timestamp, Details FROM AuditLog WHERE UserID = ? ORDER BY Timestamp DESC LIMIT 10", (session['user_id'],))
+            cursor.execute("SELECT Action, TargetType, Timestamp, Details FROM AuditLog WHERE UserID = %s ORDER BY Timestamp DESC LIMIT 10", (session['user_id'],))
             audit_logs = cursor.fetchall()
             if audit_logs:
                 for log in audit_logs:
@@ -1506,7 +1511,7 @@ def create_test_user(username, password, role, email=None):
         cursor = conn.cursor()
 
         # Check if user already exists
-        cursor.execute("SELECT UserID FROM User WHERE Username = ?", (username,))
+        cursor.execute("SELECT UserID FROM User WHERE Username = %s", (username,))
         if cursor.fetchone():
             return True  # User already exists
 
@@ -1516,7 +1521,7 @@ def create_test_user(username, password, role, email=None):
 
         cursor.execute("""
             INSERT INTO User (UserID, Username, Email, PasswordHash, Role, IsApproved, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (user_id, username, email, hashed_password, role, 1, datetime.now()))
 
         conn.commit()
@@ -1555,7 +1560,7 @@ def login():
         cursor.execute("""
             SELECT UserID, Username, Email, Role, IsApproved, FirstName, "Last Name"
             FROM User
-            WHERE (Username = ? OR Email = ?) AND PasswordHash = ?
+            WHERE (Username = %s OR Email = %s) AND PasswordHash = %s
         """, (username, username, hashed_password))
 
         user = cursor.fetchone()
@@ -1575,8 +1580,8 @@ def login():
                 logger.info(f"User {user[1]} logged in successfully (effective role: {effective_role})")
                 cursor.execute("""
                     UPDATE User
-                    SET LastLogin = ?
-                    WHERE UserID = ?
+                    SET LastLogin = %s
+                    WHERE UserID = %s
                 """, (datetime.now(), user[0]))
                 conn.commit()
                 # Ensure user_id is set and not None
@@ -1584,7 +1589,7 @@ def login():
                     session['user_id'] = user[0]
                 else:
                     # Try to fetch user ID by username/email if missing (should not happen)
-                    cursor.execute("SELECT UserID FROM User WHERE Username = ? OR Email = ?", (user[1], user[2]))
+                    cursor.execute("SELECT UserID FROM User WHERE Username = %s OR Email = %s", (user[1], user[2]))
                     user_id_row = cursor.fetchone()
                     session['user_id'] = user_id_row[0] if user_id_row else None
                 session['username'] = user[1]
@@ -1622,8 +1627,8 @@ def login():
             # Update last login in same transaction
             cursor.execute("""
                 UPDATE User
-                SET LastLogin = ?
-                WHERE UserID = ?
+                SET LastLogin = %s
+                WHERE UserID = %s
             """, (datetime.now(), user[0]))
             conn.commit()
 
@@ -1681,8 +1686,22 @@ def logout():
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
     if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    return jsonify({'success': True, 'message': 'Session refreshed'})
+        return jsonify({'authenticated': False}), 401
+    if check_session_timeout():
+        return jsonify({'authenticated': False}), 401
+    # Update last_activity so the backend timeout resets on each refresh ping
+    session['last_activity'] = datetime.now().timestamp()
+    return jsonify({
+        'authenticated': True,
+        'user': {
+            'id': session.get('user_id'),
+            'username': session.get('username'),
+            'email': session.get('email'),
+            'role': session.get('user_role', 'public'),
+            'firstName': session.get('first_name', ''),
+            'lastName': session.get('last_name', '')
+        }
+    })
 
 # Enhanced Dashboard Routes
 
@@ -1711,7 +1730,7 @@ def get_dashboard():
             cursor.execute("SELECT COUNT(*) FROM Society")
             row = cursor.fetchone()
             total_societies = row[0] if row is not None else 0
-        except sqlite3.OperationalError:
+        except Exception:
             # Society table doesn't exist, set to 0
             total_societies = 0
 
@@ -1722,7 +1741,7 @@ def get_dashboard():
         # Recent members (last 30 days)
         cursor.execute("""
             SELECT COUNT(*) FROM Members
-            WHERE DateJoined >= ? AND DateJoined <= ?
+            WHERE DateJoined >= %s AND DateJoined <= %s
         """, (datetime.now() - timedelta(days=30), datetime.now()))
         row = cursor.fetchone()
         recent_members = row[0] if row is not None else 0
@@ -1753,7 +1772,7 @@ def get_dashboard():
                 COUNT(DISTINCT m.MemberID) as Count
             FROM MemberAddress ma
             JOIN Members m ON ma.MemberID = m.MemberID
-            JOIN Provinces p ON ma.ProvinceID = p.ProvinceID
+            JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
             WHERE ma.IsCurrent = 1
               AND m.IsActive = 1
               AND ma.ProvinceID IS NOT NULL
@@ -1776,7 +1795,7 @@ def get_dashboard():
                 FORMAT(m.DateJoined, 'yyyy-MM') as Month,
                 COUNT(*) as NewMembers
             FROM Members m
-            WHERE m.DateJoined >= ?
+            WHERE m.DateJoined >= %s
             GROUP BY FORMAT(m.DateJoined, 'yyyy-MM')
             ORDER BY Month
         """, (datetime.now() - timedelta(days=365),))
@@ -1910,12 +1929,12 @@ def update_user_approval():
         if action == "approve":
             # Approve the user by setting IsApproved = True
             cursor.execute("""
-                UPDATE User SET IsApproved = 1 WHERE UserID = ?
+                UPDATE User SET IsApproved = 1 WHERE UserID = %s
             """, (user_id,))
         elif action == "reject":
             # Revert user to public status and not approved
             cursor.execute("""
-                UPDATE User SET Role = 'public', IsApproved = 0 WHERE UserID = ?
+                UPDATE User SET Role = 'public', IsApproved = 0 WHERE UserID = %s
             """, (user_id,))
         else:
             return jsonify({"error": "Invalid action"}), 400
@@ -1960,7 +1979,7 @@ def search_members():
         # Build base query
         base_query = """
             SELECT DISTINCT m.MemberID, m.FirstName, m.LastName, m.Email, m.PhoneNumber,
-                   m.[Place of Birth], m.[Date of Birth], m.DateJoined, m.DateEnded,
+                   m.`Place of Birth`, m.`Date of Birth`, m.DateJoined, m.DateEnded,
                    m.IsActive, mc.CategoryName, ic.CountyName, s.Surname,
                    o.OccupationName, m.Notes, soc.SocietyName
             FROM Members m
@@ -1981,46 +2000,46 @@ def search_members():
         # Apply search term (full-text search across multiple fields)
         if search_term:
             base_query += """ AND (
-                m.FirstName LIKE ? OR m.LastName LIKE ? OR
-                m.Email LIKE ? OR m.[Place of Birth] LIKE ? OR
-                mc.CategoryName LIKE ? OR ic.CountyName LIKE ? OR
-                s.Surname LIKE ? OR o.OccupationName LIKE ? OR
-                soc.SocietyName LIKE ? OR m.Notes LIKE ?
+                m.FirstName LIKE %s OR m.LastName LIKE %s OR
+                m.Email LIKE %s OR m.`Place of Birth` LIKE %s OR
+                mc.CategoryName LIKE %s OR ic.CountyName LIKE %s OR
+                s.Surname LIKE %s OR o.OccupationName LIKE %s OR
+                soc.SocietyName LIKE %s OR m.Notes LIKE %s
             )"""
             search_pattern = f'%{search_term}%'
             params.extend(search_pattern * 10)
 
         # Apply filters
         if category_id:
-            base_query += " AND m.MemberCategoryID = ?"
+            base_query += " AND m.MemberCategoryID = %s"
             params.append(category_id)
 
         if county_id:
-            base_query += " AND m.CountyID = ?"
+            base_query += " AND m.CountyID = %s"
             params.append(county_id)
 
         if surname_id:
-            base_query += " AND m.SurnameID = ?"
+            base_query += " AND m.SurnameID = %s"
             params.append(surname_id)
 
         if occupation_id:
-            base_query += " AND m.OccupationID = ?"
+            base_query += " AND m.OccupationID = %s"
             params.append(occupation_id)
 
         if society_id:
-            base_query += " AND m.SocietyID = ?"
+            base_query += " AND m.SocietyID = %s"
             params.append(society_id)
 
         if is_active is not None:
-            base_query += " AND m.IsActive = ?"
+            base_query += " AND m.IsActive = %s"
             params.append(is_active.lower() == 'true')
 
         if date_from:
-            base_query += " AND m.DateJoined >= ?"
+            base_query += " AND m.DateJoined >= %s"
             params.append(date_from)
 
         if date_to:
-            base_query += " AND m.DateJoined <= ?"
+            base_query += " AND m.DateJoined <= %s"
             params.append(date_to)
 
         # Get total count
@@ -2093,6 +2112,156 @@ def search_members():
     finally:
         conn.close()
 
+
+@app.route('/api/members/lookup', methods=['GET'])
+@auth_required
+def lookup_member_duplicate():
+    """Find potential duplicate members by name + at least one contact field."""
+    first_name = (request.args.get('firstName') or '').strip()
+    last_name = (request.args.get('lastName') or '').strip()
+    email = (request.args.get('email') or '').strip() or None
+    phone = (request.args.get('phone') or '').strip() or None
+    dob = (request.args.get('dateOfBirth') or '').strip() or None
+
+    LIBRARY_EMAIL = 'bisofpeilibrary@gmail.com'
+    if email == LIBRARY_EMAIL:
+        email = None
+
+    if not first_name or not last_name or not (email or phone or dob):
+        return jsonify([])
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'DB connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+
+        contact_conditions = []
+        params = [first_name, last_name]
+
+        if email:
+            contact_conditions.append("m.Email = %s")
+            params.append(email)
+        if phone:
+            contact_conditions.append(
+                "(m.PhoneNumber = %s OR EXISTS "
+                "(SELECT 1 FROM MemberPhoneNumbers mpn WHERE mpn.MemberID = m.MemberID AND mpn.PhoneNumber = %s))"
+            )
+            params.extend([phone, phone])
+        if dob:
+            contact_conditions.append("m.`Date of Birth` = %s")
+            params.append(dob)
+
+        contact_clause = " OR ".join(contact_conditions)
+
+        cursor.execute(f"""
+            SELECT DISTINCT m.MemberID, m.FirstName, m.LastName, m.Email, m.PhoneNumber, m.`Date of Birth`
+            FROM Members m
+            WHERE LOWER(TRIM(m.FirstName)) = LOWER(TRIM(%s))
+              AND LOWER(TRIM(m.LastName)) = LOWER(TRIM(%s))
+              AND ({contact_clause})
+        """, params)
+
+        rows = cursor.fetchall()
+        return jsonify([
+            {'id': r[0], 'firstName': r[1], 'lastName': r[2],
+             'email': r[3], 'phoneNumber': r[4], 'dateOfBirth': r[5]}
+            for r in rows
+        ])
+
+    except Exception as e:
+        return jsonify({'error': f'Lookup failed: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/members/statistics', methods=['GET'])
+@auth_required
+def get_member_statistics():
+    category = request.args.get('category', 'Historical')
+    valid_categories = ['Historical', 'Active', 'Inactive', 'Honorary', 'All']
+    if category not in valid_categories:
+        category = 'Historical'
+    user_role = session.get('user_role', '').lower()
+    if user_role == 'public':
+        category = 'Historical'
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection failed'}), 500
+
+    try:
+        cursor = conn.cursor()
+
+        cat_join  = 'LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID'
+        cat_where = f"AND mc.CategoryName = '{category}'" if category != 'All' else ''
+
+        # Surname frequency
+        cursor.execute(f"""
+            SELECT m.LastName, COUNT(*) AS cnt
+            FROM Members m {cat_join}
+            WHERE m.LastName IS NOT NULL AND TRIM(m.LastName) != '' {cat_where}
+            GROUP BY m.LastName
+            ORDER BY cnt DESC, m.LastName
+            LIMIT 200
+        """)
+        last_names = [{'name': r[0], 'count': r[1]} for r in cursor.fetchall()]
+
+        # Oldest members by DOB (top 10)
+        cursor.execute(f"""
+            SELECT m.MemberID, m.FirstName, m.LastName, m.`Date of Birth`, mc.CategoryName
+            FROM Members m {cat_join}
+            WHERE m.`Date of Birth` IS NOT NULL AND TRIM(m.`Date of Birth`) != '' {cat_where}
+            ORDER BY m.`Date of Birth` ASC
+            LIMIT 10
+        """)
+        oldest = [
+            {
+                'id': r[0],
+                'name': f"{r[1] or ''} {r[2] or ''}".strip(),
+                'dateOfBirth': str(r[3]) if r[3] else '',
+                'category': r[4] or '',
+            }
+            for r in cursor.fetchall()
+        ]
+
+        # Irish county connections (all members — heritage data)
+        cursor.execute("""
+            SELECT ic.CountyName, COUNT(DISTINCT icc.MemberID) AS cnt
+            FROM IrishConnectionByCounty icc
+            LEFT JOIN IrishCounties ic ON icc.CountyID = ic.CountyID
+            WHERE ic.CountyName IS NOT NULL
+            GROUP BY ic.CountyName
+            ORDER BY cnt DESC
+        """)
+        irish_counties = [{'county': r[0], 'count': r[1]} for r in cursor.fetchall()]
+
+        # Places of birth
+        cursor.execute(f"""
+            SELECT m.`Place of Birth`, COUNT(*) AS cnt
+            FROM Members m {cat_join}
+            WHERE m.`Place of Birth` IS NOT NULL AND TRIM(m.`Place of Birth`) != '' {cat_where}
+            GROUP BY m.`Place of Birth`
+            ORDER BY cnt DESC
+            LIMIT 100
+        """)
+        places = [{'place': r[0], 'count': r[1]} for r in cursor.fetchall()]
+
+        return jsonify({
+            'category': category,
+            'lastNames': last_names,
+            'oldestMembers': oldest,
+            'irishCounties': irish_counties,
+            'placesOfBirth': places,
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Statistics query failed: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
 # Member CRUD Operations
 
 
@@ -2112,13 +2281,17 @@ def get_members():
 
         # Base query - get county from IrishConnectionByCounty table (where actual county data is stored)
         query = """
-            SELECT 
-                m.MemberID, m.FirstName, m.LastName, 
-                m.[Place of Birth], m.[Date of Birth],
-                m.IsActive, mc.CategoryName, 
-                m.DateJoined, m.DateEnded
-            FROM Members AS m 
+            SELECT
+                m.MemberID, m.FirstName, m.LastName,
+                m.`Place of Birth`, m.`Date of Birth`,
+                m.IsActive, mc.CategoryName,
+                m.DateJoined, m.DateEnded,
+                m.Email, m.PhoneNumber,
+                m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder,
+                o.OccupationName, m.OtherSocieties, m.Notes
+            FROM Members AS m
             LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN Occupation AS o ON m.OccupationID = o.OccupationID
         """
 
         # Role-based filtering - all users must be logged in
@@ -2138,53 +2311,13 @@ def get_members():
         for row in cursor.fetchall():
             member_id = row[0]
             
-            # Get county from IrishConnectionByCounty table (primary Irish ancestry link)
+            # County filled by batch query below; placeholder here
             county_name = ""
-            try:
-                cursor.execute("""
-                    SELECT ic.CountyName
-                    FROM IrishConnectionByCounty AS iconn
-                    LEFT JOIN IrishCounties AS ic ON iconn.CountyID = ic.CountyID
-                    WHERE iconn.MemberID = ?
-                    LIMIT 1
-                """, (str(member_id),))
-                county_row = cursor.fetchone()
-                if county_row and county_row[0]:
-                    county_name = county_row[0]
-            except:
-                county_name = ""
-            
-            # Get address info with simple query
+
+            # Filled by batch queries after main loop
             address_info = ""
-            try:
-                cursor.execute("""
-                    SELECT Street, City 
-                    FROM MemberAddress 
-                    WHERE MemberID = ? AND IsCurrent = 1
-                """, (member_id,))
-                addr_row = cursor.fetchone()
-                if addr_row:
-                    address_parts = [part for part in [addr_row[0], addr_row[1]] if part]
-                    address_info = ", ".join(address_parts)
-            except:
-                address_info = ""
-                
-            # Get role info from MemberRole and Role tables
+            address_search = ""
             role_info = ""
-            try:
-                cursor.execute("""
-                    SELECT r.RoleName
-                    FROM MemberRole mr
-                    LEFT JOIN Role r ON mr.RoleID = r.RoleID
-                    WHERE mr.MemberID = ?
-                    ORDER BY mr.FiscalYearID DESC
-                """, (member_id,))
-                role_row = cursor.fetchone()
-                if role_row:
-                    role_info = role_row[0]
-            except Exception as e:
-                print(f"DEBUG: Role query failed for member {member_id}: {e}")
-                role_info = ""
 
             member_data = {
                 'id': row[0],
@@ -2199,10 +2332,47 @@ def get_members():
                 'dateEnded': row[8].strftime('%Y-%m-%d') if row[8] and hasattr(row[8], 'strftime') else str(row[8]) if row[8] else None,
                 'membershipYears': calculate_membership_years(row[7], row[8]) if row[7] else None,
                 'address': address_info,
+                'addressSearch': address_search,
                 'role': role_info,
-                'volunteeringInterests': []
+                'email': row[9] or '',
+                'phoneNumber': row[10] or '',
+                'approvedBy': row[11] or '',
+                'signedBy': row[12] or '',
+                'proposer': row[13] or '',
+                'seconder': row[14] or '',
+                'occupation': row[15] or '',
+                'otherSocieties': row[16] or '',
+                'notes': row[17] or '',
+                'volunteeringInterests': [],
+                'irishSurnames': [],
+                'allPhones': [],
+                'allCounties': []
             }
             members.append(member_data)
+
+        # Batch fetch all counties per member (replaces per-member N+1 query)
+        if members:
+            member_ids = [m['id'] for m in members]
+            placeholders = ','.join(['%s' for _ in member_ids])
+            try:
+                cursor.execute(f"""
+                    SELECT iconn.MemberID, ic.CountyName
+                    FROM IrishConnectionByCounty AS iconn
+                    LEFT JOIN IrishCounties AS ic ON iconn.CountyID = ic.CountyID
+                    WHERE iconn.MemberID IN ({placeholders}) AND ic.CountyName IS NOT NULL
+                """, member_ids)
+                counties_map = {}
+                for crow in cursor.fetchall():
+                    mid = crow[0]
+                    if mid not in counties_map:
+                        counties_map[mid] = []
+                    counties_map[mid].append(crow[1])
+                for m in members:
+                    all_counties = counties_map.get(m['id'], [])
+                    m['allCounties'] = all_counties
+                    m['county'] = all_counties[0] if all_counties else ''
+            except Exception:
+                pass
 
         # Batch fetch volunteering interests for all members (single query, no N+1)
         if members:
@@ -2213,10 +2383,10 @@ def get_members():
             if field_result:
                 field_id = field_result[0]
                 member_ids = [m['id'] for m in members]
-                placeholders = ','.join(['?' for _ in member_ids])
+                placeholders = ','.join(['%s' for _ in member_ids])
                 cursor.execute(f"""
                     SELECT MemberID, ValueText FROM UserDefinedFieldValue
-                    WHERE FieldID = ? AND MemberID IN ({placeholders}) AND ValueText IS NOT NULL
+                    WHERE FieldID = %s AND MemberID IN ({placeholders}) AND ValueText IS NOT NULL
                     ORDER BY MemberID, ValueText ASC
                 """, [field_id] + member_ids)
                 interests_map = {}
@@ -2227,6 +2397,101 @@ def get_members():
                     interests_map[mid].append(irow[1])
                 for m in members:
                     m['volunteeringInterests'] = interests_map.get(m['id'], [])
+
+        # Batch fetch Irish surnames for search
+        if members:
+            member_ids = [m['id'] for m in members]
+            placeholders = ','.join(['%s' for _ in member_ids])
+            try:
+                cursor.execute(f"""
+                    SELECT ics.MemberID, isur.Surname
+                    FROM IrishConnectionBySurname AS ics
+                    LEFT JOIN IrishSurnames AS isur ON ics.SurnameID = isur.SurnameID
+                    WHERE ics.MemberID IN ({placeholders}) AND isur.Surname IS NOT NULL
+                """, member_ids)
+                surnames_map = {}
+                for srow in cursor.fetchall():
+                    mid = srow[0]
+                    if mid not in surnames_map:
+                        surnames_map[mid] = []
+                    surnames_map[mid].append(srow[1])
+                for m in members:
+                    m['irishSurnames'] = surnames_map.get(m['id'], [])
+            except Exception:
+                pass
+
+        # Batch fetch additional phone numbers from MemberPhoneNumbers for search
+        if members:
+            member_ids = [m['id'] for m in members]
+            placeholders = ','.join(['%s' for _ in member_ids])
+            try:
+                cursor.execute(f"""
+                    SELECT MemberID, PhoneNumber
+                    FROM MemberPhoneNumbers
+                    WHERE MemberID IN ({placeholders}) AND PhoneNumber IS NOT NULL
+                """, member_ids)
+                phones_map = {}
+                for prow in cursor.fetchall():
+                    mid = prow[0]
+                    if mid not in phones_map:
+                        phones_map[mid] = []
+                    phones_map[mid].append(prow[1])
+                for m in members:
+                    m['allPhones'] = phones_map.get(m['id'], [])
+            except Exception:
+                pass
+
+        # Batch fetch current addresses
+        if members:
+            member_ids = [m['id'] for m in members]
+            placeholders = ','.join(['%s' for _ in member_ids])
+            try:
+                cursor.execute(f"""
+                    SELECT ma.MemberID, ma.Street, ma.City, p.ProvinceName, ma.PostalCode
+                    FROM MemberAddress AS ma
+                    LEFT JOIN Provinces AS p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+                    WHERE ma.MemberID IN ({placeholders}) AND ma.IsCurrent = 1
+                    ORDER BY ma.MemberID
+                """, member_ids)
+                address_map = {}
+                for arow in cursor.fetchall():
+                    mid = arow[0]
+                    if mid not in address_map:
+                        display_parts = [part for part in [arow[1], arow[2]] if part]
+                        search_parts = [part for part in [arow[1], arow[2], arow[3], arow[4]] if part]
+                        address_map[mid] = {
+                            'address': ', '.join(display_parts),
+                            'addressSearch': ' '.join(search_parts),
+                        }
+                for m in members:
+                    addr = address_map.get(m['id'])
+                    if addr:
+                        m['address'] = addr['address']
+                        m['addressSearch'] = addr['addressSearch']
+            except Exception:
+                pass
+
+        # Batch fetch most recent role per member
+        if members:
+            member_ids = [m['id'] for m in members]
+            placeholders = ','.join(['%s' for _ in member_ids])
+            try:
+                cursor.execute(f"""
+                    SELECT mr.MemberID, r.RoleName, mr.FiscalYearID
+                    FROM MemberRole mr
+                    LEFT JOIN Role r ON mr.RoleID = r.RoleID
+                    WHERE mr.MemberID IN ({placeholders})
+                    ORDER BY mr.MemberID, mr.FiscalYearID DESC
+                """, member_ids)
+                role_map = {}
+                for rrow in cursor.fetchall():
+                    mid = rrow[0]
+                    if mid not in role_map and rrow[1]:
+                        role_map[mid] = rrow[1]
+                for m in members:
+                    m['role'] = role_map.get(m['id'], '')
+            except Exception:
+                pass
 
         return jsonify(members)
 
@@ -2284,7 +2549,7 @@ def get_member(member_id):
 
         # Check if user has permission to view this member
         if session['user_role'] == 'Public':
-            cursor.execute("SELECT IsActive FROM Members WHERE MemberID = ?", (member_id,))
+            cursor.execute("SELECT IsActive FROM Members WHERE MemberID = %s", (member_id,))
             result = cursor.fetchone()
             if not result or result[0]:  # Active member - public can't view
                 return jsonify({'error': 'Access denied'}), 403
@@ -2293,20 +2558,20 @@ def get_member(member_id):
         member_query = """
             SELECT 
                 m.MemberID, m.FirstName, m.LastName, m.Email, m.PhoneNumber, 
-                m.[Place of Birth], m.[Date of Birth],
+                m.`Place of Birth`, m.`Date of Birth`,
                 m.MemberCategoryID, mc.CategoryName,
                 m.CountyID, ic.CountyName, 
                 m.SurnameID, s.Surname,
                 m.OccupationID, o.OccupationName,
                 m.Notes, m.IsActive, m.OtherSocieties, 
-                m.DateJoined, m.DateEnded, m.ApplicationDate, m.[Approval Date],
+                m.DateJoined, m.DateEnded, m.ApplicationDate, m.`Approval Date`,
                 m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate
             FROM Members AS m
             LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
             LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
             LEFT JOIN IrishSurnames AS s ON m.SurnameID = s.SurnameID
             LEFT JOIN Occupation AS o ON m.OccupationID = o.OccupationID
-            WHERE m.MemberID = ?
+            WHERE m.MemberID = %s
         """
         
         cursor.execute(member_query, (member_id,))
@@ -2360,8 +2625,8 @@ def get_member(member_id):
                 ma.FiscalYearID, fy.YearLabel, ma.IsCurrent
             FROM MemberAddress AS ma
             LEFT JOIN FiscalYear AS fy ON ma.FiscalYearID = fy.FiscalYearID
-            LEFT JOIN Provinces AS p ON ma.ProvinceID = p.ProvinceID
-            WHERE ma.MemberID = ?
+            LEFT JOIN Provinces AS p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+            WHERE ma.MemberID = %s
             ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC
         """
         
@@ -2392,7 +2657,7 @@ def get_member(member_id):
                 'fiscalYearID': addr[7],
                 'yearLabel': addr[8] or '',  # Frontend expects yearLabel
                 'fiscalYear': addr[8] or '',  # Keep both for compatibility
-                'isCurrent': bool(addr[9])
+                'isCurrent': str(addr[9]) == '1' if addr[9] is not None else False
             })
         
         member_data['addresses'] = addresses
@@ -2405,7 +2670,7 @@ def get_member(member_id):
             FROM MemberRole AS mr
             LEFT JOIN Role AS r ON mr.RoleID = r.RoleID
             LEFT JOIN FiscalYear AS fy ON mr.FiscalYearID = fy.FiscalYearID
-            WHERE mr.MemberID = ?
+            WHERE mr.MemberID = %s
             ORDER BY mr.FiscalYearID DESC
         """
         
@@ -2425,49 +2690,41 @@ def get_member(member_id):
         
         member_data['roleFiscalYears'] = role_fiscal_years
 
-        # 4. GET IRISH CONNECTIONS with proper name resolution
+        # 4. GET IRISH CONNECTIONS — read counties and surnames separately, pair positionally
         irish_connections = []
         try:
-            # Get both county and surname connections for this member
             cursor.execute("""
-                SELECT 
-                    icc.CountyID, ic.CountyName,
-                    ics.SurnameID, isur.Surname
+                SELECT icc.CountyID, ic.CountyName, icc.ConnectionType
                 FROM IrishConnectionByCounty AS icc
                 LEFT JOIN IrishCounties AS ic ON icc.CountyID = ic.CountyID
-                LEFT JOIN IrishConnectionBySurname AS ics ON icc.MemberID = ics.MemberID
+                WHERE icc.MemberID = %s
+                ORDER BY icc.rowid
+            """, (member_id,))
+            county_rows = cursor.fetchall()
+
+            cursor.execute("""
+                SELECT ics.SurnameID, isur.Surname, ics.ConnectionType
+                FROM IrishConnectionBySurname AS ics
                 LEFT JOIN IrishSurnames AS isur ON ics.SurnameID = isur.SurnameID
-                WHERE icc.MemberID = ?
-                UNION
-                SELECT 
-                    icc2.CountyID, ic2.CountyName,
-                    ics2.SurnameID, isur2.Surname
-                FROM IrishConnectionBySurname AS ics2
-                LEFT JOIN IrishSurnames AS isur2 ON ics2.SurnameID = isur2.SurnameID
-                LEFT JOIN IrishConnectionByCounty AS icc2 ON ics2.MemberID = icc2.MemberID
-                LEFT JOIN IrishCounties AS ic2 ON icc2.CountyID = ic2.CountyID
-                WHERE ics2.MemberID = ?
-            """, (member_id, member_id))
-            connection_rows = cursor.fetchall()
-            
-            # Process connections - combine county and surname data
-            seen_connections = set()
-            for row in connection_rows:
-                county_id, county_name, surname_id, surname_name = row
-                
-                # Create a unique key for this connection combination
-                connection_key = (county_id or 0, surname_id or 0)
-                if connection_key not in seen_connections:
-                    seen_connections.add(connection_key)
-                    
-                    irish_connections.append({
-                        'countyId': str(county_id) if county_id else '',
-                        'county': county_name or '',
-                        'surnameId': str(surname_id) if surname_id else '',
-                        'surname': surname_name or '',
-                        'type': 'Paternal'  # Default type, could be extended later
-                    })
-                    
+                WHERE ics.MemberID = %s
+                ORDER BY ics.rowid
+            """, (member_id,))
+            surname_rows = cursor.fetchall()
+
+            # Pair counties and surnames positionally
+            length = max(len(county_rows), len(surname_rows)) if (county_rows or surname_rows) else 0
+            for i in range(length):
+                c = county_rows[i] if i < len(county_rows) else None
+                s = surname_rows[i] if i < len(surname_rows) else None
+                conn_type = (c[2] if c and c[2] else None) or (s[2] if s and s[2] else None) or 'Paternal'
+                irish_connections.append({
+                    'countyId': str(c[0]) if c and c[0] else '',
+                    'county': c[1] or '' if c else '',
+                    'surnameId': str(s[0]) if s and s[0] else '',
+                    'surname': s[1] or '' if s else '',
+                    'type': conn_type
+                })
+
         except Exception as e:
             print(f'DEBUG: Irish connections query failed: {e}')
         
@@ -2477,7 +2734,7 @@ def get_member(member_id):
         cursor.execute("""
             SELECT PhoneID, PhoneType, PhoneNumber, IsPreferred
             FROM MemberPhoneNumbers
-            WHERE MemberID = ?
+            WHERE MemberID = %s
             ORDER BY IsPreferred DESC, PhoneType ASC
         """, (member_id,))
         
@@ -2504,7 +2761,7 @@ def get_member(member_id):
             field_id = field_result[0]
             cursor.execute("""
                 SELECT ValueText FROM UserDefinedFieldValue
-                WHERE FieldID = ? AND MemberID = ?
+                WHERE FieldID = %s AND MemberID = %s
                 ORDER BY ValueText ASC
             """, (field_id, member_id))
             
@@ -2514,6 +2771,13 @@ def get_member(member_id):
                     volunteering_interests.append(interest[0])
         
         member_data['volunteeringInterests'] = volunteering_interests
+
+        # 7. GET MOST RECENT PHOTO
+        cursor.execute("""
+            SELECT FileName FROM Photos WHERE MemberID = %s ORDER BY UploadDate DESC LIMIT 1
+        """, (member_id,))
+        photo_row = cursor.fetchone()
+        member_data['photo'] = photo_row[0] if photo_row else None
 
         print(f'DEBUG: Successfully built member data for {member_id}')
         print(f'DEBUG: Member county: {member_data.get("county")}')
@@ -2571,10 +2835,8 @@ def create_member():
                 return None
             return value
 
-        # Auto-set DateJoined to today if not provided
-        date_joined = data.get('dateJoined')
-        if not date_joined or date_joined == '' or date_joined == 'null':
-            date_joined = datetime.now().strftime('%Y-%m-%d')
+        # DateJoined is optional - don't auto-set to today
+        date_joined = convert_to_date_or_none(data.get('dateJoined'))
 
         # Duplicate check: block creation if a member with the same identity already exists
         first_name = (data.get('firstName') or '').strip()
@@ -2586,28 +2848,28 @@ def create_member():
         duplicate_msg = None
         if email:
             cursor.execute(
-                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND Email = ?",
+                "SELECT MemberID FROM Members WHERE FirstName = %s AND LastName = %s AND Email = %s",
                 (first_name, last_name, email)
             )
             if cursor.fetchone():
                 duplicate_msg = f"A member named {first_name} {last_name} with that email already exists."
         if not duplicate_msg and phone:
             cursor.execute(
-                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND PhoneNumber = ?",
+                "SELECT MemberID FROM Members WHERE FirstName = %s AND LastName = %s AND PhoneNumber = %s",
                 (first_name, last_name, phone)
             )
             if cursor.fetchone():
                 duplicate_msg = f"A member named {first_name} {last_name} with that phone number already exists."
         if not duplicate_msg and dob:
             cursor.execute(
-                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ? AND [Date of Birth] = ?",
+                "SELECT MemberID FROM Members WHERE FirstName = %s AND LastName = %s AND `Date of Birth` = %s",
                 (first_name, last_name, dob)
             )
             if cursor.fetchone():
                 duplicate_msg = f"A member named {first_name} {last_name} with that date of birth already exists."
         if not duplicate_msg and not email and not phone and not dob:
             cursor.execute(
-                "SELECT MemberID FROM Members WHERE FirstName = ? AND LastName = ?",
+                "SELECT MemberID FROM Members WHERE FirstName = %s AND LastName = %s",
                 (first_name, last_name)
             )
             if cursor.fetchone():
@@ -2620,7 +2882,7 @@ def create_member():
         _cat_id = convert_to_int_or_none(data.get('memberCategoryId'))
         is_active = True
         if _cat_id:
-            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = ?", (_cat_id,))
+            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = %s", (_cat_id,))
             _cat_row = cursor.fetchone()
             if _cat_row:
                 is_active = _cat_row[0].lower() in ('active', 'honorary')
@@ -2629,13 +2891,13 @@ def create_member():
         cursor.execute("""
             INSERT INTO Members (
                 FirstName, LastName, Email, PhoneNumber,
-                [Place of Birth], [Date of Birth], MemberCategoryID,
+                `Place of Birth`, `Date of Birth`, MemberCategoryID,
                 CountyID, SurnameID, OccupationID, Notes,
                 IsActive, OtherSocieties, DateJoined, DateEnded,
-                ApplicationDate, [Approval Date], ApprovedBy, SignedBy,
+                ApplicationDate, `Approval Date`, ApprovedBy, SignedBy,
                 Proposer, Seconder, ProposalDate, CreatedAt
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             data.get('firstName'),
             data.get('lastName'),
@@ -2649,7 +2911,7 @@ def create_member():
             convert_to_int_or_none(data.get('occupationId')),
             data.get('notes') or '',
             is_active,
-            data.get('otherSocieties') or None,
+            (', '.join(filter(None, data.get('otherSocieties'))) if isinstance(data.get('otherSocieties'), list) else data.get('otherSocieties')) or None,
             date_joined,
             convert_to_date_or_none(data.get('dateEnded')),
             convert_to_date_or_none(data.get('applicationDate')),
@@ -2675,7 +2937,7 @@ def create_member():
                     # Look up ProvinceID from province name
                     province_id = None
                     if address.get('province'):
-                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = ?", (address.get('province'),))
+                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = %s", (address.get('province'),))
                         prow = cursor.fetchone()
                         province_id = prow[0] if prow else None
 
@@ -2684,7 +2946,7 @@ def create_member():
 
                     cursor.execute("""
                         INSERT INTO MemberAddress (MemberID, Street, City, ProvinceID, CountryID, PostalCode, FiscalYearID, IsCurrent)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         member_id,
                         address.get('street') or None,
@@ -2693,28 +2955,25 @@ def create_member():
                         country_text,
                         address.get('postalCode') or None,
                         convert_to_int_or_none(address.get('fiscalYearID')),
-                        bool(address.get('isCurrent', True))
+                        bool(address.get('isCurrent', False))
                     ))
 
-        # Handle Irish connections by county
+        # Handle Irish connections by county and surname
         if 'irishConnections' in data and data['irishConnections']:
             for connection in data['irishConnections']:
                 county_id = convert_to_int_or_none(connection.get('countyId'))
+                surname_id = convert_to_int_or_none(connection.get('surnameId'))
+                conn_type = connection.get('type') or 'Paternal'
                 if county_id:
                     cursor.execute("""
-                        INSERT INTO IrishConnectionByCounty (MemberID, CountyID)
-                        VALUES (?, ?)
-                    """, (member_id, county_id))
-
-        # Handle Irish connections by surname
-        if 'irishConnections' in data and data['irishConnections']:
-            for connection in data['irishConnections']:
-                surname_id = convert_to_int_or_none(connection.get('surnameId'))
+                        INSERT INTO IrishConnectionByCounty (MemberID, CountyID, ConnectionType)
+                        VALUES (%s, %s, %s)
+                    """, (member_id, county_id, conn_type))
                 if surname_id:
                     cursor.execute("""
-                        INSERT INTO IrishConnectionBySurname (MemberID, SurnameID)
-                        VALUES (?, ?)
-                    """, (member_id, surname_id))
+                        INSERT INTO IrishConnectionBySurname (MemberID, SurnameID, ConnectionType)
+                        VALUES (%s, %s, %s)
+                    """, (member_id, surname_id, conn_type))
 
         # Handle member roles for fiscal years
         if 'roleFiscalYears' in data and data['roleFiscalYears']:
@@ -2724,7 +2983,7 @@ def create_member():
                 if role_id and fiscal_year_id:
                     cursor.execute("""
                         INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
-                        VALUES (?, ?, ?)
+                        VALUES (%s, %s, %s)
                     """, (member_id, role_id, fiscal_year_id))
 
         # Handle multiple phone numbers
@@ -2737,7 +2996,7 @@ def create_member():
                 if phone_number and phone_type in ['Home', 'Cell', 'Work', 'Other']:
                     cursor.execute("""
                         INSERT INTO MemberPhoneNumbers (MemberID, PhoneType, PhoneNumber, IsPreferred)
-                        VALUES (?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s)
                     """, (member_id, phone_type, phone_number, is_preferred))
 
         # Handle volunteering interests
@@ -2752,7 +3011,7 @@ def create_member():
                     if interest:  # Only insert non-empty interests
                         cursor.execute("""
                             INSERT INTO UserDefinedFieldValue (FieldID, MemberID, ValueText)
-                            VALUES (?, ?, ?)
+                            VALUES (%s, %s, %s)
                         """, (field_id, member_id, interest))
 
         conn.commit()
@@ -2782,7 +3041,7 @@ def update_member(member_id):
     
     print("=== BACKEND UPDATE DEBUG ===")
     print(f"Received data keys: {list(data.keys()) if data else 'None'}")
-    print(f"Phone number: {data.get('phoneNumber') if data else 'None'}")
+    print(f"otherSocieties raw: {data.get('otherSocieties')!r}")
     print(f"Irish connections: {data.get('irishConnections') if data else 'None'}")
     if data and 'irishConnections' in data:
         for i, conn in enumerate(data['irishConnections']):
@@ -2797,7 +3056,7 @@ def update_member(member_id):
         cursor = conn.cursor()
 
         # Check if member exists
-        cursor.execute("SELECT * FROM Members WHERE MemberID = ?", (member_id,))
+        cursor.execute("SELECT * FROM Members WHERE MemberID = %s", (member_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Member not found'}), 404
 
@@ -2826,7 +3085,7 @@ def update_member(member_id):
         _cat_id_upd = convert_to_int_or_none(data.get('memberCategoryId'))
         is_active_upd = True
         if _cat_id_upd:
-            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = ?", (_cat_id_upd,))
+            cursor.execute("SELECT CategoryName FROM MemberCategory WHERE CategoryID = %s", (_cat_id_upd,))
             _cat_row_upd = cursor.fetchone()
             if _cat_row_upd:
                 is_active_upd = _cat_row_upd[0].lower() in ('active', 'honorary')
@@ -2835,29 +3094,29 @@ def update_member(member_id):
         try:
             cursor.execute("""
                 UPDATE Members SET
-                    FirstName = ?,
-                    LastName = ?,
-                    Email = ?,
-                    PhoneNumber = ?,
-                    [Place of Birth] = ?,
-                    [Date of Birth] = ?,
-                    MemberCategoryID = ?,
-                    CountyID = ?,
-                    SurnameID = ?,
-                    OccupationID = ?,
-                    Notes = ?,
-                    IsActive = ?,
-                    OtherSocieties = ?,
-                    DateJoined = ?,
-                    DateEnded = ?,
-                    ApplicationDate = ?,
-                    [Approval Date] = ?,
-                    ApprovedBy = ?,
-                    SignedBy = ?,
-                    Proposer = ?,
-                    Seconder = ?,
-                    ProposalDate = ?
-                WHERE MemberID = ?
+                    FirstName = %s,
+                    LastName = %s,
+                    Email = %s,
+                    PhoneNumber = %s,
+                    `Place of Birth` = %s,
+                    `Date of Birth` = %s,
+                    MemberCategoryID = %s,
+                    CountyID = %s,
+                    SurnameID = %s,
+                    OccupationID = %s,
+                    Notes = %s,
+                    IsActive = %s,
+                    OtherSocieties = %s,
+                    DateJoined = %s,
+                    DateEnded = %s,
+                    ApplicationDate = %s,
+                    `Approval Date` = %s,
+                    ApprovedBy = %s,
+                    SignedBy = %s,
+                    Proposer = %s,
+                    Seconder = %s,
+                    ProposalDate = %s
+                WHERE MemberID = %s
             """, (
                 data.get('firstName'),
                 data.get('lastName'),
@@ -2871,7 +3130,7 @@ def update_member(member_id):
                 convert_to_int_or_none(data.get('occupationId')),
                 data.get('notes', ''),
                 is_active_upd,
-                data.get('otherSocieties', None),
+                (', '.join(filter(None, data.get('otherSocieties'))) if isinstance(data.get('otherSocieties'), list) else data.get('otherSocieties')) or None,
                 convert_to_date_or_none(data.get('dateJoined')),
                 convert_to_date_or_none(data.get('dateEnded')),
                 convert_to_date_or_none(data.get('applicationDate')),
@@ -2890,8 +3149,11 @@ def update_member(member_id):
 
         # Handle addresses - clear existing and add new
         if 'addresses' in data:
+            print(f"DEBUG ADDRESSES: received {len(data['addresses'])} addresses")
+            for i, addr in enumerate(data['addresses']):
+                print(f"  Address {i}: isCurrent={addr.get('isCurrent')!r} (type={type(addr.get('isCurrent')).__name__}), city={addr.get('city')!r}")
             # Delete existing addresses
-            cursor.execute("DELETE FROM MemberAddress WHERE MemberID = ?", (member_id,))
+            cursor.execute("DELETE FROM MemberAddress WHERE MemberID = %s", (member_id,))
 
             # Add new addresses
             for address in data['addresses']:
@@ -2899,7 +3161,7 @@ def update_member(member_id):
                     # Look up ProvinceID from province name
                     province_id = None
                     if address.get('province'):
-                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = ?", (address.get('province'),))
+                        cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = %s", (address.get('province'),))
                         prow = cursor.fetchone()
                         province_id = prow[0] if prow else None
 
@@ -2908,7 +3170,7 @@ def update_member(member_id):
 
                     cursor.execute("""
                         INSERT INTO MemberAddress (MemberID, Street, City, ProvinceID, CountryID, PostalCode, FiscalYearID, IsCurrent)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (
                         member_id,
                         address.get('street') or None,
@@ -2917,16 +3179,17 @@ def update_member(member_id):
                         country_text,
                         address.get('postalCode') or None,
                         convert_to_int_or_none(address.get('fiscalYearID')),
-                        bool(address.get('isCurrent', True))
+                        bool(address.get('isCurrent', False))
                     ))
 
         # Handle Irish connections - clear existing and add new
+        print(f"DEBUG irishConnections raw from request: {data.get('irishConnections')}")
         if 'irishConnections' in data:
             try:
                 # Delete existing Irish connections
-                cursor.execute("DELETE FROM IrishConnectionByCounty WHERE MemberID = ?", (member_id,))
+                cursor.execute("DELETE FROM IrishConnectionByCounty WHERE MemberID = %s", (member_id,))
                 print(f"Deleted existing county connections. Rows affected: {cursor.rowcount}")
-                cursor.execute("DELETE FROM IrishConnectionBySurname WHERE MemberID = ?", (member_id,))
+                cursor.execute("DELETE FROM IrishConnectionBySurname WHERE MemberID = %s", (member_id,))
                 print(f"Deleted existing surname connections. Rows affected: {cursor.rowcount}")
                 
                 # Add new Irish connections
@@ -2934,19 +3197,20 @@ def update_member(member_id):
                     print(f"  Processing connection: {connection}")
                     county_id = convert_to_int_or_none(connection.get('countyId'))
                     surname_id = convert_to_int_or_none(connection.get('surnameId'))
-                    
+                    conn_type = connection.get('type') or 'Paternal'
+
                     if county_id:
                         cursor.execute("""
-                            INSERT INTO IrishConnectionByCounty (MemberID, CountyID)
-                            VALUES (?, ?)
-                        """, (member_id, county_id))
+                            INSERT INTO IrishConnectionByCounty (MemberID, CountyID, ConnectionType)
+                            VALUES (%s, %s, %s)
+                        """, (member_id, county_id, conn_type))
                         print(f"  Inserted county connection. Rows affected: {cursor.rowcount}")
-                        
+
                     if surname_id:
                         cursor.execute("""
-                            INSERT INTO IrishConnectionBySurname (MemberID, SurnameID)
-                            VALUES (?, ?)
-                        """, (member_id, surname_id))
+                            INSERT INTO IrishConnectionBySurname (MemberID, SurnameID, ConnectionType)
+                            VALUES (%s, %s, %s)
+                        """, (member_id, surname_id, conn_type))
                         print(f"  Inserted surname connection. Rows affected: {cursor.rowcount}")
             except Exception as e:
                 print(f"Error updating Irish connections: {e}")
@@ -2956,7 +3220,7 @@ def update_member(member_id):
         if 'roleFiscalYears' in data:
             print(f"DEBUG: Processing role fiscal years: {data['roleFiscalYears']}")
             # Delete existing role assignments
-            cursor.execute("DELETE FROM MemberRole WHERE MemberID = ?", (member_id,))
+            cursor.execute("DELETE FROM MemberRole WHERE MemberID = %s", (member_id,))
             print(f"DEBUG: Deleted existing roles. Rows affected: {cursor.rowcount}")
             
             # Add new role assignments
@@ -2968,7 +3232,7 @@ def update_member(member_id):
                 if role_id and fiscal_year_id:
                     cursor.execute("""
                         INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
-                        VALUES (?, ?, ?)
+                        VALUES (%s, %s, %s)
                     """, (member_id, role_id, fiscal_year_id))
                     print(f"DEBUG: Inserted role assignment. Rows affected: {cursor.rowcount}")
                 else:
@@ -2979,7 +3243,7 @@ def update_member(member_id):
         # Handle phone numbers - clear existing and add new
         if 'phoneNumbers' in data:
             # Delete existing phone numbers
-            cursor.execute("DELETE FROM MemberPhoneNumbers WHERE MemberID = ?", (member_id,))
+            cursor.execute("DELETE FROM MemberPhoneNumbers WHERE MemberID = %s", (member_id,))
             
             # Add new phone numbers
             for phone in data['phoneNumbers']:
@@ -2990,7 +3254,7 @@ def update_member(member_id):
                 if phone_number and phone_type in ['Home', 'Cell', 'Work', 'Other']:
                     cursor.execute("""
                         INSERT INTO MemberPhoneNumbers (MemberID, PhoneType, PhoneNumber, IsPreferred)
-                        VALUES (?, ?, ?, ?)
+                        VALUES (%s, %s, %s, %s)
                     """, (member_id, phone_type, phone_number, is_preferred))
 
         # Handle volunteering interests - clear existing and add new
@@ -3003,7 +3267,7 @@ def update_member(member_id):
                 field_id = field_result[0]
                 # Delete existing interests
                 cursor.execute("""
-                    DELETE FROM UserDefinedFieldValue WHERE FieldID = ? AND MemberID = ?
+                    DELETE FROM UserDefinedFieldValue WHERE FieldID = %s AND MemberID = %s
                 """, (field_id, member_id))
                 
                 # Add new interests
@@ -3011,22 +3275,18 @@ def update_member(member_id):
                     if interest:
                         cursor.execute("""
                             INSERT INTO UserDefinedFieldValue (FieldID, MemberID, ValueText)
-                            VALUES (?, ?, ?)
+                            VALUES (%s, %s, %s)
                         """, (field_id, member_id, interest))
-
-        # Log audit event (before commit, but don't let it fail the transaction)
-        try:
-            log_audit_event(
-                session['user_id'],
-                'UPDATE',
-                'Members',
-                member_id,
-                f'Updated member: {data.get("firstName")} {data.get("lastName")}')
-        except Exception as audit_error:
-            print(f"Audit logging failed but continuing: {audit_error}")
 
         conn.commit()
         print("Transaction committed successfully!")
+
+        log_audit_event_async(
+            session['user_id'],
+            'UPDATE',
+            'Members',
+            member_id,
+            f'Updated member: {data.get("firstName")} {data.get("lastName")}')
 
         if hasattr(dashboard_stats, 'cache'):
             dashboard_stats.cache.clear()
@@ -3051,7 +3311,7 @@ def delete_member(member_id):
 
         # Get member name for logging
         cursor.execute(
-            "SELECT FirstName, LastName FROM Members WHERE MemberID = ?", (member_id,))
+            "SELECT FirstName, LastName FROM Members WHERE MemberID = %s", (member_id,))
         member = cursor.fetchone()
         if not member:
             return jsonify({'error': 'Member not found'}), 404
@@ -3059,8 +3319,8 @@ def delete_member(member_id):
         # Soft delete - set as inactive instead of actual deletion
         cursor.execute("""
             UPDATE Members
-            SET IsActive = 0, DateEnded = ?
-            WHERE MemberID = ?
+            SET IsActive = 0, DateEnded = %s
+            WHERE MemberID = %s
         """, (datetime.now(), member_id))
 
         conn.commit()
@@ -3085,7 +3345,7 @@ def delete_member(member_id):
         cursor.execute("""
             INSERT INTO Society (SocietyName, Description, FoundedDate,
                                  IncorporatedDate, CharityNumber, NonProfitNumber)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             data.get('name'),
             data.get('description'),
@@ -3116,9 +3376,9 @@ def update_society(society_id):
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Society
-            SET SocietyName = ?, Description = ?, FoundedDate = ?,
-                IncorporatedDate = ?, CharityNumber = ?, NonProfitNumber = ?
-            WHERE SocietyID = ?
+            SET SocietyName = %s, Description = %s, FoundedDate = %s,
+                IncorporatedDate = %s, CharityNumber = %s, NonProfitNumber = %s
+            WHERE SocietyID = %s
         """, (
             data.get('name'),
             data.get('description'),
@@ -3145,7 +3405,7 @@ def delete_society(society_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT COUNT(*) FROM Members WHERE SocietyID = ?", (society_id,))
+            "SELECT COUNT(*) FROM Members WHERE SocietyID = %s", (society_id,))
         row = cursor.fetchone()
         if row is None:
             return jsonify({'error': 'Failed to count members for society'}), 500
@@ -3153,7 +3413,7 @@ def delete_society(society_id):
             return jsonify(
                 {'error': 'Cannot delete society with members. Remove members first.'}), 400
         cursor.execute(
-            "DELETE FROM Society WHERE SocietyID = ?", (society_id,))
+            "DELETE FROM Society WHERE SocietyID = %s", (society_id,))
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
@@ -3251,7 +3511,7 @@ def add_member_recognition():
         
         cursor.execute("""
             INSERT INTO MemberRecognitions (MemberID, RecognitionTypeID, AwardedDate, AwardedBy, Notes)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             data['memberId'],
             data['recognitionTypeId'], 
@@ -3322,7 +3582,7 @@ def create_old_recognition():
         cursor.execute("""
             INSERT INTO Recognitions (SocietyID, RecognitionTypeID, FiscalYearID,
                                       Description, IsActive)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             data.get('societyId'),
             data.get('recognitionTypeId'),
@@ -3357,12 +3617,12 @@ def change_user_role(user_id):
     try:
         cursor = conn.cursor()
         # Check if user exists
-        cursor.execute("SELECT Username FROM User WHERE UserID = ?", (user_id,))
+        cursor.execute("SELECT Username FROM User WHERE UserID = %s", (user_id,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
         # Update role
-        cursor.execute("UPDATE User SET Role = ? WHERE UserID = ?", (new_role, user_id))
+        cursor.execute("UPDATE User SET Role = %s WHERE UserID = %s", (new_role, user_id))
         conn.commit()
         log_audit_event(session['user_id'], 'ROLE_CHANGE', 'User', user_id,
                         f'Changed role to {new_role} for user: {user[0]}')
@@ -3381,12 +3641,12 @@ def approve_user(user_id):
     try:
         cursor = conn.cursor()
         # Check if user exists
-        cursor.execute("SELECT Username FROM User WHERE UserID = ?", (user_id,))
+        cursor.execute("SELECT Username FROM User WHERE UserID = %s", (user_id,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
         # Approve user
-        cursor.execute("UPDATE User SET IsApproved = 1 WHERE UserID = ?", (user_id,))
+        cursor.execute("UPDATE User SET IsApproved = 1 WHERE UserID = %s", (user_id,))
         conn.commit()
         log_audit_event(session['user_id'], 'APPROVE', 'User', user_id,
                         f'Approved user: {user[0]}')
@@ -3457,7 +3717,7 @@ def create_user():
 
         # Check if username or email already exists
         cursor.execute(
-            "SELECT UserID FROM User WHERE Username = ? OR Email = ?",
+            "SELECT UserID FROM User WHERE Username = %s OR Email = %s",
             (data.get('username'),
              data.get('email')))
         if cursor.fetchone():
@@ -3467,7 +3727,7 @@ def create_user():
 
         cursor.execute("""
             INSERT INTO User (Username, Email, PasswordHash, Role, IsApproved, CreatedAt)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """, (
             data.get('username'),
             data.get('email'),
@@ -3514,7 +3774,7 @@ def forgot_password():
 
         # Check if email exists
         cursor.execute(
-            "SELECT UserID, Username FROM User WHERE Email = ?", (email,))
+            "SELECT UserID, Username FROM User WHERE Email = %s", (email,))
         user = cursor.fetchone()
 
         if user:
@@ -3525,13 +3785,13 @@ def forgot_password():
             # Store reset token
             cursor.execute("""
                 UPDATE User
-                SET ResetToken = ?, ResetRequestedAt = ?
-                WHERE UserID = ?
+                SET ResetToken = %s, ResetRequestedAt = %s
+                WHERE UserID = %s
             """, (reset_token, datetime.now(), user[0]))
             conn.commit()
 
             # Send reset email
-            reset_link = f"http://your-domain.com/reset-password?token={reset_token}"
+            reset_link = f"http://your-domain.com/reset-password%stoken={reset_token}"
             send_email(
                 email,
                 "Password Reset - BIS Membership Database",
@@ -3578,7 +3838,7 @@ def reset_password():
         cursor.execute("""
             SELECT UserID, Username
             FROM User
-            WHERE ResetToken = ? AND ResetRequestedAt > ?
+            WHERE ResetToken = %s AND ResetRequestedAt > %s
         """, (token, datetime.now() - timedelta(hours=1)))
 
         user = cursor.fetchone()
@@ -3589,8 +3849,8 @@ def reset_password():
         hashed_password = hash_password(new_password)
         cursor.execute("""
             UPDATE User
-            SET PasswordHash = ?, ResetToken = NULL, ResetTokenExpires = NULL
-            WHERE UserID = ?
+            SET PasswordHash = %s, ResetToken = NULL, ResetTokenExpires = NULL
+            WHERE UserID = %s
         """, (hashed_password, user[0]))
         conn.commit()
 
@@ -3629,7 +3889,7 @@ def reset_password_no_email():
 
         # Check if user exists and has no email
         cursor.execute(
-            "SELECT Username FROM User WHERE UserID = ? AND (Email IS NULL OR Email = '')",
+            "SELECT Username FROM User WHERE UserID = %s AND (Email IS NULL OR Email = '')",
             (user_id,
              ))
         user = cursor.fetchone()
@@ -3642,8 +3902,8 @@ def reset_password_no_email():
         # Update password
         cursor.execute("""
             UPDATE User
-            SET PasswordHash = ?, ResetToken = NULL, ResetTokenExpires = NULL
-            WHERE UserID = ?
+            SET PasswordHash = %s, ResetToken = NULL, ResetTokenExpires = NULL
+            WHERE UserID = %s
         """, (hashed_password, user_id))
         conn.commit()
 
@@ -3683,7 +3943,7 @@ def upload_photo(member_id):
         # Check if member exists
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT MemberID FROM Members WHERE MemberID = ?", (member_id,))
+            "SELECT MemberID FROM Members WHERE MemberID = %s", (member_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Member not found'}), 404
 
@@ -3710,7 +3970,7 @@ def upload_photo(member_id):
         description = request.form.get('description', '')
         cursor.execute("""
             INSERT INTO Photos (MemberID, FileName, Description, UploadDate)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (member_id, unique_filename, description, datetime.now()))
         conn.commit()
 
@@ -3745,7 +4005,7 @@ def delete_photo(photo_id):
         cursor = conn.cursor()
         # Get photo details
         cursor.execute(
-            "SELECT FileName, MemberID FROM Photos WHERE PhotoID = ?", (photo_id,))
+            "SELECT FileName, MemberID FROM Photos WHERE PhotoID = %s", (photo_id,))
         photo = cursor.fetchone()
         if not photo:
             return jsonify({'error': 'Photo not found'}), 404
@@ -3756,7 +4016,7 @@ def delete_photo(photo_id):
             os.remove(file_path)
 
         # Delete from database
-        cursor.execute("DELETE FROM Photos WHERE PhotoID = ?", (photo_id,))
+        cursor.execute("DELETE FROM Photos WHERE PhotoID = %s", (photo_id,))
         conn.commit()
 
         # Log audit event
@@ -3785,7 +4045,7 @@ def get_notifications():
         cursor.execute("""
             SELECT NotificationID, Message, DateCreated, IsRead
             FROM Notification
-            WHERE UserID = ?
+            WHERE UserID = %s
             ORDER BY DateCreated DESC
         """, (user_id,))
         rows = cursor.fetchall()
@@ -3822,7 +4082,7 @@ def mark_notification_read(notification_id):
         cursor.execute("""
             UPDATE Notification
             SET IsRead = 1
-            WHERE NotificationID = ? AND UserID = ?
+            WHERE NotificationID = %s AND UserID = %s
         """, (notification_id, session['user_id']))
         conn.commit()
         return jsonify({'success': True})
@@ -3841,7 +4101,7 @@ def create_notification(user_id, message, notif_type="system"):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO Notification (UserID, Message, Type, DateCreated, IsRead)
-            VALUES (?, ?, ?, ?, 0)
+            VALUES (%s, %s, %s, %s, 0)
         """, (user_id, message, notif_type, datetime.now()))
         conn.commit()
     except Exception as e:
@@ -3858,85 +4118,115 @@ def export_members_csv():
         return jsonify({'error': 'Database connection failed'}), 500
     try:
         cursor = conn.cursor()
+        c2 = conn.cursor()
+
+        def fmt_date(v):
+            if not v: return ''
+            return v.strftime('%Y-%m-%d') if hasattr(v, 'strftime') else str(v)
+
+        legacy_country_map = {'0': 'Canada', '1': 'Canada', '2': 'United States',
+                              '3': 'Ireland', '4': 'United Kingdom', '5': 'Other'}
+
+        # Get volunteering field ID once
+        cursor.execute("SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'")
+        vol_field = cursor.fetchone()
+        vol_field_id = vol_field[0] if vol_field else None
+
         cursor.execute("""
-            SELECT m.MemberID, m.FirstName, m.LastName, m.Email, 
-                   m.[Place of Birth], m.[Date of Birth], m.DateJoined, m.IsActive, 
-                   mc.CategoryName, ic.CountyName 
-            FROM (Members m 
-            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID) 
-            LEFT JOIN IrishCounties ic ON m.CountyID = ic.CountyID
-            ORDER BY m.FirstName, m.LastName
+            SELECT m.MemberID, m.FirstName, m.LastName, m.Email,
+                   m.`Place of Birth`, m.`Date of Birth`, o.OccupationName,
+                   m.DateJoined, m.DateEnded, m.ApplicationDate, m.`Approval Date`,
+                   m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate,
+                   m.OtherSocieties, m.Notes, m.IsActive, mc.CategoryName
+            FROM Members m
+            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN Occupation o ON m.OccupationID = o.OccupationID
+            ORDER BY m.LastName, m.FirstName
         """)
-        
+        all_rows = cursor.fetchall()
+
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['First Name',
-                         'Last Name',
-                         'Email',
-                         'Phone (Primary)',
-                         'Phone (Cell)',
-                         'Phone (Home)',
-                         'Phone (Work)',
-                         'Phone (Other)',
-                         'Place of Birth',
-                         'Date of Birth',
-                         'Date Joined',
-                         'Active',
-                         'Category',
-                         'County'])
-        
-        for row in cursor.fetchall():
+        writer.writerow([
+            'First Name', 'Last Name', 'Email',
+            'Phone (Primary)', 'Phone (Cell)', 'Phone (Home)', 'Phone (Work)', 'Phone (Other)',
+            'Place of Birth', 'Date of Birth', 'Occupation',
+            'Irish Counties', 'Irish Surnames', 'Irish Connection Types',
+            'Current Street', 'Current City', 'Current Province', 'Current Country', 'Current Postal Code',
+            'Category', 'Active',
+            'Date Joined', 'Date Ended', 'Application Date', 'Approval Date',
+            'Approved By', 'Signed By', 'Proposer', 'Seconder', 'Proposal Date',
+            'Other Societies', 'Roles Held', 'Volunteering Interests', 'Notes'
+        ])
+
+        for row in all_rows:
             member_id = row[0]
-            
-            # Get all phone numbers for this member
-            cursor.execute("""
-                SELECT PhoneType, PhoneNumber, IsPreferred
-                FROM MemberPhoneNumbers
-                WHERE MemberID = ?
-                ORDER BY IsPreferred DESC, PhoneType ASC
-            """, (member_id,))
-            
-            phones = cursor.fetchall()
+
+            # Phones
+            c2.execute("""SELECT PhoneType, PhoneNumber, IsPreferred FROM MemberPhoneNumbers
+                WHERE MemberID = %s ORDER BY IsPreferred DESC, PhoneType ASC""", (member_id,))
+            phones = c2.fetchall()
             phone_dict = {}
             primary_phone = ''
-            
             for phone in phones:
-                phone_type = phone[0]
-                phone_number = phone[1]
-                is_preferred = phone[2]
-                
-                if is_preferred:
-                    primary_phone = phone_number
-                
-                if phone_type not in phone_dict:
-                    phone_dict[phone_type] = phone_number
-            
-            # Helper function to format dates safely
-            def format_date_safe(date_value):
-                if not date_value:
-                    return ''
-                if hasattr(date_value, 'strftime'):
-                    return date_value.strftime('%Y-%m-%d')
-                else:
-                    return str(date_value)
-            
+                if phone[2]: primary_phone = phone[1] or ''
+                if phone[0] not in phone_dict: phone_dict[phone[0]] = phone[1] or ''
+
+            # Irish connections
+            c2.execute("""SELECT ic.CountyName, icc.ConnectionType FROM IrishConnectionByCounty icc
+                LEFT JOIN IrishCounties ic ON icc.CountyID = ic.CountyID
+                WHERE icc.MemberID = %s ORDER BY icc.rowid""", (member_id,))
+            counties = c2.fetchall()
+            c2.execute("""SELECT isur.Surname FROM IrishConnectionBySurname ics
+                LEFT JOIN IrishSurnames isur ON ics.SurnameID = isur.SurnameID
+                WHERE ics.MemberID = %s ORDER BY ics.rowid""", (member_id,))
+            surnames = c2.fetchall()
+
+            # Current address
+            c2.execute("""SELECT ma.Street, ma.City, p.ProvinceName, ma.CountryID, ma.PostalCode
+                FROM MemberAddress ma
+                LEFT JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+                WHERE ma.MemberID = %s AND ma.IsCurrent = '1' LIMIT 1""", (member_id,))
+            addr = c2.fetchone()
+
+            # Roles
+            c2.execute("""SELECT r.RoleName, fy.YearLabel FROM MemberRole mr
+                LEFT JOIN Role r ON mr.RoleID = r.RoleID
+                LEFT JOIN FiscalYear fy ON mr.FiscalYearID = fy.FiscalYearID
+                WHERE mr.MemberID = %s ORDER BY mr.FiscalYearID DESC""", (member_id,))
+            roles = c2.fetchall()
+
+            # Volunteering
+            volunteering = []
+            if vol_field_id:
+                c2.execute("""SELECT ValueText FROM UserDefinedFieldValue
+                    WHERE FieldID = %s AND MemberID = %s ORDER BY ValueText""", (vol_field_id, member_id))
+                volunteering = [r[0] for r in c2.fetchall() if r[0]]
+
+            raw_country = str(addr[3]) if addr and addr[3] is not None else ''
+            country = legacy_country_map.get(raw_country, raw_country)
+
             writer.writerow([
-                row[1] or '',  # FirstName
-                row[2] or '',  # LastName
-                row[3] or '',  # Email
-                primary_phone or '',  # Phone (Primary)
-                phone_dict.get('Cell', ''),  # Phone (Cell)
-                phone_dict.get('Home', ''),  # Phone (Home)
-                phone_dict.get('Work', ''),  # Phone (Work)
-                phone_dict.get('Other', ''),  # Phone (Other)
-                row[4] or '',  # Place of Birth
-                format_date_safe(row[5]),  # Date of Birth
-                format_date_safe(row[6]),  # DateJoined
-                'Yes' if row[7] else 'No',  # IsActive
-                row[8] or '',  # CategoryName
-                row[9] or ''   # CountyName
+                row[1] or '', row[2] or '', row[3] or '',
+                primary_phone,
+                phone_dict.get('Cell', ''), phone_dict.get('Home', ''),
+                phone_dict.get('Work', ''), phone_dict.get('Other', ''),
+                row[4] or '', fmt_date(row[5]), row[6] or '',
+                '; '.join(c[0] or '' for c in counties),
+                '; '.join(s[0] or '' for s in surnames),
+                '; '.join(c[1] or '' for c in counties),
+                addr[0] if addr else '', addr[1] if addr else '',
+                addr[2] if addr else '', country,
+                addr[4] if addr else '',
+                row[19] or '', 'Yes' if row[18] else 'No',
+                fmt_date(row[7]), fmt_date(row[8]), fmt_date(row[9]), fmt_date(row[10]),
+                row[11] or '', row[12] or '', row[13] or '', row[14] or '', fmt_date(row[15]),
+                row[16] or '',
+                '; '.join(f"{r[0] or ''} ({r[1] or ''})" for r in roles),
+                '; '.join(volunteering),
+                row[17] or ''
             ])
-        
+
         output.seek(0)
         return Response(output, mimetype='text/csv', headers={
             "Content-Disposition": "attachment;filename=members.csv"
@@ -3950,115 +4240,208 @@ def export_members_csv():
 @app.route('/api/export/members/pdf', methods=['GET'])
 @private_or_admin_required
 def export_members_pdf():
-    category_filter = request.args.get('category')
     conn = get_db_connection()
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
     try:
         cursor = conn.cursor()
-        query = """
-            SELECT m.MemberID, m.FirstName, m.LastName, m.Email,
-                   m.[Place of Birth], m.[Date of Birth], m.DateJoined, m.IsActive, 
-                   mc.CategoryName, ic.CountyName 
-            FROM (Members m 
-            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID) 
-            LEFT JOIN IrishCounties ic ON m.CountyID = ic.CountyID
-            ORDER BY m.FirstName, m.LastName
-        """
-        values = []
-        if category_filter:
-            # Skip category filtering for now since we don't know the field name
-            pass
+        c2 = conn.cursor()
 
-        cursor.execute(query, values)
-        
-        # Fetch all data and check if we have any
+        def fmt_date(v):
+            if not v: return ''
+            return v.strftime('%Y-%m-%d') if hasattr(v, 'strftime') else str(v)
+
+        def s(v):
+            if v is None: return ''
+            return str(v)
+
+        legacy_country_map = {'0': 'Canada', '1': 'Canada', '2': 'United States',
+                              '3': 'Ireland', '4': 'United Kingdom', '5': 'Other'}
+
+        cursor.execute("SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'")
+        vol_field = cursor.fetchone()
+        vol_field_id = vol_field[0] if vol_field else None
+
+        cursor.execute("""
+            SELECT m.MemberID, m.FirstName, m.LastName, m.Email,
+                   m.`Place of Birth`, m.`Date of Birth`, o.OccupationName,
+                   m.DateJoined, m.DateEnded, m.ApplicationDate, m.`Approval Date`,
+                   m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate,
+                   m.OtherSocieties, m.Notes, m.IsActive, mc.CategoryName
+            FROM Members m
+            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN Occupation o ON m.OccupationID = o.OccupationID
+            ORDER BY m.LastName, m.FirstName
+        """)
         all_rows = cursor.fetchall()
-        row_count = len(all_rows)
-        
-        try:
-            pdf = FPDF()
-            pdf.add_page()
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(200, 15, "BIS Membership Directory", ln=True, align='C')
-            pdf.ln(5)
-            
-            # Add record count and date
-            pdf.set_font("Arial", size=10)
-            pdf.cell(200, 8, f"Total Members: {row_count}", ln=True, align='L')
-            pdf.cell(200, 8, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='L')
-            pdf.ln(10)
-            
-            if row_count == 0:
-                pdf.set_font("Arial", size=12)
-                pdf.cell(200, 10, "No member records found in database", ln=True, align='C')
+
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+
+        pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 18)
+        pdf.cell(0, 12, 'BIS Membership Directory', border=0, align='C')
+        pdf.ln(6)
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(0, 6, f'Total members: {len(all_rows)}   Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}', border=0, align='C')
+        pdf.ln(10)
+
+        for i, row in enumerate(all_rows, 1):
+            member_id = row[0]
+            full_name = f"{s(row[1])} {s(row[2])}".strip()
+
+            # Phones
+            c2.execute("""SELECT PhoneType, PhoneNumber, IsPreferred FROM MemberPhoneNumbers
+                WHERE MemberID = %s ORDER BY IsPreferred DESC, PhoneType""", (member_id,))
+            phones = c2.fetchall()
+
+            # Irish connections
+            c2.execute("""SELECT ic.CountyName, icc.ConnectionType FROM IrishConnectionByCounty icc
+                LEFT JOIN IrishCounties ic ON icc.CountyID = ic.CountyID
+                WHERE icc.MemberID = %s ORDER BY icc.rowid""", (member_id,))
+            counties = c2.fetchall()
+            c2.execute("""SELECT isur.Surname FROM IrishConnectionBySurname ics
+                LEFT JOIN IrishSurnames isur ON ics.SurnameID = isur.SurnameID
+                WHERE ics.MemberID = %s ORDER BY ics.rowid""", (member_id,))
+            surnames = c2.fetchall()
+
+            # Addresses
+            c2.execute("""SELECT ma.Street, ma.City, p.ProvinceName, ma.CountryID, ma.PostalCode, ma.IsCurrent
+                FROM MemberAddress ma
+                LEFT JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+                WHERE ma.MemberID = %s ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC""", (member_id,))
+            addresses = c2.fetchall()
+
+            # Roles
+            c2.execute("""SELECT r.RoleName, fy.YearLabel FROM MemberRole mr
+                LEFT JOIN Role r ON mr.RoleID = r.RoleID
+                LEFT JOIN FiscalYear fy ON mr.FiscalYearID = fy.FiscalYearID
+                WHERE mr.MemberID = %s ORDER BY mr.FiscalYearID DESC""", (member_id,))
+            roles = c2.fetchall()
+
+            # Volunteering
+            volunteering = []
+            if vol_field_id:
+                c2.execute("""SELECT ValueText FROM UserDefinedFieldValue
+                    WHERE FieldID = %s AND MemberID = %s ORDER BY ValueText""", (vol_field_id, member_id))
+                volunteering = [r[0] for r in c2.fetchall() if r[0]]
+
+            # Member header
+            pdf.set_fill_color(20, 184, 166)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.cell(0, 8, f'  {i}. {full_name}  |  {s(row[19])}  |  {"Active" if row[18] else "Inactive"}', border=0, fill=True)
+            pdf.ln(8)
+            pdf.set_text_color(0, 0, 0)
+
+            def field(label, value):
+                pdf.set_font('Helvetica', 'B', 9)
+                pdf.cell(45, 6, f'{label}:', border=0)
+                pdf.set_font('Helvetica', '', 9)
+                pdf.cell(0, 6, s(value) or '-', border=0)
+                pdf.ln(6)
+
+            # Personal
+            pdf.set_font('Helvetica', 'B', 10)
+            pdf.set_fill_color(240, 253, 250)
+            pdf.cell(0, 6, '  Personal', border=0, fill=True)
+            pdf.ln(6)
+            field('Date of Birth', fmt_date(row[5]))
+            field('Place of Birth', row[4])
+            field('Occupation', row[6])
+
+            # Contact
+            pdf.set_font('Helvetica', 'B', 10)
+            pdf.cell(0, 6, '  Contact', border=0, fill=True)
+            pdf.ln(6)
+            field('Email', row[3])
+            if phones:
+                for phone in phones:
+                    label = s(phone[0]) + (' (Primary)' if phone[2] else '')
+                    field(label, phone[1])
             else:
-                # Simple list format instead of complex table
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(200, 8, "Member Directory:", ln=True, align='L')
-                pdf.ln(5)
-                
-                pdf.set_font("Arial", size=10)
-                for i, row in enumerate(all_rows, 1):
-                    member_id = row[0]
-                    full_name = f"{row[1] or ''} {row[2] or ''}".strip()
-                    email = row[3] or 'No email'
-                    category = row[8] or 'No category'
-                    county = row[9] or 'No county'
-                    active_status = 'Active' if row[7] else 'Inactive'
-                    joined = row[6] if row[6] else 'Unknown'
-                    
-                    # Get all phone numbers for this member
-                    cursor.execute("""
-                        SELECT PhoneType, PhoneNumber, IsPreferred
-                        FROM MemberPhoneNumbers
-                        WHERE MemberID = ?
-                        ORDER BY IsPreferred DESC, PhoneType ASC
-                    """, (member_id,))
-                    
-                    phones = cursor.fetchall()
-                    phone_display = 'No phone'
-                    if phones:
-                        phone_strs = []
-                        for phone in phones:
-                            phone_type = phone[0]
-                            phone_num = phone[1]
-                            is_pref = phone[2]
-                            pref_marker = ' (Primary)' if is_pref else ''
-                            phone_strs.append(f"{phone_type}: {phone_num}{pref_marker}")
-                        phone_display = ', '.join(phone_strs)
-                    
-                    # Member entry
-                    pdf.set_font("Arial", 'B', 11)
-                    pdf.cell(200, 6, f"{i}. {full_name}", ln=True, align='L')
-                    
-                    pdf.set_font("Arial", size=9)
-                    pdf.cell(200, 5, f"   Email: {email}", ln=True, align='L')
-                    pdf.cell(200, 5, f"   Phone: {phone_display}", ln=True, align='L')
-                    pdf.cell(200, 5, f"   Category: {category} | County: {county}", ln=True, align='L')
-                    pdf.cell(200, 5, f"   Status: {active_status} | Joined: {joined}", ln=True, align='L')
-                    pdf.ln(3)
-            
-            # Generate PDF
-            pdf_output = pdf.output(dest='S').encode('latin1')
-            
-            response = Response(
-                pdf_output,
-                mimetype='application/pdf',
-                headers={
-                    'Content-Disposition': 'attachment; filename=bis_members_directory.pdf',
-                    'Content-Type': 'application/pdf'
-                }
-            )
-            return response
-            
-        except Exception as pdf_error:
-            return jsonify({'error': f'PDF generation failed: {str(pdf_error)}'}), 500
-        response.headers.set('Content-Type', 'application/pdf')
-        return response
+                field('Phone', None)
+
+            # Irish Connections
+            if counties or surnames:
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(0, 6, '  Irish Connections', border=0, fill=True)
+                pdf.ln(6)
+                length = max(len(counties), len(surnames))
+                for idx in range(length):
+                    c = counties[idx] if idx < len(counties) else None
+                    sr = surnames[idx] if idx < len(surnames) else None
+                    field('County', c[0] if c else None)
+                    field('Connection Type', c[1] if c else None)
+                    field('Surname', sr[0] if sr else None)
+
+            # Addresses
+            if addresses:
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(0, 6, '  Addresses', border=0, fill=True)
+                pdf.ln(6)
+                for addr in addresses:
+                    is_current = str(addr[5]) == '1'
+                    pdf.set_font('Helvetica', 'I', 9)
+                    pdf.cell(0, 5, '  Current Address' if is_current else '  Other Address', border=0)
+                    pdf.ln(5)
+                    raw_country = str(addr[3]) if addr[3] is not None else ''
+                    country = legacy_country_map.get(raw_country, raw_country)
+                    field('Street', addr[0])
+                    field('City', addr[1])
+                    field('Province', addr[2])
+                    field('Country', country)
+                    field('Postal Code', addr[4])
+
+            # Membership
+            pdf.set_font('Helvetica', 'B', 10)
+            pdf.cell(0, 6, '  Membership', border=0, fill=True)
+            pdf.ln(6)
+            field('Date Joined', fmt_date(row[7]))
+            field('Date Ended', fmt_date(row[8]))
+            field('Application Date', fmt_date(row[9]))
+            field('Approval Date', fmt_date(row[10]))
+            field('Approved By', row[11])
+            field('Signed By', row[12])
+            field('Proposer', row[13])
+            field('Seconder', row[14])
+            field('Proposal Date', fmt_date(row[15]))
+            field('Other Societies', row[16])
+
+            # Roles
+            if roles:
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(0, 6, '  Roles Held', border=0, fill=True)
+                pdf.ln(6)
+                for role in roles:
+                    field(s(role[1]) or 'Year', role[0])
+
+            # Volunteering
+            if volunteering:
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(0, 6, '  Volunteering Interests', border=0, fill=True)
+                pdf.ln(6)
+                pdf.set_font('Helvetica', '', 9)
+                pdf.cell(0, 6, '; '.join(volunteering), border=0)
+                pdf.ln(6)
+
+            # Notes
+            if row[17]:
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(0, 6, '  Notes', border=0, fill=True)
+                pdf.ln(6)
+                pdf.set_font('Helvetica', '', 9)
+                pdf.multi_cell(0, 5, s(row[17]))
+
+            pdf.ln(6)
+
+        pdf_bytes = bytes(pdf.output())
+        pdf_io = io.BytesIO(pdf_bytes)
+        return send_file(pdf_io, mimetype='application/pdf', as_attachment=True,
+                         download_name='bis_members_directory.pdf')
 
     except Exception as e:
-        return jsonify({'error': f'Failed to export PDF: {str(e)}'}), 500
+        return jsonify({'error': f'PDF generation failed: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -4086,7 +4469,7 @@ def export_members_by_fiscal_year_csv():
             LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
             LEFT JOIN MemberFiscalYear mf ON m.MemberID = mf.MemberID
             LEFT JOIN FiscalYear fy ON mf.FiscalYearID = fy.FiscalYearID
-            WHERE mf.FiscalYearID = ?
+            WHERE mf.FiscalYearID = %s
         """, (fiscal_year_id,))
 
         output = io.StringIO()
@@ -4130,7 +4513,7 @@ def export_recognitions_by_fiscal_year_csv():
             LEFT JOIN RecognitionType rt ON r.RecognitionTypeID = rt.RecognitionTypeID
             LEFT JOIN Society s ON r.SocietyID = s.SocietyID
             LEFT JOIN FiscalYear fy ON r.FiscalYearID = fy.FiscalYearID
-            WHERE r.FiscalYearID = ?
+            WHERE r.FiscalYearID = %s
         """, (fiscal_year_id,))
 
         output = io.StringIO()
@@ -4178,7 +4561,7 @@ def export_members_by_fiscal_year_pdf():
             LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
             LEFT JOIN MemberFiscalYear mf ON m.MemberID = mf.MemberID
             LEFT JOIN FiscalYear fy ON mf.FiscalYearID = fy.FiscalYearID
-            WHERE mf.FiscalYearID = ?
+            WHERE mf.FiscalYearID = %s
         """, (fiscal_year_id,))
 
         pdf = FPDF()
@@ -4230,7 +4613,7 @@ def export_recognitions_by_fiscal_year_pdf():
             LEFT JOIN RecognitionType rt ON r.RecognitionTypeID = rt.RecognitionTypeID
             LEFT JOIN Society s ON r.SocietyID = s.SocietyID
             LEFT JOIN FiscalYear fy ON r.FiscalYearID = fy.FiscalYearID
-            WHERE r.FiscalYearID = ?
+            WHERE r.FiscalYearID = %s
         """, (fiscal_year_id,))
 
         pdf = FPDF()
@@ -4265,288 +4648,417 @@ def export_recognitions_by_fiscal_year_pdf():
 @private_or_admin_required
 def export_member_csv(member_id):
     """Export individual member information as CSV"""
-    conn = get_db_connection()
-    if not conn:
+    db_conn = get_db_connection()
+    if not db_conn:
         return jsonify({'error': 'Database connection failed'}), 500
 
     try:
-        cursor = conn.cursor()
-        
-        # Get member details with simple query
+        cursor = db_conn.cursor()
+
+        def fmt_date(v):
+            if not v:
+                return ''
+            return v.strftime('%Y-%m-%d') if hasattr(v, 'strftime') else str(v)
+
+        legacy_country_map = {'0': 'Canada', '1': 'Canada', '2': 'United States',
+                              '3': 'Ireland', '4': 'United Kingdom', '5': 'Other'}
+
+        # 1. Main member info
         cursor.execute("""
-            SELECT 
-                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
-                m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
-            FROM Members AS m 
-            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
-            LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
-            WHERE m.MemberID = ?
+            SELECT m.FirstName, m.LastName, m.Email, m.`Place of Birth`, m.`Date of Birth`,
+                   mc.CategoryName, o.OccupationName,
+                   m.DateJoined, m.DateEnded, m.ApplicationDate, m.`Approval Date`,
+                   m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate,
+                   m.OtherSocieties, m.Notes, m.IsActive
+            FROM Members m
+            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN Occupation o ON m.OccupationID = o.OccupationID
+            WHERE m.MemberID = %s
         """, (member_id,))
-        
         row = cursor.fetchone()
         if not row:
             return jsonify({'error': 'Member not found'}), 404
 
-        # Get address info with simple query
-        address_row = None
-        try:
-            cursor.execute("""
-                SELECT Street, City, PostalCode 
-                FROM MemberAddress 
-                WHERE MemberID = ? AND IsCurrent = True
-            """, (member_id,))
-            address_row = cursor.fetchone()
-        except:
-            pass
+        # 2. Irish connections
+        cursor.execute("""
+            SELECT ic.CountyName, icc.ConnectionType
+            FROM IrishConnectionByCounty icc
+            LEFT JOIN IrishCounties ic ON icc.CountyID = ic.CountyID
+            WHERE icc.MemberID = %s ORDER BY icc.rowid
+        """, (member_id,))
+        county_rows = cursor.fetchall()
 
-        # Get phone numbers
-        phone_rows = []
-        try:
-            cursor.execute("""
-                SELECT PhoneType, PhoneNumber, IsPreferred
-                FROM MemberPhoneNumbers
-                WHERE MemberID = ?
-                ORDER BY IsPreferred DESC, PhoneType ASC
-            """, (member_id,))
-            phone_rows = cursor.fetchall()
-        except:
-            pass
+        cursor.execute("""
+            SELECT isur.Surname
+            FROM IrishConnectionBySurname ics
+            LEFT JOIN IrishSurnames isur ON ics.SurnameID = isur.SurnameID
+            WHERE ics.MemberID = %s ORDER BY ics.rowid
+        """, (member_id,))
+        surname_rows = cursor.fetchall()
 
-        # Get user account info with simple query
-        user_row = None
-        try:
+        # 3. Phone numbers
+        cursor.execute("""
+            SELECT PhoneType, PhoneNumber, IsPreferred
+            FROM MemberPhoneNumbers
+            WHERE MemberID = %s ORDER BY IsPreferred DESC, PhoneType ASC
+        """, (member_id,))
+        phone_rows = cursor.fetchall()
+
+        # 4. All addresses
+        cursor.execute("""
+            SELECT ma.Street, ma.City, p.ProvinceName, ma.CountryID, ma.PostalCode, ma.IsCurrent
+            FROM MemberAddress ma
+            LEFT JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+            WHERE ma.MemberID = %s ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC
+        """, (member_id,))
+        address_rows = cursor.fetchall()
+
+        # 5. Roles
+        cursor.execute("""
+            SELECT r.RoleName, fy.YearLabel
+            FROM MemberRole mr
+            LEFT JOIN Role r ON mr.RoleID = r.RoleID
+            LEFT JOIN FiscalYear fy ON mr.FiscalYearID = fy.FiscalYearID
+            WHERE mr.MemberID = %s ORDER BY mr.FiscalYearID DESC
+        """, (member_id,))
+        role_rows = cursor.fetchall()
+
+        # 6. Volunteering interests
+        cursor.execute("SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'")
+        field_result = cursor.fetchone()
+        volunteering = []
+        if field_result:
             cursor.execute("""
-                SELECT Username, Role, Email 
-                FROM Users 
-                WHERE MemberID = ?
-            """, (member_id,))
-            user_row = cursor.fetchone()
-        except:
-            pass
+                SELECT ValueText FROM UserDefinedFieldValue
+                WHERE FieldID = %s AND MemberID = %s ORDER BY ValueText
+            """, (field_result[0], member_id))
+            volunteering = [r[0] for r in cursor.fetchall() if r[0]]
 
         output = io.StringIO()
         writer = csv.writer(output)
-        
-        # Helper function to format dates safely
-        def format_date_safe(date_value):
-            if not date_value:
-                return ''
-            if hasattr(date_value, 'strftime'):
-                return date_value.strftime('%Y-%m-%d')
-            else:
-                return str(date_value)
-        
-        # Write header
         writer.writerow(['Field', 'Value'])
-        
-        # Write member data
+
+        # Personal
+        writer.writerow(['--- PERSONAL ---', ''])
         writer.writerow(['First Name', row[0] or ''])
         writer.writerow(['Last Name', row[1] or ''])
-        writer.writerow(['Place of Birth', row[2] or ''])
-        writer.writerow(['Date of Birth', format_date_safe(row[3])])
-        writer.writerow(['Date Joined', format_date_safe(row[4])])
-        writer.writerow(['Date Ended', format_date_safe(row[5])])
-        writer.writerow(['Active', 'Yes' if row[6] else 'No'])
-        writer.writerow(['Category', row[7] or ''])
-        writer.writerow(['County', row[8] or ''])
-        
-        # Write phone numbers
+        writer.writerow(['Date of Birth', fmt_date(row[4])])
+        writer.writerow(['Place of Birth', row[3] or ''])
+        writer.writerow(['Occupation', row[6] or ''])
+        writer.writerow(['Status', 'Active' if row[18] else 'Inactive'])
+
+        # Contact
+        writer.writerow(['', ''])
+        writer.writerow(['--- CONTACT ---', ''])
+        writer.writerow(['Email', row[2] or ''])
         if phone_rows:
-            writer.writerow(['', ''])  # Blank row
-            writer.writerow(['Phone Numbers', ''])
             for phone in phone_rows:
-                phone_type = phone[0]
-                phone_num = phone[1]
-                is_pref = ' (Primary)' if phone[2] else ''
-                writer.writerow([f'  {phone_type}', f'{phone_num}{is_pref}'])
+                label = phone[0] + (' (Primary)' if phone[2] else '')
+                writer.writerow([label, phone[1] or ''])
         else:
-            writer.writerow(['Phone Numbers', 'None'])
-        
-        writer.writerow(['', ''])  # Blank row
-        writer.writerow(['Street', address_row[0] if address_row else ''])
-        writer.writerow(['City', address_row[1] if address_row else ''])
-        writer.writerow(['Postal Code', address_row[2] if address_row else ''])
-        writer.writerow(['Username', user_row[0] if user_row else ''])
-        writer.writerow(['Role', user_row[1] if user_row else ''])
-        writer.writerow(['Email', user_row[2] if user_row else ''])
-        
+            writer.writerow(['Phone', ''])
+
+        # Irish Connections
+        writer.writerow(['', ''])
+        writer.writerow(['--- IRISH CONNECTIONS ---', ''])
+        ic_len = max(len(county_rows), len(surname_rows)) if (county_rows or surname_rows) else 0
+        if ic_len > 0:
+            for i in range(ic_len):
+                c = county_rows[i] if i < len(county_rows) else None
+                s = surname_rows[i] if i < len(surname_rows) else None
+                sfx = f' {i + 1}' if ic_len > 1 else ''
+                writer.writerow([f'County{sfx}', c[0] if c else ''])
+                writer.writerow([f'Connection Type{sfx}', c[1] if c else ''])
+                writer.writerow([f'Surname{sfx}', s[0] if s else ''])
+        else:
+            writer.writerow(['County', ''])
+            writer.writerow(['Surname', ''])
+
+        # Addresses
+        writer.writerow(['', ''])
+        writer.writerow(['--- ADDRESSES ---', ''])
+        if address_rows:
+            for i, addr in enumerate(address_rows):
+                is_current = str(addr[5]) == '1'
+                writer.writerow(['Address', 'Current' if is_current else f'Other {i + 1}'])
+                writer.writerow(['  Street', addr[0] or ''])
+                writer.writerow(['  City', addr[1] or ''])
+                writer.writerow(['  Province/State', addr[2] or ''])
+                country = legacy_country_map.get(str(addr[3]) if addr[3] is not None else '', str(addr[3] or ''))
+                writer.writerow(['  Country', country])
+                writer.writerow(['  Postal Code', addr[4] or ''])
+        else:
+            writer.writerow(['Address', ''])
+
+        # Membership
+        writer.writerow(['', ''])
+        writer.writerow(['--- MEMBERSHIP ---', ''])
+        writer.writerow(['Category', row[5] or ''])
+        writer.writerow(['Date Joined', fmt_date(row[7])])
+        writer.writerow(['Date Ended', fmt_date(row[8])])
+        writer.writerow(['Application Date', fmt_date(row[9])])
+        writer.writerow(['Approval Date', fmt_date(row[10])])
+        writer.writerow(['Approved By', row[11] or ''])
+        writer.writerow(['Signed By', row[12] or ''])
+        writer.writerow(['Proposer', row[13] or ''])
+        writer.writerow(['Seconder', row[14] or ''])
+        writer.writerow(['Proposal Date', fmt_date(row[15])])
+        writer.writerow(['Other Societies', row[16] or ''])
+
+        # Roles
+        writer.writerow(['', ''])
+        writer.writerow(['--- ROLES HELD ---', ''])
+        if role_rows:
+            for role in role_rows:
+                writer.writerow([role[0] or '', role[1] or ''])
+        else:
+            writer.writerow(['No roles on record', ''])
+
+        # Volunteering
+        writer.writerow(['', ''])
+        writer.writerow(['--- VOLUNTEERING INTERESTS ---', ''])
+        if volunteering:
+            for interest in volunteering:
+                writer.writerow(['', interest])
+        else:
+            writer.writerow(['', 'None on record'])
+
+        # Notes
+        writer.writerow(['', ''])
+        writer.writerow(['--- NOTES ---', ''])
+        writer.writerow(['Notes', row[17] or ''])
+
         output.seek(0)
         filename = f"member_{row[0]}_{row[1]}.csv".replace(' ', '_')
         return Response(output, mimetype='text/csv', headers={
             "Content-Disposition": f"attachment;filename={filename}"
         })
-        
+
     except Exception as e:
         return jsonify({'error': f'Failed to export member CSV: {str(e)}'}), 500
     finally:
-        conn.close()
+        db_conn.close()
 
 
 @app.route('/api/export/member/<int:member_id>/pdf', methods=['GET'])
-@private_or_admin_required  
+@private_or_admin_required
 def export_member_pdf(member_id):
     """Export individual member information as PDF"""
-    conn = get_db_connection()
-    if not conn:
+    db_conn = get_db_connection()
+    if not db_conn:
         return jsonify({'error': 'Database connection failed'}), 500
 
     try:
-        cursor = conn.cursor()
-        
-        # Get member details with simple query
+        cursor = db_conn.cursor()
+
+        def fmt_date(v):
+            if not v:
+                return ''
+            return v.strftime('%Y-%m-%d') if hasattr(v, 'strftime') else str(v)
+
+        def safe_str(v):
+            return str(v) if v else ''
+
+        legacy_country_map = {'0': 'Canada', '1': 'Canada', '2': 'United States',
+                              '3': 'Ireland', '4': 'United Kingdom', '5': 'Other'}
+
+        # 1. Main member info
         cursor.execute("""
-            SELECT 
-                m.FirstName, m.LastName, m.[Place of Birth], m.[Date of Birth],
-                m.DateJoined, m.DateEnded, m.IsActive, mc.CategoryName, ic.CountyName
-            FROM Members AS m 
-            LEFT JOIN MemberCategory AS mc ON m.MemberCategoryID = mc.CategoryID
-            LEFT JOIN IrishCounties AS ic ON m.CountyID = ic.CountyID
-            WHERE m.MemberID = ?
+            SELECT m.FirstName, m.LastName, m.Email, m.`Place of Birth`, m.`Date of Birth`,
+                   mc.CategoryName, o.OccupationName,
+                   m.DateJoined, m.DateEnded, m.ApplicationDate, m.`Approval Date`,
+                   m.ApprovedBy, m.SignedBy, m.Proposer, m.Seconder, m.ProposalDate,
+                   m.OtherSocieties, m.Notes, m.IsActive
+            FROM Members m
+            LEFT JOIN MemberCategory mc ON m.MemberCategoryID = mc.CategoryID
+            LEFT JOIN Occupation o ON m.OccupationID = o.OccupationID
+            WHERE m.MemberID = %s
         """, (member_id,))
-        
         row = cursor.fetchone()
         if not row:
             return jsonify({'error': 'Member not found'}), 404
 
-        # Get address info with simple query
-        address_row = None
-        try:
-            cursor.execute("""
-                SELECT Street, City, PostalCode 
-                FROM MemberAddress 
-                WHERE MemberID = ? AND IsCurrent = True
-            """, (member_id,))
-            address_row = cursor.fetchone()
-        except:
-            pass
+        # 2. Irish connections
+        cursor.execute("""
+            SELECT ic.CountyName, icc.ConnectionType
+            FROM IrishConnectionByCounty icc
+            LEFT JOIN IrishCounties ic ON icc.CountyID = ic.CountyID
+            WHERE icc.MemberID = %s ORDER BY icc.rowid
+        """, (member_id,))
+        county_rows = cursor.fetchall()
 
-        # Get phone numbers
-        phone_rows = []
-        try:
-            cursor.execute("""
-                SELECT PhoneType, PhoneNumber, IsPreferred
-                FROM MemberPhoneNumbers
-                WHERE MemberID = ?
-                ORDER BY IsPreferred DESC, PhoneType ASC
-            """, (member_id,))
-            phone_rows = cursor.fetchall()
-        except:
-            pass
+        cursor.execute("""
+            SELECT isur.Surname
+            FROM IrishConnectionBySurname ics
+            LEFT JOIN IrishSurnames isur ON ics.SurnameID = isur.SurnameID
+            WHERE ics.MemberID = %s ORDER BY ics.rowid
+        """, (member_id,))
+        surname_rows = cursor.fetchall()
 
-        # Get user account info with simple query
-        user_row = None
-        try:
-            cursor.execute("""
-                SELECT Username, Role, Email 
-                FROM Users 
-                WHERE MemberID = ?
-            """, (member_id,))
-            user_row = cursor.fetchone()
-        except:
-            pass
+        # 3. Phone numbers
+        cursor.execute("""
+            SELECT PhoneType, PhoneNumber, IsPreferred
+            FROM MemberPhoneNumbers
+            WHERE MemberID = %s ORDER BY IsPreferred DESC, PhoneType ASC
+        """, (member_id,))
+        phone_rows = cursor.fetchall()
 
+        # 4. All addresses
+        cursor.execute("""
+            SELECT ma.Street, ma.City, p.ProvinceName, ma.CountryID, ma.PostalCode, ma.IsCurrent
+            FROM MemberAddress ma
+            LEFT JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
+            WHERE ma.MemberID = %s ORDER BY ma.IsCurrent DESC, ma.MemberAddressID DESC
+        """, (member_id,))
+        address_rows = cursor.fetchall()
+
+        # 5. Roles
+        cursor.execute("""
+            SELECT r.RoleName, fy.YearLabel
+            FROM MemberRole mr
+            LEFT JOIN Role r ON mr.RoleID = r.RoleID
+            LEFT JOIN FiscalYear fy ON mr.FiscalYearID = fy.FiscalYearID
+            WHERE mr.MemberID = %s ORDER BY mr.FiscalYearID DESC
+        """, (member_id,))
+        role_rows = cursor.fetchall()
+
+        # 6. Volunteering interests
+        cursor.execute("SELECT FieldID FROM UserDefinedField WHERE FieldLabel = 'Volunteering Interests'")
+        field_result = cursor.fetchone()
+        volunteering = []
+        if field_result:
+            cursor.execute("""
+                SELECT ValueText FROM UserDefinedFieldValue
+                WHERE FieldID = %s AND MemberID = %s ORDER BY ValueText
+            """, (field_result[0], member_id))
+            volunteering = [r[0] for r in cursor.fetchall() if r[0]]
+
+        # Build PDF
         pdf = FPDF()
         pdf.add_page()
+
+        def section_header(title):
+            pdf.ln(4)
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_fill_color(230, 253, 250)
+            pdf.cell(0, 8, title, 0, 1, 'L', True)
+            pdf.set_font('Helvetica', '', 11)
+            pdf.ln(1)
+
+        def field_row(label, value):
+            pdf.cell(55, 7, f'{label}:', 0, 0)
+            pdf.cell(0, 7, safe_str(value) or '-', 0, 1)
+
+        # Title
         pdf.set_font('Helvetica', 'B', 16)
-        title = f'Member Information: {row[0] or ""} {row[1] or ""}'
-        pdf.cell(0, 10, title, ln=True, align='C')
-        pdf.ln(10)
-        
-        pdf.set_font('Helvetica', '', 12)
-        
-        # Helper function to format dates safely
-        def format_date_safe(date_value):
-            if not date_value:
-                return 'N/A'
-            if hasattr(date_value, 'strftime'):
-                return date_value.strftime('%Y-%m-%d')
-            else:
-                return str(date_value)
-        
-        # Member details
-        fields = [
-            ('First Name', row[0]),
-            ('Last Name', row[1]), 
-            ('Place of Birth', row[2]),
-            ('Date of Birth', format_date_safe(row[3])),
-            ('Date Joined', format_date_safe(row[4])),
-            ('Date Ended', format_date_safe(row[5])),
-            ('Status', 'Active' if row[6] else 'Inactive'),
-            ('Category', row[7] or 'N/A'),
-            ('County', row[8] or 'N/A'),
-        ]
-        
-        for field, value in fields:
-            pdf.cell(50, 8, f'{field}:', 0, 0)
-            pdf.cell(0, 8, str(value or 'N/A'), 0, 1)
-        
-        # Phone numbers
-        pdf.ln(5)
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, 'Phone Numbers:', 0, 1)
+        pdf.cell(0, 10, f'{safe_str(row[0])} {safe_str(row[1])}', 0, 1, 'C')
         pdf.set_font('Helvetica', '', 11)
-        
+        pdf.cell(0, 7, f'Member ID: {member_id}', 0, 1, 'C')
+        pdf.ln(4)
+
+        # Personal
+        section_header('Personal')
+        field_row('Date of Birth', fmt_date(row[4]))
+        field_row('Place of Birth', row[3])
+        field_row('Occupation', row[6])
+        field_row('Status', 'Active' if row[18] else 'Inactive')
+
+        # Contact
+        section_header('Contact')
+        field_row('Email', row[2])
         if phone_rows:
             for phone in phone_rows:
-                phone_type = phone[0]
-                phone_num = phone[1]
-                is_pref = ' (Primary)' if phone[2] else ''
-                pdf.cell(50, 7, f'  {phone_type}:', 0, 0)
-                pdf.cell(0, 7, f'{phone_num}{is_pref}', 0, 1)
+                label = safe_str(phone[0]) + (' (Primary)' if phone[2] else '')
+                field_row(label, phone[1])
         else:
-            pdf.cell(0, 7, '  No phone numbers', 0, 1)
-        
-        # Address info
-        pdf.ln(5)
-        pdf.set_font('Helvetica', 'B', 12)
-        pdf.cell(0, 8, 'Address:', 0, 1)
-        pdf.set_font('Helvetica', '', 11)
-        address_fields = [
-            ('Street', address_row[0] if address_row else 'N/A'),
-            ('City', address_row[1] if address_row else 'N/A'),
-            ('Postal Code', address_row[2] if address_row else 'N/A'),
-        ]
-        for field, value in address_fields:
-            pdf.cell(50, 7, f'  {field}:', 0, 0)
-            pdf.cell(0, 7, str(value or 'N/A'), 0, 1)
-        
-        # User account info
-        if user_row:
-            pdf.ln(5)
-            pdf.set_font('Helvetica', 'B', 12)
-            pdf.cell(0, 8, 'Account Information:', 0, 1)
+            field_row('Phone', None)
+
+        # Irish Connections
+        section_header('Irish Connections')
+        ic_len = max(len(county_rows), len(surname_rows)) if (county_rows or surname_rows) else 0
+        if ic_len > 0:
+            for i in range(ic_len):
+                c = county_rows[i] if i < len(county_rows) else None
+                s = surname_rows[i] if i < len(surname_rows) else None
+                if ic_len > 1:
+                    pdf.set_font('Helvetica', 'I', 10)
+                    pdf.cell(0, 6, f'Connection {i + 1}', 0, 1)
+                    pdf.set_font('Helvetica', '', 11)
+                field_row('County', c[0] if c else None)
+                field_row('Connection Type', c[1] if c else None)
+                field_row('Surname', s[0] if s else None)
+        else:
+            pdf.cell(0, 7, 'None on record', 0, 1)
+
+        # Addresses
+        section_header('Addresses')
+        if address_rows:
+            for i, addr in enumerate(address_rows):
+                is_current = str(addr[5]) == '1'
+                pdf.set_font('Helvetica', 'I', 10)
+                pdf.cell(0, 6, 'Current Address' if is_current else f'Other Address {i + 1}', 0, 1)
+                pdf.set_font('Helvetica', '', 11)
+                field_row('Street', addr[0])
+                field_row('City', addr[1])
+                field_row('Province/State', addr[2])
+                country = legacy_country_map.get(str(addr[3]) if addr[3] is not None else '', safe_str(addr[3]))
+                field_row('Country', country)
+                field_row('Postal Code', addr[4])
+                if i < len(address_rows) - 1:
+                    pdf.ln(2)
+        else:
+            pdf.cell(0, 7, 'None on record', 0, 1)
+
+        # Membership
+        section_header('Membership')
+        field_row('Category', row[5])
+        field_row('Date Joined', fmt_date(row[7]))
+        field_row('Date Ended', fmt_date(row[8]))
+        field_row('Application Date', fmt_date(row[9]))
+        field_row('Approval Date', fmt_date(row[10]))
+        field_row('Approved By', row[11])
+        field_row('Signed By', row[12])
+        field_row('Proposer', row[13])
+        field_row('Seconder', row[14])
+        field_row('Proposal Date', fmt_date(row[15]))
+        field_row('Other Societies', row[16])
+
+        # Roles
+        section_header('Roles Held')
+        if role_rows:
+            pdf.set_font('Helvetica', 'B', 10)
+            pdf.cell(90, 7, 'Role', 0, 0)
+            pdf.cell(0, 7, 'Fiscal Year', 0, 1)
             pdf.set_font('Helvetica', '', 11)
-            user_fields = [
-                ('Username', user_row[0]),
-                ('Role', user_row[1]),
-                ('Email', user_row[2])
-            ]
-            for field, value in user_fields:
-                pdf.cell(50, 7, f'  {field}:', 0, 0)
-                pdf.cell(0, 7, str(value or 'N/A'), 0, 1)
-            
-        # Generate PDF and get bytes
-        pdf_output = pdf.output(dest='S')
-        if isinstance(pdf_output, str):
-            pdf_bytes = pdf_output.encode('latin-1')
+            for role in role_rows:
+                pdf.cell(90, 7, safe_str(role[0]), 0, 0)
+                pdf.cell(0, 7, safe_str(role[1]), 0, 1)
         else:
-            pdf_bytes = pdf_output
-        
+            pdf.cell(0, 7, 'None on record', 0, 1)
+
+        # Volunteering
+        section_header('Volunteering Interests')
+        if volunteering:
+            pdf.cell(0, 7, ', '.join(volunteering), 0, 1)
+        else:
+            pdf.cell(0, 7, 'None on record', 0, 1)
+
+        # Notes
+        section_header('Notes')
+        if row[17]:
+            pdf.set_font('Helvetica', '', 11)
+            pdf.multi_cell(0, 7, safe_str(row[17]))
+        else:
+            pdf.cell(0, 7, 'None', 0, 1)
+
         filename = f"member_{row[0]}_{row[1]}.pdf".replace(' ', '_')
-        
-        # Use BytesIO for Flask send_file
-        pdf_io = io.BytesIO(pdf_bytes)
-        return send_file(
-            pdf_io,
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=filename
-        )
-        
+        pdf_io = io.BytesIO(bytes(pdf.output()))
+        return send_file(pdf_io, mimetype='application/pdf', as_attachment=True, download_name=filename)
+
     except Exception as e:
         return jsonify({'error': f'Failed to export member PDF: {str(e)}'}), 500
     finally:
-        conn.close()
+        db_conn.close()
 
 
 # --- Change Password ---
@@ -4573,7 +5085,7 @@ def change_my_password():
 
         # Verify current password
         cursor.execute(
-            "SELECT PasswordHash FROM User WHERE UserID = ?", (session['user_id'],))
+            "SELECT PasswordHash FROM User WHERE UserID = %s", (session['user_id'],))
         result = cursor.fetchone()
         if not result or not verify_password(current_password, result[0]):
             return jsonify({'error': 'Current password is incorrect'}), 403
@@ -4582,8 +5094,8 @@ def change_my_password():
         hashed_password = hash_password(new_password)
         cursor.execute("""
             UPDATE User
-            SET PasswordHash = ?
-            WHERE UserID = ?
+            SET PasswordHash = %s
+            WHERE UserID = %s
         """, (hashed_password, session['user_id']))
         conn.commit()
 
@@ -4627,8 +5139,8 @@ def upload_profile_photo():
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE User
-            SET ProfilePhoto = ?
-            WHERE UserID = ?
+            SET ProfilePhoto = %s
+            WHERE UserID = %s
         """, (unique_filename, session['user_id']))
         conn.commit()
 
@@ -4664,13 +5176,13 @@ def toggle_user_status(user_id):
 
         # Check if user exists
         cursor.execute(
-            "SELECT Username FROM User WHERE UserID = ?", (user_id,))
+            "SELECT Username FROM User WHERE UserID = %s", (user_id,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
         cursor.execute(
-            "UPDATE User SET IsApproved = ? WHERE UserID = ?", (is_approved, user_id))
+            "UPDATE User SET IsApproved = %s WHERE UserID = %s", (is_approved, user_id))
         conn.commit()
         status_str = "approved" if is_approved else "disapproved"
         log_audit_event(session['user_id'], 'STATUS_CHANGE', 'User', user_id,
@@ -4697,7 +5209,7 @@ def update_user(user_id):
         cursor = conn.cursor()
         
         # Get current user info
-        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\" FROM User WHERE UserID = ?", (user_id,))
+        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\" FROM User WHERE UserID = %s", (user_id,))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -4707,19 +5219,19 @@ def update_user(user_id):
         params = []
         
         if 'username' in data:
-            update_fields.append("Username = ?")
+            update_fields.append("Username = %s")
             params.append(data['username'])
         
         if 'email' in data:
-            update_fields.append("Email = ?")
+            update_fields.append("Email = %s")
             params.append(data['email'])
         
         if 'firstName' in data:
-            update_fields.append("FirstName = ?")
+            update_fields.append("FirstName = %s")
             params.append(data['firstName'])
         
         if 'lastName' in data:
-            update_fields.append("Last Name = ?")
+            update_fields.append("Last Name = %s")
             params.append(data['lastName'])
         
         if not update_fields:
@@ -4728,7 +5240,7 @@ def update_user(user_id):
         # Add user_id for WHERE clause
         params.append(user_id)
         
-        query = f"UPDATE User SET {', '.join(update_fields)} WHERE UserID = ?"
+        query = f"UPDATE User SET {', '.join(update_fields)} WHERE UserID = %s"
         cursor.execute(query, params)
         conn.commit()
         
@@ -4799,8 +5311,8 @@ def get_lookups():
         counties = [{'value': row[0], 'label': row[1]} for row in cursor.fetchall()]
         print(f'DEBUG: Found {len(counties)} counties')
 
-        # Provinces (global, with country info)
-        cursor.execute("SELECT ProvinceID, ProvinceName, CountryCode, CountryName FROM Provinces ORDER BY CountryName, ProvinceName")
+        # Provinces (global, with country info) — filtered to Canada, United States, Ireland only
+        cursor.execute("SELECT ProvinceID, ProvinceName, CountryCode, CountryName FROM Provinces WHERE CountryName IN ('Canada', 'United States', 'Ireland') ORDER BY CountryName, ProvinceName")
         provinces = [
             {
                 'value': row[0],
@@ -4940,8 +5452,8 @@ def get_categories():
         categories = []
         for row in rows:
             try:
-                cat_id = row['CategoryID'] if isinstance(row, sqlite3.Row) else row[0]
-                cat_name = row['CategoryName'] if isinstance(row, sqlite3.Row) else row[1]
+                cat_id = row[0]
+                cat_name = row[1]
                 print(f"DEBUG: Row: {row}, ID: {cat_id!r}, Name: {cat_name}, ID type: {type(cat_id)}")
                 try:
                     int_id = int(cat_id)
@@ -4977,14 +5489,14 @@ def create_fiscal_year():
         cursor = conn.cursor()
         
         # Check if fiscal year already exists
-        cursor.execute("SELECT FiscalYearID FROM FiscalYear WHERE YearLabel = ?", (data['yearLabel'],))
+        cursor.execute("SELECT FiscalYearID FROM FiscalYear WHERE YearLabel = %s", (data['yearLabel'],))
         if cursor.fetchone():
             return jsonify({'error': 'Fiscal year already exists'}), 409
         
         # Insert new fiscal year (simplified - only YearLabel)
         cursor.execute("""
             INSERT INTO FiscalYear (YearLabel)
-            VALUES (?)
+            VALUES (%s)
         """, (
             data['yearLabel'],
         ))
@@ -5021,14 +5533,14 @@ def create_category():
         cursor = conn.cursor()
         
         # Check if category already exists
-        cursor.execute("SELECT CategoryID FROM MemberCategory WHERE CategoryName = ?", (data['categoryName'],))
+        cursor.execute("SELECT CategoryID FROM MemberCategory WHERE CategoryName = %s", (data['categoryName'],))
         if cursor.fetchone():
             return jsonify({'error': 'Category already exists'}), 409
         
         # Insert new category
         cursor.execute("""
             INSERT INTO MemberCategory (CategoryName)
-            VALUES (?)
+            VALUES (%s)
         """, (data['categoryName'],))
         
         conn.commit()
@@ -5081,7 +5593,7 @@ def create_role():
         # Insert new role
         cursor.execute("""
             INSERT INTO Role (RoleName)
-            VALUES (?)
+            VALUES (%s)
         """, (role_name,))
         
         conn.commit()
@@ -5116,14 +5628,14 @@ def create_society_lookup():
         cursor = conn.cursor()
         
         # Check if society already exists
-        cursor.execute("SELECT SocietyID FROM Society WHERE SocietyName = ?", (data['societyName'],))
+        cursor.execute("SELECT SocietyID FROM Society WHERE SocietyName = %s", (data['societyName'],))
         if cursor.fetchone():
             return jsonify({'error': 'Society already exists'}), 409
         
         # Insert new society
         cursor.execute("""
             INSERT INTO Society (SocietyName)
-            VALUES (?)
+            VALUES (%s)
         """, (data['societyName'],))
         
         conn.commit()
@@ -5158,14 +5670,14 @@ def create_occupation():
         cursor = conn.cursor()
         
         # Check if occupation already exists
-        cursor.execute("SELECT OccupationID FROM Occupation WHERE OccupationName = ?", (data['occupationName'],))
+        cursor.execute("SELECT OccupationID FROM Occupation WHERE OccupationName = %s", (data['occupationName'],))
         if cursor.fetchone():
             return jsonify({'error': 'Occupation already exists'}), 409
         
         # Insert new occupation
         cursor.execute("""
             INSERT INTO Occupation (OccupationName)
-            VALUES (?)
+            VALUES (%s)
         """, (data['occupationName'],))
         
         conn.commit()
@@ -5218,7 +5730,7 @@ def create_surname():
         # Insert new surname
         cursor.execute("""
             INSERT INTO IrishSurnames (Surname)
-            VALUES (?)
+            VALUES (%s)
         """, (surname,))
         
         conn.commit()
@@ -5249,7 +5761,7 @@ def delete_fiscal_year(fiscal_year_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM FiscalYear WHERE FiscalYearID = ?", (fiscal_year_id,))
+        cursor.execute("DELETE FROM FiscalYear WHERE FiscalYearID = %s", (fiscal_year_id,))
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Fiscal year not found'}), 404
@@ -5272,7 +5784,7 @@ def delete_category(category_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM MemberCategory WHERE CategoryID = ?", (category_id,))
+        cursor.execute("DELETE FROM MemberCategory WHERE CategoryID = %s", (category_id,))
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Category not found'}), 404
@@ -5295,7 +5807,7 @@ def delete_role(role_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM MemberRole WHERE RoleID = ?", (role_id,))
+        cursor.execute("DELETE FROM MemberRole WHERE RoleID = %s", (role_id,))
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Role not found'}), 404
@@ -5318,7 +5830,7 @@ def delete_occupation(occupation_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM Occupation WHERE OccupationID = ?", (occupation_id,))
+        cursor.execute("DELETE FROM Occupation WHERE OccupationID = %s", (occupation_id,))
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Occupation not found'}), 404
@@ -5341,7 +5853,7 @@ def delete_surname(surname_id):
     
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM IrishSurnames WHERE SurnameID = ?", (surname_id,))
+        cursor.execute("DELETE FROM IrishSurnames WHERE SurnameID = %s", (surname_id,))
         
         if cursor.rowcount == 0:
             return jsonify({'error': 'Surname not found'}), 404
@@ -5370,7 +5882,7 @@ def get_my_profile():
             SELECT UserID, Username, Email, Role, IsApproved, CreatedAt, LastLogin,
                    FirstName, "Last Name"
             FROM User
-            WHERE UserID = ?
+            WHERE UserID = %s
         """, (session.get('user_id'),))
 
         user = cursor.fetchone()
@@ -5427,7 +5939,7 @@ def update_my_profile():
         cursor = conn.cursor()
         
         # Get current user info to verify they exist
-        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\" FROM User WHERE UserID = ?", (session['user_id'],))
+        cursor.execute("SELECT Username, Email, FirstName, \"Last Name\" FROM User WHERE UserID = %s", (session['user_id'],))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -5438,30 +5950,30 @@ def update_my_profile():
         
         if 'username' in data:
             # Check if username is already taken by another user - use separate queries to avoid parameter issues
-            cursor.execute("SELECT UserID FROM User WHERE Username = ?", (data['username'],))
+            cursor.execute("SELECT UserID FROM User WHERE Username = %s", (data['username'],))
             existing_user = cursor.fetchone()
             if existing_user and existing_user[0] != session['user_id']:
                 return jsonify({'error': 'Username is already taken'}), 400
-            update_fields.append("Username = ?")
+            update_fields.append("Username = %s")
             params.append(data['username'])
         
         if 'email' in data:
             # Check if email is already taken by another user - use separate queries to avoid parameter issues
-            cursor.execute("SELECT UserID FROM User WHERE Email = ?", (data['email'],))
+            cursor.execute("SELECT UserID FROM User WHERE Email = %s", (data['email'],))
             existing_user = cursor.fetchone()
             if existing_user and existing_user[0] != session['user_id']:
                 return jsonify({'error': 'Email is already taken'}), 400
             if cursor.fetchone():
                 return jsonify({'error': 'Email is already taken'}), 400
-            update_fields.append("Email = ?")
+            update_fields.append("Email = %s")
             params.append(data['email'])
         
         if 'firstName' in data:
-            update_fields.append("FirstName = ?")
+            update_fields.append("FirstName = %s")
             params.append(data['firstName'])
         
         if 'lastName' in data:
-            update_fields.append("Last Name = ?")
+            update_fields.append("Last Name = %s")
             params.append(data['lastName'])
         
         if not update_fields:
@@ -5470,7 +5982,7 @@ def update_my_profile():
         # Add user_id for WHERE clause
         params.append(session['user_id'])
         
-        query = f"UPDATE User SET {', '.join(update_fields)} WHERE UserID = ?"
+        query = f"UPDATE User SET {', '.join(update_fields)} WHERE UserID = %s"
         cursor.execute(query, params)
         conn.commit()
         
@@ -5504,7 +6016,7 @@ def request_private_access():
         cursor = conn.cursor()
         
         # Get current user info
-        cursor.execute("SELECT Role, IsApproved, Username, FirstName, \"Last Name\" FROM User WHERE UserID = ?", (session['user_id'],))
+        cursor.execute("SELECT Role, IsApproved, Username, FirstName, \"Last Name\" FROM User WHERE UserID = %s", (session['user_id'],))
         user = cursor.fetchone()
         if not user:
             return jsonify({'error': 'User not found'}), 404
@@ -5526,7 +6038,7 @@ def request_private_access():
         cursor.execute("""
             UPDATE User 
             SET Role = 'private', IsApproved = FALSE 
-            WHERE UserID = ?
+            WHERE UserID = %s
         """, (session['user_id'],))
         conn.commit()
         
@@ -5577,7 +6089,7 @@ def manual_password_reset():
 
         # Check if user exists and has no email on record
         cursor.execute(
-            "SELECT Username FROM User WHERE UserID = ? AND (Email IS NULL OR Email = '')",
+            "SELECT Username FROM User WHERE UserID = %s AND (Email IS NULL OR Email = '')",
             (user_id,
              ))
         result = cursor.fetchone()
@@ -5589,8 +6101,8 @@ def manual_password_reset():
         hashed = hash_password(new_password)
         cursor.execute("""
             UPDATE User
-            SET PasswordHash = ?, ResetToken = NULL, ResetTokenExpires = NULL
-            WHERE UserID = ?
+            SET PasswordHash = %s, ResetToken = NULL, ResetTokenExpires = NULL
+            WHERE UserID = %s
         """, (hashed, user_id))
         conn.commit()
 
@@ -5663,7 +6175,7 @@ def get_society_recognitions(society_id):
             FROM Recognitions r
             JOIN RecognitionType rt ON r.RecognitionTypeID = rt.RecognitionTypeID
             LEFT JOIN FiscalYear fy ON r.FiscalYearID = fy.FiscalYearID
-            WHERE r.SocietyID = ?
+            WHERE r.SocietyID = %s
             ORDER BY fy.StartDate DESC
         """, (society_id,))
         data = [{
@@ -5703,18 +6215,18 @@ def add_recognition(society_id):
             if start_year < 1825:
                 return jsonify({'error': 'Fiscal year cannot start before 1825'}), 400
             # Check if fiscal year exists
-            cursor.execute("SELECT FiscalYearID FROM FiscalYear WHERE YearLabel = ?", (fiscal_year_label,))
+            cursor.execute("SELECT FiscalYearID FROM FiscalYear WHERE YearLabel = %s", (fiscal_year_label,))
             row = cursor.fetchone()
             if row:
                 fiscal_year_id = row[0]
             else:
-                cursor.execute("INSERT INTO FiscalYear (YearLabel) VALUES (?)", (fiscal_year_label,))
+                cursor.execute("INSERT INTO FiscalYear (YearLabel) VALUES (%s)", (fiscal_year_label,))
                 fiscal_year_id = cursor.lastrowid
                 conn.commit()
         # Insert recognition
         cursor.execute("""
             INSERT INTO Recognitions (SocietyID, RecognitionTypeID, Description, FiscalYearID, IsActive)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             society_id,
             data.get('recognitionTypeId'),
@@ -5756,8 +6268,8 @@ def update_recognition(recognition_id):
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE Recognitions
-            SET RecognitionTypeID = ?, Description = ?, FiscalYearID = ?, IsActive = ?
-            WHERE RecognitionID = ?
+            SET RecognitionTypeID = %s, Description = %s, FiscalYearID = %s, IsActive = %s
+            WHERE RecognitionID = %s
         """, (
             data.get('recognitionTypeId'),
             data.get('description'),
@@ -5792,7 +6304,7 @@ def delete_recognition(recognition_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "DELETE FROM Recognitions WHERE RecognitionID = ?", (recognition_id,))
+            "DELETE FROM Recognitions WHERE RecognitionID = %s", (recognition_id,))
         conn.commit()
 
         log_audit_event(
@@ -5829,7 +6341,7 @@ def submit_support_message():
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO SupportMessage (UserID, Subject, MessageBody, DateSubmitted, Status)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             session['user_id'],
             subject,
@@ -5908,7 +6420,7 @@ def get_member_phone_numbers(member_id):
         cursor.execute("""
             SELECT PhoneID, PhoneType, PhoneNumber, IsPreferred, CreatedAt
             FROM MemberPhoneNumbers
-            WHERE MemberID = ?
+            WHERE MemberID = %s
             ORDER BY IsPreferred DESC, CreatedAt ASC
         """, (member_id,))
         
@@ -5954,7 +6466,7 @@ def add_member_phone_number(member_id):
         cursor.execute("""
             INSERT INTO MemberPhoneNumbers 
             (MemberID, PhoneType, PhoneNumber, IsPreferred)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (member_id, phone_type, phone_number, is_preferred))
         
         # Get the auto-generated PhoneID
@@ -5989,7 +6501,7 @@ def update_member_phone_number(member_id, phone_id):
         # Check if phone exists
         cursor.execute("""
             SELECT PhoneID FROM MemberPhoneNumbers 
-            WHERE PhoneID = ? AND MemberID = ?
+            WHERE PhoneID = %s AND MemberID = %s
         """, (phone_id, member_id))
         
         if not cursor.fetchone():
@@ -6003,15 +6515,15 @@ def update_member_phone_number(member_id, phone_id):
             phone_type = data['type']
             if phone_type not in ['Home', 'Cell', 'Work', 'Other']:
                 return jsonify({'error': 'Invalid phone type'}), 400
-            updates.append('PhoneType = ?')
+            updates.append('PhoneType = %s')
             params.append(phone_type)
         
         if 'number' in data:
-            updates.append('PhoneNumber = ?')
+            updates.append('PhoneNumber = %s')
             params.append(data['number'])
         
         if 'isPreferred' in data:
-            updates.append('IsPreferred = ?')
+            updates.append('IsPreferred = %s')
             params.append(data['isPreferred'])
         
         if not updates:
@@ -6020,7 +6532,7 @@ def update_member_phone_number(member_id, phone_id):
         updates.append('UpdatedAt = CURRENT_TIMESTAMP')
         params.extend([phone_id, member_id])
         
-        query = f"UPDATE MemberPhoneNumbers SET {', '.join(updates)} WHERE PhoneID = ? AND MemberID = ?"
+        query = f"UPDATE MemberPhoneNumbers SET {', '.join(updates)} WHERE PhoneID = %s AND MemberID = %s"
         cursor.execute(query, params)
         conn.commit()
         
@@ -6044,7 +6556,7 @@ def delete_member_phone_number(member_id, phone_id):
         
         cursor.execute("""
             DELETE FROM MemberPhoneNumbers 
-            WHERE PhoneID = ? AND MemberID = ?
+            WHERE PhoneID = %s AND MemberID = %s
         """, (phone_id, member_id))
         
         if cursor.rowcount == 0:
@@ -6072,7 +6584,7 @@ def get_member_roles(member_id):
             FROM MemberRole mr
             JOIN Role r ON mr.RoleID = r.RoleID
             JOIN FiscalYear fy ON mr.FiscalYearID = fy.FiscalYearID
-            WHERE mr.MemberID = ?
+            WHERE mr.MemberID = %s
         """, (member_id,))
         roles = [{'id': row[0], 'role': row[1], 'fiscalYear': row[2]}
                  for row in cursor.fetchall()]
@@ -6100,7 +6612,7 @@ def add_member_role(member_id):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO MemberRole (MemberID, RoleID, FiscalYearID)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (member_id, role_id, fiscal_year_id))
         conn.commit()
 
@@ -6127,7 +6639,7 @@ def delete_member_role(member_id, member_role_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "DELETE FROM MemberRole WHERE MemberRoleID = ? AND MemberID = ?",
+            "DELETE FROM MemberRole WHERE MemberRoleID = %s AND MemberID = %s",
             (member_role_id,
              member_id))
         conn.commit()
@@ -6157,7 +6669,7 @@ def get_member_fiscal_years(member_id):
             SELECT mfy.MemberFiscalYearID, fy.YearLabel
             FROM MemberFiscalYear mfy
             JOIN FiscalYear fy ON mfy.FiscalYearID = fy.FiscalYearID
-            WHERE mfy.MemberID = ?
+            WHERE mfy.MemberID = %s
         """, (member_id,))
         fy_data = [{'id': row[0], 'fiscalYear': row[1]}
                    for row in cursor.fetchall()]
@@ -6185,7 +6697,7 @@ def add_member_fiscal_year(member_id):
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO MemberFiscalYear (MemberID, FiscalYearID)
-            VALUES (?, ?)
+            VALUES (%s, %s)
         """, (member_id, fiscal_year_id))
         conn.commit()
 
@@ -6213,7 +6725,7 @@ def delete_member_fiscal_year(member_id, fy_link_id):
         cursor = conn.cursor()
         cursor.execute("""
             DELETE FROM MemberFiscalYear
-            WHERE MemberFiscalYearID = ? AND MemberID = ?
+            WHERE MemberFiscalYearID = %s AND MemberID = %s
         """, (fy_link_id, member_id))
         conn.commit()
 
@@ -6288,7 +6800,7 @@ def signup():
         
         cursor.execute("""
             INSERT INTO User (Username, FirstName, "Last Name", Email, PasswordHash, Role, IsApproved, CreatedAt, Preferences)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             username_to_use,  # Username (use userID if provided, else firstName)
             firstName,
@@ -6332,7 +6844,7 @@ def submit_support():
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO SupportMessage (UserID, Subject, MessageBody, DateSubmitted, Status)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (session['user_id'], subject, message, datetime.now(), "Open"))
         conn.commit()
         new_id = cursor.lastrowid
@@ -6392,7 +6904,7 @@ def get_my_support_messages():
         cursor.execute("""
             SELECT SupportID, Subject, MessageBody, DateSubmitted, Status
             FROM SupportMessage
-            WHERE UserID = ?
+            WHERE UserID = %s
             ORDER BY DateSubmitted DESC
         """, (session['user_id'],))
         results = []
@@ -6434,14 +6946,14 @@ def update_support_status(support_id):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT SupportID FROM SupportMessage WHERE SupportID = ?", (support_id,))
+            "SELECT SupportID FROM SupportMessage WHERE SupportID = %s", (support_id,))
         if not cursor.fetchone():
             return jsonify({'error': 'Support message not found'}), 404
 
         cursor.execute("""
             UPDATE SupportMessage
-            SET Status = ?
-            WHERE SupportID = ?
+            SET Status = %s
+            WHERE SupportID = %s
         """, (new_status, support_id))
         conn.commit()
 
@@ -6540,15 +7052,15 @@ def update_admin_settings():
         
         for key, value in data.items():
             # Check if setting exists
-            cursor.execute("SELECT SettingID FROM Settings WHERE SettingKey = ?", (key,))
+            cursor.execute("SELECT SettingID FROM Settings WHERE SettingKey = %s", (key,))
             existing = cursor.fetchone()
             
             if existing:
                 # Update existing setting
-                cursor.execute("UPDATE Settings SET SettingValue = ? WHERE SettingKey = ?", (value, key))
+                cursor.execute("UPDATE Settings SET SettingValue = %s WHERE SettingKey = %s", (value, key))
             else:
                 # Insert new setting
-                cursor.execute("INSERT INTO Settings (SettingKey, SettingValue) VALUES (?, ?)", (key, value))
+                cursor.execute("INSERT INTO Settings (SettingKey, SettingValue) VALUES (%s, %s)", (key, value))
         
         conn.commit()
         return jsonify({'success': True, 'message': 'Settings updated successfully'})
@@ -6577,15 +7089,15 @@ def update_setting(key):
 
         # Check if setting exists
         cursor.execute(
-            "SELECT SettingID FROM Settings WHERE SettingKey = ?", (key,))
+            "SELECT SettingID FROM Settings WHERE SettingKey = %s", (key,))
         if cursor.fetchone():
             # Update existing
             cursor.execute(
-                "UPDATE Settings SET SettingValue = ? WHERE SettingKey = ?", (value, key))
+                "UPDATE Settings SET SettingValue = %s WHERE SettingKey = %s", (value, key))
         else:
             # Insert new
             cursor.execute(
-                "INSERT INTO Settings (SettingKey, SettingValue) VALUES (?, ?)", (key, value))
+                "INSERT INTO Settings (SettingKey, SettingValue) VALUES (%s, %s)", (key, value))
 
         conn.commit()
         log_audit_event(
@@ -6601,20 +7113,396 @@ def update_setting(key):
         conn.close()
 
 
+def read_excel_file(file_stream):
+    """Parse Excel file and return list of dictionaries (similar to csv.DictReader)"""
+    if not openpyxl:
+        raise ImportError("openpyxl is required to read Excel files. Please install it: pip install openpyxl")
+    
+    try:
+        # Convert stream to BytesIO if needed
+        if hasattr(file_stream, 'read'):
+            excel_bytes = BytesIO(file_stream.read())
+        else:
+            excel_bytes = file_stream
+            
+        # Read the Excel file from BytesIO
+        wb = openpyxl.load_workbook(excel_bytes, data_only=True)
+        ws = wb.active
+        
+        # Column mapping: maps various possible header names to our expected field names
+        column_mapping = {
+            'firstname': 'FirstName',
+            'first': 'FirstName',
+            'first name': 'FirstName',
+            'forename': 'FirstName',
+            'fore name': 'FirstName',
+            'given name': 'FirstName',
+            'givenname': 'FirstName',
+            'christian name': 'FirstName',
+            'christianname': 'FirstName',
+            'lastname': 'LastName',
+            'last': 'LastName',
+            'last name': 'LastName',
+            'surname': 'LastName',
+            'family name': 'LastName',
+            'familyname': 'LastName',
+            'email': 'Email',
+            'email address': 'Email',
+            'emailaddress': 'Email',
+            'e-mail': 'Email',
+            'e-mail address': 'Email',
+            'phonenumber': 'PhoneNumber',
+            'phone': 'PhoneNumber',
+            'phone number': 'PhoneNumber',
+            'telephone': 'PhoneNumber',
+            'tel': 'PhoneNumber',
+            'cell': 'PhoneNumber',
+            'home': 'PhoneNumber',
+            'mobile': 'PhoneNumber',
+            'placeofbirth': 'Place of Birth',
+            'place of birth': 'Place of Birth',
+            'birthplace': 'Place of Birth',
+            'birth place': 'Place of Birth',
+            'dateofbirth': 'Date of Birth',
+            'date of birth': 'Date of Birth',
+            'dob': 'Date of Birth',
+            'birth date': 'Date of Birth',
+            'birthdate': 'Date of Birth',
+            'datejoined': 'DateJoined',
+            'date joined': 'DateJoined',
+            'joined': 'DateJoined',
+            'join date': 'DateJoined',
+            'membership date': 'DateJoined',
+            'membershipdate': 'DateJoined',
+            'dateended': 'DateEnded',
+            'date ended': 'DateEnded',
+            'ended': 'DateEnded',
+            'end date': 'DateEnded',
+            'applicationdate': 'ApplicationDate',
+            'application date': 'ApplicationDate',
+            'date paid': 'ApplicationDate',
+            'datepaid': 'ApplicationDate',
+            'membercategory': 'MemberCategory',
+            'membership type': 'MemberCategory',
+            'membershiptype': 'MemberCategory',
+            'member category': 'MemberCategory',
+            'membertype': 'MemberCategory',
+            'member type': 'MemberCategory',
+            'category': 'MemberCategory',
+            'type': 'MemberCategory',
+            'county': 'County',
+            'irish county': 'County',
+            'irishcounty': 'County',
+            'province': 'Province',
+            'province/state': 'Province',
+            'state': 'Province',
+            'society': 'Society',
+            'organisation': 'Society',
+            'organization': 'Society',
+            'isactive': 'IsActive',
+            'is active': 'IsActive',
+            'status': 'IsActive',
+            'notes': 'Notes',
+            'note': 'Notes',
+            'comments': 'Notes',
+            'comment': 'Notes',
+            'street': 'Street',
+            'address': 'Street',
+            'address line 1': 'Street',
+            'address1': 'Street',
+            'city': 'City',
+            'town': 'City',
+            'postalcode': 'PostalCode',
+            'postal code': 'PostalCode',
+            'post code': 'PostalCode',
+            'postcode': 'PostalCode',
+            'zip': 'PostalCode',
+            'zip code': 'PostalCode',
+        }
+
+        # Get headers from first row
+        raw_headers = []
+        for cell in ws[1]:
+            if cell.value:
+                raw_headers.append(str(cell.value).strip())
+            else:
+                raw_headers.append(None)
+        
+        # Create a mapping from raw headers to expected headers
+        header_mapping = {}
+        for raw_header in raw_headers:
+            if raw_header:
+                raw_lower = raw_header.lower()
+                if raw_lower in column_mapping:
+                    header_mapping[raw_header] = column_mapping[raw_lower]
+        
+        # Read data rows
+        rows = []
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            row_dict = {}
+            for col_idx, raw_header in enumerate(raw_headers):
+                if raw_header:
+                    # Use mapped header name if available, otherwise skip
+                    if raw_header in header_mapping:
+                        key = header_mapping[raw_header]
+                        value = row[col_idx] if col_idx < len(row) else None
+                        if value is not None and not isinstance(value, str):
+                            value = str(value)
+                        # Normalize date fields to YYYY-MM-DD
+                        if key in ('Date of Birth', 'DateJoined', 'DateEnded', 'ApplicationDate') and value:
+                            value = normalize_date(value) or value
+                        # Don't overwrite an existing non-empty value with empty
+                        # (handles cases like both "Cell" and "Home" mapping to PhoneNumber)
+                        if key in row_dict and row_dict[key] and not value:
+                            continue
+                        row_dict[key] = value
+            rows.append(row_dict)
+        
+        return rows
+    except Exception as e:
+        raise Exception(f"Failed to parse Excel file: {str(e)}")
+
+
+def normalize_date(value):
+    """Convert various date formats to YYYY-MM-DD. Returns None if value is empty or unrecognized."""
+    if not value:
+        return None
+    value = str(value).strip()
+    if not value:
+        return None
+    formats = [
+        '%d-%m-%Y',      # 17-11-2024  (Access export default)
+        '%Y-%m-%d',      # 2024-11-17
+        '%d/%m/%Y',      # 17/11/2024
+        '%m/%d/%Y',      # 11/17/2024
+        '%Y/%m/%d',      # 2024/11/17
+        '%d-%b-%Y',      # 17-Nov-2024
+        '%d %b %Y',      # 17 Nov 2024
+        '%B %d, %Y',     # November 17, 2024
+        '%d %B %Y',      # 17 November 2024
+        '%Y-%m-%d %H:%M:%S',  # 2024-11-17 00:00:00 (Excel datetime)
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(value, fmt).strftime('%Y-%m-%d')
+        except ValueError:
+            continue
+    return None
+
+
+_PROVINCE_ABBREV = {
+    # Canada
+    'AB': 'Alberta', 'BC': 'British Columbia', 'MB': 'Manitoba',
+    'NB': 'New Brunswick', 'NL': 'Newfoundland and Labrador',
+    'NT': 'Northwest Territories', 'NS': 'Nova Scotia', 'NU': 'Nunavut',
+    'ON': 'Ontario', 'PE': 'Prince Edward Island', 'PEI': 'Prince Edward Island',
+    'QC': 'Quebec', 'SK': 'Saskatchewan', 'YT': 'Yukon', 'YK': 'Yukon',
+    # United States
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+    'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+    'DC': 'District of Columbia', 'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii',
+    'ID': 'Idaho', 'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa',
+    'KS': 'Kansas', 'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine',
+    'MD': 'Maryland', 'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota',
+    'MS': 'Mississippi', 'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska',
+    'NV': 'Nevada', 'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico',
+    'NY': 'New York', 'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio',
+    'OK': 'Oklahoma', 'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island',
+    'SC': 'South Carolina', 'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas',
+    'UT': 'Utah', 'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington',
+    'WV': 'West Virginia', 'WI': 'Wisconsin', 'WY': 'Wyoming',
+}
+
+
+def resolve_province_id(cursor, province_text):
+    """Return MemberAddress.ProvinceID (str) for a province name or abbreviation, or None."""
+    if not province_text:
+        return None
+    name = str(province_text).strip()
+    full_name = _PROVINCE_ABBREV.get(name.upper(), name)
+    cursor.execute("SELECT ProvinceID FROM Provinces WHERE ProvinceName = %s", (full_name,))
+    row = cursor.fetchone()
+    return row[0] if row else None
+
+
+def map_membership_type_to_category_id(membership_type_text):
+    """Map membership type text values to MemberCategoryID"""
+    mapping = {
+        'active': 1,
+        'life': 1,
+        'lifetime': 1,
+        'annual': 1,
+        'historical': 2,
+        'deceased': 2,
+        'inactive': 3,
+        'honorary': 4,
+    }
+
+    if not membership_type_text:
+        return None
+
+    text_lower = str(membership_type_text).strip().lower()
+    return mapping.get(text_lower)
+
+
 @app.route('/api/import/members/preview', methods=['POST'])
 @admin_required
 def import_members_preview():
-    """Upload CSV and preview parsed member data"""
+    """Upload CSV file and preview parsed member data"""
+    LIBRARY_EMAIL = 'bisofpeilibrary@gmail.com'
     if 'file' not in request.files:
         return jsonify({'error': 'CSV file is required'}), 400
 
     file = request.files['file']
     if not file or not file.filename:
-        return jsonify({'error': 'Only CSV files are supported'}), 400
+        return jsonify({'error': 'CSV file is required'}), 400
 
     try:
-        stream = io.StringIO(file.stream.read().decode('utf-8'))
-        reader = csv.DictReader(stream)
+        filename_lower = file.filename.lower()
+        is_excel = filename_lower.endswith('.xlsx') or filename_lower.endswith('.xls')
+        is_csv = filename_lower.endswith('.csv') or file.content_type == 'text/csv'
+
+        if not is_csv and not is_excel:
+            return jsonify({'error': 'Only CSV or Excel (.xlsx/.xls) files are supported'}), 400
+
+        rows = None
+
+        if is_excel:
+            file.seek(0)
+            rows = read_excel_file(file.stream)
+        else:
+            # Try multiple encodings to handle different CSV formats
+            file.seek(0)
+            file_content = file.stream.read()
+            encodings = ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+            for encoding in encodings:
+                try:
+                    stream = io.StringIO(file_content.decode(encoding))
+                    reader = csv.DictReader(stream)
+                    rows = list(reader)
+                    break
+                except (UnicodeDecodeError, AttributeError):
+                    continue
+
+        if rows is None:
+            return jsonify({'error': 'File encoding not recognized. Please save as UTF-8, ANSI, or Excel format.'}), 400
+        
+        # Normalize CSV headers using same mapping as Excel
+        column_mapping = {
+            'firstname': 'FirstName',
+            'first': 'FirstName',
+            'first name': 'FirstName',
+            'forename': 'FirstName',
+            'fore name': 'FirstName',
+            'given name': 'FirstName',
+            'givenname': 'FirstName',
+            'christian name': 'FirstName',
+            'christianname': 'FirstName',
+            'lastname': 'LastName',
+            'last': 'LastName',
+            'last name': 'LastName',
+            'surname': 'LastName',
+            'family name': 'LastName',
+            'familyname': 'LastName',
+            'email': 'Email',
+            'email address': 'Email',
+            'emailaddress': 'Email',
+            'e-mail': 'Email',
+            'e-mail address': 'Email',
+            'phonenumber': 'PhoneNumber',
+            'phone': 'PhoneNumber',
+            'phone number': 'PhoneNumber',
+            'telephone': 'PhoneNumber',
+            'tel': 'PhoneNumber',
+            'cell': 'CellPhone',
+            'cell phone': 'CellPhone',
+            'cellphone': 'CellPhone',
+            'mobile': 'CellPhone',
+            'home': 'HomePhone',
+            'home phone': 'HomePhone',
+            'homephone': 'HomePhone',
+            'placeofbirth': 'Place of Birth',
+            'place of birth': 'Place of Birth',
+            'birthplace': 'Place of Birth',
+            'birth place': 'Place of Birth',
+            'dateofbirth': 'Date of Birth',
+            'date of birth': 'Date of Birth',
+            'dob': 'Date of Birth',
+            'birth date': 'Date of Birth',
+            'birthdate': 'Date of Birth',
+            'datejoined': 'DateJoined',
+            'date joined': 'DateJoined',
+            'joined': 'DateJoined',
+            'join date': 'DateJoined',
+            'membership date': 'DateJoined',
+            'membershipdate': 'DateJoined',
+            'dateended': 'DateEnded',
+            'date ended': 'DateEnded',
+            'ended': 'DateEnded',
+            'end date': 'DateEnded',
+            'applicationdate': 'ApplicationDate',
+            'application date': 'ApplicationDate',
+            'date paid': 'ApplicationDate',
+            'datepaid': 'ApplicationDate',
+            'membercategory': 'MemberCategory',
+            'membership type': 'MemberCategory',
+            'membershiptype': 'MemberCategory',
+            'member category': 'MemberCategory',
+            'membertype': 'MemberCategory',
+            'member type': 'MemberCategory',
+            'category': 'MemberCategory',
+            'type': 'MemberCategory',
+            'county': 'County',
+            'irish county': 'County',
+            'irishcounty': 'County',
+            'province': 'Province',
+            'province/state': 'Province',
+            'state': 'Province',
+            'country': 'County',
+            'society': 'Society',
+            'organisation': 'Society',
+            'organization': 'Society',
+            'isactive': 'IsActive',
+            'is active': 'IsActive',
+            'active': 'IsActive',
+            'status': 'IsActive',
+            'notes': 'Notes',
+            'note': 'Notes',
+            'comments': 'Notes',
+            'comment': 'Notes',
+            'street': 'Street',
+            'address': 'Street',
+            'address line 1': 'Street',
+            'address1': 'Street',
+            'city': 'City',
+            'town': 'City',
+            'postalcode': 'PostalCode',
+            'postal code': 'PostalCode',
+            'post code': 'PostalCode',
+            'postcode': 'PostalCode',
+            'zip': 'PostalCode',
+            'zip code': 'PostalCode',
+        }
+        
+        # Apply header mapping to each row
+        normalized_rows = []
+        for row in rows:
+            normalized_row = {}
+            for raw_header, value in row.items():
+                raw_lower = raw_header.lower().strip()
+                mapped_header = column_mapping.get(raw_lower, raw_header)
+                if value is not None and not isinstance(value, str):
+                    value = str(value)
+                # Don't overwrite an existing non-empty value with empty
+                if mapped_header in normalized_row and normalized_row[mapped_header] and not value:
+                    continue
+                normalized_row[mapped_header] = value
+            normalized_rows.append(normalized_row)
+        
+        rows = normalized_rows
+        total_count = len(rows)
+        detected_headers = list(rows[0].keys()) if rows else []
+
         preview_data = []
         errors = []
         seen_in_csv = set()  # Track duplicates within the CSV file itself
@@ -6622,121 +7510,207 @@ def import_members_preview():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        for i, row in enumerate(reader, start=1):
+        for i, row in enumerate(rows, start=1):
             row_errors = []
 
-            # Required checks
-            for field in ['FirstName', 'LastName', 'IsActive']:
+            # Required checks - FirstName and LastName must exist
+            for field in ['FirstName', 'LastName']:
                 if not row.get(field):
                     row_errors.append(f"Missing {field}")
 
-            # Date format check
-            for date_field in ['DateOfBirth', 'DateJoined', 'DateEnded']:
+            # If there are missing required fields, add to errors and continue
+            if row_errors:
+                errors.append(f"Row {i}: " + "; ".join(row_errors))
+                continue
+
+            # Normalize date formats (DD-MM-YYYY, DD/MM/YYYY, etc.) to YYYY-MM-DD
+            for date_field in ['Date of Birth', 'DateJoined', 'DateEnded', 'ApplicationDate']:
                 value = row.get(date_field)
                 if value:
-                    try:
-                        datetime.strptime(value, '%Y-%m-%d')
-                    except ValueError:
-                        row_errors.append(f"{date_field} must be YYYY-MM-DD")
+                    normalized = normalize_date(value)
+                    if normalized:
+                        row[date_field] = normalized
+                    else:
+                        row_errors.append(f"{date_field} has unrecognized date format: '{value}'")
 
-            # Check for duplicates within CSV file
-            csv_key = (row.get('FirstName', '').strip().lower(), 
-                       row.get('LastName', '').strip().lower(), 
-                       row.get('Email', '').strip().lower() if row.get('Email') else '')
+            # Identify variables used throughout this block
+            first_name = row.get('FirstName', '').strip()
+            last_name = row.get('LastName', '').strip()
+            email = row.get('Email', '').strip() if row.get('Email') else None
+            if email and email.lower() == LIBRARY_EMAIL.lower():
+                email = None  # treat library placeholder as no email
+            home_phone = row.get('HomePhone', '').strip() if row.get('HomePhone') else None
+            cell_phone = row.get('CellPhone', '').strip() if row.get('CellPhone') else None
+            phone = row.get('PhoneNumber', '').strip() if row.get('PhoneNumber') else None
+            if not phone:
+                phone = home_phone or cell_phone  # fallback for duplicate detection
+            dob = row.get('Date of Birth', '').strip() if row.get('Date of Birth') else None
+
+            # Check for duplicates within this file
+            csv_key = (first_name.lower(), last_name.lower(), (email or '').lower())
             if csv_key in seen_in_csv:
-                row_errors.append("Duplicate: appears multiple times in this CSV file")
+                row_errors.append("Duplicate: appears multiple times in this file")
             else:
                 seen_in_csv.add(csv_key)
 
-            # Duplicate check against database - check by name + email, or name + phone, or name + DOB
-            # This catches duplicates even if email is missing
-            first_name = row['FirstName'].strip()
-            last_name = row['LastName'].strip()
-            email = row.get('Email', '').strip() if row.get('Email') else None
-            phone = row.get('PhoneNumber', '').strip() if row.get('PhoneNumber') else None
-            dob = row.get('Date of Birth', '').strip() if row.get('Date of Birth') else None
-            
-            is_duplicate = False
-            
-            # Check 1: Match by name + email (most reliable)
-            if email and not is_duplicate:
+            # Duplicate check against database — capture existing MemberID if found
+            existing_member_id = None
+
+            if email:
                 cursor.execute("""
                     SELECT MemberID FROM Members
-                    WHERE FirstName = ? AND LastName = ? AND Email = ?
+                    WHERE TRIM(FirstName) = %s AND TRIM(LastName) = %s AND Email = %s
                 """, (first_name, last_name, email))
-                if cursor.fetchone():
-                    row_errors.append("Duplicate: already exists in database (by name + email)")
-                    is_duplicate = True
-            
-            # Check 2: Match by name + phone (if email not provided)
-            if not email and phone and not is_duplicate:
+                r = cursor.fetchone()
+                if r:
+                    existing_member_id = r[0]
+
+            if not existing_member_id and not email and phone:
                 cursor.execute("""
                     SELECT MemberID FROM Members
-                    WHERE FirstName = ? AND LastName = ? AND PhoneNumber = ?
+                    WHERE TRIM(FirstName) = %s AND TRIM(LastName) = %s AND PhoneNumber = %s
                 """, (first_name, last_name, phone))
-                if cursor.fetchone():
-                    row_errors.append("Duplicate: already exists in database (by name + phone)")
-                    is_duplicate = True
-            
-            # Check 3: Match by name + DOB (catches cases with different emails/phones)
-            if dob and not is_duplicate:
+                r = cursor.fetchone()
+                if r:
+                    existing_member_id = r[0]
+
+            if not existing_member_id and dob:
                 cursor.execute("""
                     SELECT MemberID FROM Members
-                    WHERE FirstName = ? AND LastName = ? AND [Date of Birth] = ?
+                    WHERE TRIM(FirstName) = %s AND TRIM(LastName) = %s AND `Date of Birth` = %s
                 """, (first_name, last_name, dob))
-                if cursor.fetchone():
-                    row_errors.append("Duplicate: already exists in database (by name + date of birth)")
-                    is_duplicate = True
-            
-            # Check 4: Match by name only (if no other identifiers)
-            if not email and not phone and not dob and not is_duplicate:
+                r = cursor.fetchone()
+                if r:
+                    existing_member_id = r[0]
+
+            if not existing_member_id:
                 cursor.execute("""
                     SELECT MemberID FROM Members
-                    WHERE FirstName = ? AND LastName = ?
+                    WHERE TRIM(FirstName) = %s AND TRIM(LastName) = %s
                 """, (first_name, last_name))
-                if cursor.fetchone():
-                    row_errors.append("Duplicate: already exists in database (by name). Please provide email or phone to disambiguate.")
-                    is_duplicate = True
+                name_matches = cursor.fetchall()
+                if len(name_matches) == 1:
+                    existing_member_id = name_matches[0][0]
 
-            # Lookup conversion
-            category_id = get_lookup_id(
-                conn,
-                'MemberCategory',
-                'CategoryName',
-                row.get('MemberCategory'))
-            county_id = get_lookup_id(
-                conn, 'IrishCounties', 'CountyName', row.get('County'))
-            society_id = get_lookup_id(
-                conn, 'Society', 'SocietyName', row.get('Society'))
+            # Lookup conversion - these are optional
+            category_id = None
+            county_id = None
 
-            if not category_id:
-                row_errors.append("Unknown MemberCategory")
-            if not county_id:
-                row_errors.append("Unknown County")
-            if row.get('Society') and not society_id:
-                row_errors.append("Unknown Society")
+            member_category = row.get('MemberCategory')
+            if member_category:
+                category_id = map_membership_type_to_category_id(member_category)
+                if not category_id:
+                    row_errors.append(f"Unknown MemberCategory: '{member_category}' (expected: Active, Honorary, Inactive, Historical, or Deceased)")
 
-            # Only add to preview if there are NO errors
+            county = row.get('County')
+            country_name = None
+            if county:
+                county_id = get_lookup_id(
+                    conn, 'IrishCounties', 'CountyName', county, id_column='CountyID')
+                if not county_id:
+                    cursor.execute(
+                        "SELECT DISTINCT CountryName FROM Provinces WHERE CountryName = %s OR CountryCode = %s LIMIT 1",
+                        (county, county.upper()))
+                    cr = cursor.fetchone()
+                    if cr:
+                        country_name = cr[0]
+
+            society_name = row.get('Society')
+
             if row_errors:
                 errors.append(f"Row {i}: " + "; ".join(row_errors))
+            elif existing_member_id:
+                # Existing member — compute which blank fields can be filled in
+                cursor.execute("""
+                    SELECT Email, PhoneNumber, `Place of Birth`, `Date of Birth`,
+                           DateJoined, DateEnded, MemberCategoryID, CountyID, OtherSocieties, Notes
+                    FROM Members WHERE MemberID = %s
+                """, (existing_member_id,))
+                ex = cursor.fetchone()
+                if ex:
+                    existing_data = {
+                        'Email': ex[0], 'PhoneNumber': ex[1],
+                        'Place of Birth': ex[2], 'Date of Birth': ex[3],
+                        'DateJoined': ex[4], 'DateEnded': ex[5],
+                        'MemberCategoryID': ex[6], 'CountyID': ex[7],
+                        'OtherSocieties': ex[8], 'Notes': ex[9],
+                    }
+                    import_values = {
+                        'Email': email, 'PhoneNumber': phone,
+                        'Place of Birth': row.get('Place of Birth'),
+                        'Date of Birth': dob,
+                        'DateJoined': row.get('DateJoined'),
+                        'DateEnded': row.get('DateEnded'),
+                        'ApplicationDate': row.get('ApplicationDate'),
+                        'MemberCategoryID': category_id,
+                        'CountyID': county_id,
+                        'OtherSocieties': society_name,
+                        'Notes': row.get('Notes'),
+                    }
+                    fill_fields = {}
+                    for col, val in import_values.items():
+                        if not val:
+                            continue
+                        existing_val = existing_data.get(col)
+                        # Email: always update from import (replaces library placeholder or outdated value)
+                        # Other fields: only fill if currently blank in DB
+                        if col == 'Email' or not existing_val:
+                            fill_fields[col] = val
+                    if fill_fields:
+                        entry = {'action': 'update', 'MemberID': existing_member_id,
+                                 'FirstName': first_name, 'LastName': last_name}
+                        entry.update(fill_fields)
+                        entry['Street'] = row.get('Street')
+                        entry['City'] = row.get('City')
+                        entry['PostalCode'] = row.get('PostalCode')
+                        entry['Country'] = country_name
+                        entry['Province'] = row.get('Province')
+                        entry['HomePhone'] = home_phone
+                        entry['CellPhone'] = cell_phone
+                        preview_data.append(entry)
+                    # else nothing to fill — silently skip
             else:
                 preview_data.append({
-                    'FirstName': row['FirstName'],
-                    'LastName': row['LastName'],
+                    'action': 'insert',
+                    'FirstName': row.get('FirstName'),
+                    'LastName': row.get('LastName'),
                     'Email': row.get('Email'),
-                    'PhoneNumber': row.get('PhoneNumber'),
-                    'PlaceOfBirth': row.get('PlaceOfBirth'),
-                    'DateOfBirth': row.get('DateOfBirth'),
+                    'PhoneNumber': phone,
+                    'Place of Birth': row.get('Place of Birth'),
+                    'Date of Birth': row.get('Date of Birth'),
                     'DateJoined': row.get('DateJoined'),
                     'DateEnded': row.get('DateEnded'),
+                    'ApplicationDate': row.get('ApplicationDate'),
                     'MemberCategoryID': category_id,
                     'CountyID': county_id,
-                    'SocietyID': society_id,
-                    'IsActive': (row.get('IsActive') or '').strip().lower() == 'true'
+                    'OtherSocieties': society_name,
+                    'Notes': row.get('Notes'),
+                    'IsActive': (
+                        (row.get('IsActive') or '').strip().lower() in ('true', 'yes', '1', 'active')
+                        if (row.get('IsActive') or '').strip()
+                        else category_id in (1, 4)  # Active or Honorary → default IsActive=True
+                    ),
+                    'Street': row.get('Street'),
+                    'City': row.get('City'),
+                    'PostalCode': row.get('PostalCode'),
+                    'Country': country_name,
+                    'Province': row.get('Province'),
+                    'HomePhone': home_phone,
+                    'CellPhone': cell_phone,
                 })
 
+        insert_count = sum(1 for r in preview_data if r.get('action') == 'insert')
+        update_count = sum(1 for r in preview_data if r.get('action') == 'update')
+
         conn.close()
-        return jsonify({'preview': preview_data, 'errors': errors})
+        return jsonify({
+            'preview': preview_data,
+            'errors': errors,
+            'total_count': total_count,
+            'detected_headers': detected_headers,
+            'insert_count': insert_count,
+            'update_count': update_count
+        })
     except Exception as e:
         return jsonify({'error': f'Failed to parse CSV: {str(e)}'}), 500
 
@@ -6762,37 +7736,119 @@ def import_members_confirm():
         cursor = conn.cursor()
         
         # Get the next available MemberID (numeric IDs only)
-        cursor.execute("SELECT MAX(CAST(MemberID AS INTEGER)) FROM Members WHERE MemberID NOT NULL AND INSTR(MemberID, '.') = 0")
+        cursor.execute("SELECT MAX(MemberID) FROM Members")
         result = cursor.fetchone()
         next_id = (result[0] + 1) if result and result[0] else 1
         
+        cursor.execute("SELECT MAX(MemberAddressID) FROM MemberAddress")
+        result = cursor.fetchone()
+        next_addr_id = (result[0] + 1) if result and result[0] else 1
+
         for i, row in enumerate(rows, start=1):
             try:
-                cursor.execute(
-                    """
-                    INSERT INTO Members (
-                        MemberID, FirstName, LastName, Email, PhoneNumber,
-                        PlaceOfBirth, DateOfBirth, DateJoined, DateEnded,
-                        MemberCategoryID, CountyID, SocietyID, IsActive
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                    (str(next_id),
-                     row.get('FirstName'),
-                     row.get('LastName'),
-                     row.get('Email'),
-                     row.get('PhoneNumber'),
-                     row.get('PlaceOfBirth'),
-                     row.get('DateOfBirth'),
-                     row.get('DateJoined'),
-                     row.get('DateEnded'),
-                     row.get('MemberCategoryID'),
-                     row.get('CountyID'),
-                     row.get('SocietyID'),
-                     True if row.get(
-                     'IsActive',
-                     '').lower() == 'true' else False))
+                action = row.get('action', 'insert')
+
+                if action == 'update':
+                    member_id = row['MemberID']
+                    updatable = ['Email', 'PhoneNumber', 'Place of Birth', 'Date of Birth',
+                                 'DateJoined', 'DateEnded', 'ApplicationDate', 'MemberCategoryID',
+                                 'CountyID', 'OtherSocieties', 'Notes']
+                    updates = {f: row[f] for f in updatable if f in row and row[f] is not None}
+                    if updates:
+                        parts = [f'`{f}` = %s' if ' ' in f else f'{f} = %s' for f in updates]
+                        vals = list(updates.values()) + [member_id]
+                        cursor.execute(
+                            f"UPDATE Members SET {', '.join(parts)} WHERE MemberID = %s", vals)
+
+                    # Add address only if member has no current address
+                    street = row.get('Street')
+                    city = row.get('City')
+                    postal_code = row.get('PostalCode')
+                    country = row.get('Country')
+                    province = row.get('Province')
+                    if any([street, city, postal_code, country, province]):
+                        cursor.execute(
+                            "SELECT MemberAddressID, ProvinceID FROM MemberAddress WHERE MemberID = %s AND IsCurrent = 1",
+                            (member_id,))
+                        existing_addr = cursor.fetchone()
+                        if not existing_addr:
+                            province_id = resolve_province_id(cursor, province)
+                            cursor.execute(
+                                """
+                                INSERT INTO MemberAddress (
+                                    MemberAddressID, MemberID, Street, City,
+                                    ProvinceID, CountryID, PostalCode, IsCurrent
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+                            """,
+                                (next_addr_id, member_id, street, city, province_id, country, postal_code))
+                            next_addr_id += 1
+                        elif province and not existing_addr[1]:
+                            province_id = resolve_province_id(cursor, province)
+                            if province_id:
+                                cursor.execute(
+                                    "UPDATE MemberAddress SET ProvinceID = %s WHERE MemberAddressID = %s",
+                                    (province_id, existing_addr[0]))
+
+                else:
+                    member_id = str(next_id)
+                    cursor.execute(
+                        """
+                        INSERT INTO Members (
+                            MemberID, FirstName, LastName, Email, PhoneNumber,
+                            `Place of Birth`, `Date of Birth`, DateJoined, DateEnded,
+                            ApplicationDate, MemberCategoryID, CountyID, OtherSocieties, Notes, IsActive
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                        (member_id,
+                         row.get('FirstName'),
+                         row.get('LastName'),
+                         row.get('Email'),
+                         row.get('PhoneNumber'),
+                         row.get('Place of Birth'),
+                         row.get('Date of Birth'),
+                         row.get('DateJoined'),
+                         row.get('DateEnded'),
+                         row.get('ApplicationDate'),
+                         row.get('MemberCategoryID'),
+                         row.get('CountyID'),
+                         row.get('OtherSocieties'),
+                         row.get('Notes'),
+                         bool(row.get('IsActive', False))))
+
+                    street = row.get('Street')
+                    city = row.get('City')
+                    postal_code = row.get('PostalCode')
+                    country = row.get('Country')
+                    province = row.get('Province')
+                    if any([street, city, postal_code, country, province]):
+                        province_id = resolve_province_id(cursor, province)
+                        cursor.execute(
+                            """
+                            INSERT INTO MemberAddress (
+                                MemberAddressID, MemberID, Street, City,
+                                ProvinceID, CountryID, PostalCode, IsCurrent
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)
+                        """,
+                            (next_addr_id, member_id, street, city, province_id, country, postal_code))
+                        next_addr_id += 1
+
+                    next_id += 1
+
+                # Import Home/Cell phone numbers into MemberPhoneNumbers
+                now = datetime.now().isoformat()
+                for phone_type, phone_val in [('Home', row.get('HomePhone')), ('Cell', row.get('CellPhone'))]:
+                    if phone_val and str(phone_val).strip():
+                        pv = str(phone_val).strip()
+                        cursor.execute(
+                            "SELECT PhoneID FROM MemberPhoneNumbers WHERE MemberID = %s AND PhoneNumber = %s",
+                            (member_id, pv))
+                        if not cursor.fetchone():
+                            cursor.execute("""
+                                INSERT INTO MemberPhoneNumbers (MemberID, PhoneType, PhoneNumber, IsPreferred, CreatedAt, UpdatedAt)
+                                VALUES (%s, %s, %s, 0, %s, %s)
+                            """, (member_id, phone_type, pv, now, now))
+
                 inserted += 1
-                next_id += 1
             except Exception as row_err:
                 errors.append(f"Row {i}: {str(row_err)}")
 
@@ -6810,9 +7866,10 @@ def import_members_confirm():
 def download_member_csv_template():
     """Download blank CSV import template"""
     headers = [
-        'FirstName', 'LastName', 'Email', 'PhoneNumber',
-        'PlaceOfBirth', 'DateOfBirth', 'DateJoined', 'DateEnded',
-        'MemberCategory', 'County', 'Society', 'IsActive'
+        'FirstName', 'LastName', 'Email', 'Home Phone', 'Cell Phone',
+        'PlaceOfBirth', 'DateOfBirth', 'DateJoined', 'Date Paid',
+        'MemberCategory', 'County', 'Society', 'IsActive', 'Notes',
+        'Street', 'City', 'Province/State', 'Country', 'PostalCode',
     ]
 
     stream = io.StringIO()
@@ -6826,10 +7883,12 @@ def download_member_csv_template():
     return response
 
 
-def get_lookup_id(conn, table, name_column, value):
+def get_lookup_id(conn, table, name_column, value, id_column=None):
+    if id_column is None:
+        id_column = f"{table}ID"
     cursor = conn.cursor()
     cursor.execute(
-        f"SELECT {table}ID FROM {table} WHERE {name_column} = ?", (value,))
+        f"SELECT {id_column} FROM {table} WHERE {name_column} = %s", (value,))
     row = cursor.fetchone()
     return row[0] if row else None
 
@@ -6957,6 +8016,7 @@ def import_recognitions_preview():
     try:
         stream = io.StringIO(file.stream.read().decode('utf-8'))
         reader = csv.DictReader(stream)
+        
         preview_data = []
         errors = []
 
@@ -7030,7 +8090,7 @@ def import_recognitions_confirm():
                     INSERT INTO Recognitions (
                         RecognitionTypeID, SocietyID, FiscalYearID,
                         Description, IsActive
-                    ) VALUES (?, ?, ?, ?, ?)
+                    ) VALUES (%s, %s, %s, %s, %s)
                 """, (
                     row.get('RecognitionTypeID'),
                     row.get('SocietyID'),
@@ -7164,7 +8224,7 @@ def get_public_dashboard():
                     SELECT p.ProvinceName, COUNT(ma.MemberID) as MemberCount
                     FROM MemberAddress ma
                     INNER JOIN Members m ON ma.MemberID = m.MemberID
-                    INNER JOIN Provinces p ON ma.ProvinceID = p.ProvinceID
+                    INNER JOIN Provinces p ON CAST(ma.ProvinceID AS INTEGER) = p.ProvinceID
                     WHERE ma.IsCurrent = 1
                     GROUP BY p.ProvinceName
                     ORDER BY COUNT(ma.MemberID) DESC
@@ -7237,13 +8297,13 @@ def reinstate_member(member_id):
         cursor = conn.cursor()
         
         # Check if member exists
-        cursor.execute("SELECT FirstName, LastName FROM Members WHERE MemberID = ?", (member_id,))
+        cursor.execute("SELECT FirstName, LastName FROM Members WHERE MemberID = %s", (member_id,))
         member = cursor.fetchone()
         if not member:
             return jsonify({'error': 'Member not found'}), 404
         
         # Reinstate member
-        cursor.execute("UPDATE Members SET IsActive = 1, DateEnded = NULL WHERE MemberID = ?", 
+        cursor.execute("UPDATE Members SET IsActive = 1, DateEnded = NULL WHERE MemberID = %s", 
                       (member_id,))
         conn.commit()
         
@@ -7263,7 +8323,7 @@ def reinstate_member(member_id):
         conn.close()
 
 
-@app.route("/api/members/<int:member_id>/deactivate", methods=["POST"])
+@app.route("/api/members/<member_id>/deactivate", methods=["POST"])
 @admin_required
 def deactivate_member(member_id):
     """Deactivate an active member (Admin only)"""
@@ -7275,13 +8335,13 @@ def deactivate_member(member_id):
         cursor = conn.cursor()
         
         # Check if member exists
-        cursor.execute("SELECT FirstName, LastName FROM Members WHERE MemberID = ?", (member_id,))
+        cursor.execute("SELECT FirstName, LastName FROM Members WHERE MemberID = %s", (member_id,))
         member = cursor.fetchone()
         if not member:
             return jsonify({'error': 'Member not found'}), 404
         
         # Deactivate member
-        cursor.execute("UPDATE Members SET IsActive = 0, DateEnded = ? WHERE MemberID = ?", 
+        cursor.execute("UPDATE Members SET IsActive = 0, DateEnded = %s WHERE MemberID = %s", 
                       (datetime.now(), member_id))
         conn.commit()
         
@@ -7302,6 +8362,7 @@ def deactivate_member(member_id):
 
 
 @app.route("/api/members/bulk-deactivate", methods=["PUT"])
+@admin_required
 def bulk_deactivate_members():
     data = request.json
     if not data:
@@ -7313,7 +8374,7 @@ def bulk_deactivate_members():
     if not conn:
         return jsonify({'error': 'Database connection failed'}), 500
     cursor = conn.cursor()
-    q = f"UPDATE Members SET IsActive = 0 WHERE MemberID IN ({','.join(['?'] * len(ids))})"
+    q = f"UPDATE Members SET IsActive = 0 WHERE MemberID IN ({','.join(['%s'] * len(ids))})"
     cursor.execute(q, ids)
     conn.commit()
     conn.close()
@@ -7365,7 +8426,7 @@ def admin_dashboard():
             cursor.execute("SELECT COUNT(*) FROM Society")
             row = cursor.fetchone()
             total_societies = row[0] if row is not None else 0
-        except sqlite3.OperationalError:
+        except Exception:
             # Society table doesn't exist, set to 0
             total_societies = 0
         cursor.execute("SELECT COUNT(*) FROM User WHERE IsApproved = '1' OR IsApproved = 1")
@@ -7379,7 +8440,7 @@ def admin_dashboard():
         cursor.execute("""
             SELECT FirstName, LastName, CreatedAt, 'member_added' as activity_type
             FROM Members
-            WHERE CreatedAt >= ? 
+            WHERE CreatedAt >= %s 
             ORDER BY CreatedAt DESC
             LIMIT 10
         """, (thirty_days_ago.strftime('%Y-%m-%d %H:%M:%S'),))
@@ -7403,7 +8464,7 @@ def admin_dashboard():
         cursor.execute("""
             SELECT FirstName, "Last Name", CreatedAt, 'user_registered' as activity_type, Role
             FROM User
-            WHERE CreatedAt >= ? AND CreatedAt IS NOT NULL AND CreatedAt != ''
+            WHERE CreatedAt >= %s AND CreatedAt IS NOT NULL AND CreatedAt != ''
             ORDER BY CreatedAt DESC
             LIMIT 5
         """, (thirty_days_ago.strftime('%Y-%m-%d %H:%M:%S'),))
@@ -7486,7 +8547,7 @@ def admin_dashboard():
                 pass
         
         # 5. Data quality check - members without birth dates
-        cursor.execute("SELECT COUNT(*) FROM Members WHERE (IsActive = '1' OR IsActive = 1) AND ([Date of Birth] IS NULL OR [Date of Birth] = '')")
+        cursor.execute("SELECT COUNT(*) FROM Members WHERE (IsActive = '1' OR IsActive = 1) AND (`Date of Birth` IS NULL OR `Date of Birth` = '')")
         members_no_birth_date = cursor.fetchone()[0] or 0
         if members_no_birth_date > 10:  # Only notify if significant number
             smart_notifications.append({
@@ -7521,7 +8582,7 @@ def admin_dashboard():
         cursor.execute("""
             SELECT FirstName, "Last Name", Username
             FROM User
-            WHERE UserID = ?
+            WHERE UserID = %s
         """, (session['user_id'],))
         
         admin_data = cursor.fetchone()
@@ -7573,10 +8634,10 @@ def admin_stats():
         where_clauses = []
         params = []
         if start_date:
-            where_clauses.append('DateJoined >= ?')
+            where_clauses.append('DateJoined >= %s')
             params.append(start_date)
         if end_date:
-            where_clauses.append('DateJoined <= ?')
+            where_clauses.append('DateJoined <= %s')
             params.append(end_date)
         where_sql = ('WHERE ' + ' AND '.join(where_clauses)) if where_clauses else ''
 
@@ -7587,7 +8648,7 @@ def admin_stats():
 
         # Pie chart breakdown (filtered) using MemberCategoryID
         def count_by_category(category_id):
-            sql = f"SELECT COUNT(*) FROM Members {where_sql}{' AND ' if where_sql else ' WHERE '} MemberCategoryID = ?"
+            sql = f"SELECT COUNT(*) FROM Members {where_sql}{' AND ' if where_sql else ' WHERE '} MemberCategoryID = %s"
             cursor.execute(sql, params + [category_id])
             row = cursor.fetchone()
             return row[0] if row is not None else 0
@@ -7602,7 +8663,7 @@ def admin_stats():
         for y in range(datetime.now().year - 4, datetime.now().year + 1):
             year_clauses = list(where_clauses)
             year_params = list(params)
-            year_clauses.append("strftime('%Y', DateJoined) = ?")
+            year_clauses.append("strftime('%Y', DateJoined) = %s")
             year_params.append(str(y))
             year_sql = 'WHERE ' + ' AND '.join(year_clauses)
             cursor.execute(f"SELECT COUNT(*) FROM Members {year_sql}", year_params)
@@ -7644,8 +8705,8 @@ def get_stats():
     try:
         cursor = conn.cursor()
         # Province/State distribution (from MemberAddress)
-        # Get province ID to name mapping
-        cursor.execute("SELECT ProvinceID, ProvinceName, CountryName FROM Provinces")
+        # Get province ID to name mapping — filtered to Canada, United States, Ireland only
+        cursor.execute("SELECT ProvinceID, ProvinceName, CountryName FROM Provinces WHERE CountryName IN ('Canada', 'United States', 'Ireland')")
         province_map = {str(row[0]): {'name': row[1], 'country': row[2]} for row in cursor.fetchall()}
 
         # Province/State distribution (from MemberAddress)
@@ -7666,14 +8727,14 @@ def get_stats():
         where_clauses = []
         params = []
         if start_date:
-            where_clauses.append("DateJoined >= ?")
+            where_clauses.append("DateJoined >= %s")
             params.append(start_date)
         if end_date:
-            where_clauses.append("DateJoined <= ?")
+            where_clauses.append("DateJoined <= %s")
             params.append(end_date)
         if category:
             where_clauses.append("m.MemberCategoryID = mc.CategoryID")
-            where_clauses.append("mc.CategoryName = ?")
+            where_clauses.append("mc.CategoryName = %s")
             params.append(category.capitalize())
 
         # Use JOIN with MemberCategory for all counts
@@ -7690,14 +8751,14 @@ def get_stats():
         categories = ['Active', 'Inactive', 'Honorary', 'Historical']
         breakdown = {}
         for cat in categories:
-            cursor.execute(f"SELECT COUNT(*){join_sql}{where_sql} {'AND' if where_sql else 'WHERE'} mc.CategoryName = ?", params + [cat])
+            cursor.execute(f"SELECT COUNT(*){join_sql}{where_sql} {'AND' if where_sql else 'WHERE'} mc.CategoryName = %s", params + [cat])
             row = cursor.fetchone()
             breakdown[cat.lower()] = row[0] if row is not None else 0
 
         # Yearly breakdown (last 5 years) - show total members per year regardless of date filter
         yearly = {}
         for y in range(datetime.now().year - 4, datetime.now().year + 1):
-            cursor.execute("SELECT COUNT(*) FROM Members WHERE strftime('%Y', DateJoined) = ?", (str(y),))
+            cursor.execute("SELECT COUNT(*) FROM Members WHERE strftime('%Y', DateJoined) = %s", (str(y),))
             row = cursor.fetchone()
             yearly[str(y)] = row[0] if row is not None else 0
 
@@ -7831,7 +8892,7 @@ def get_my_recognitions():
         
         # Find member linked to this user (assuming email match or direct link)
         user_id = session['user_id']
-        cursor.execute("SELECT Email, FirstName, \"Last Name\" FROM User WHERE UserID = ?", (user_id,))
+        cursor.execute("SELECT Email, FirstName, \"Last Name\" FROM User WHERE UserID = %s", (user_id,))
         user_data = cursor.fetchone()
         
         if not user_data:
@@ -7843,7 +8904,7 @@ def get_my_recognitions():
         cursor.execute("""
             SELECT m.MemberID, m.FirstName, m.LastName 
             FROM Members m 
-            WHERE m.Email = ? AND m.IsActive = 1
+            WHERE m.Email = %s AND m.IsActive = 1
         """, (user_email,))
         
         member_data = cursor.fetchone()
@@ -7859,7 +8920,7 @@ def get_my_recognitions():
                 mr.AwardedDate, mr.AwardedBy, mr.Notes
             FROM MemberRecognitions mr
             JOIN RecognitionTypes rt ON mr.RecognitionTypeID = rt.RecognitionTypeID
-            WHERE mr.MemberID = ? AND mr.IsActive = 1
+            WHERE mr.MemberID = %s AND mr.IsActive = 1
             ORDER BY mr.AwardedDate DESC
         """, (member_id,))
         
@@ -7978,7 +9039,7 @@ def export_for_offline():
         # If admin, also export users
         if user_role == 'admin':
             cursor.execute("""
-                SELECT UserID, Username, FirstName, [Last Name], Email, Role, IsApproved
+                SELECT UserID, Username, FirstName, `Last Name`, Email, Role, IsApproved
                 FROM User
                 ORDER BY Username
             """)
@@ -8037,9 +9098,9 @@ def import_offline_changes():
                     member_id = item.get('id')
                     if member_id:
                         cursor.execute("""
-                            UPDATE Members SET FirstName=?, LastName=?, Email=?, 
-                                    PhoneNumber=?, MemberCategoryID=?, IsActive=?
-                            WHERE MemberID=?
+                            UPDATE Members SET FirstName=%s, LastName=%s, Email=%s, 
+                                    PhoneNumber=%s, MemberCategoryID=%s, IsActive=%s
+                            WHERE MemberID=%s
                         """, (
                             item.get('firstName'),
                             item.get('lastName'),
@@ -8061,8 +9122,8 @@ def import_offline_changes():
                     if phone_id:
                         cursor.execute("""
                             UPDATE MemberPhoneNumbers 
-                            SET PhoneType=?, PhoneNumber=?, IsPreferred=?
-                            WHERE PhoneID=?
+                            SET PhoneType=%s, PhoneNumber=%s, IsPreferred=%s
+                            WHERE PhoneID=%s
                         """, (
                             item.get('type'),
                             item.get('number'),
@@ -8081,8 +9142,8 @@ def import_offline_changes():
                     if addr_id:
                         cursor.execute("""
                             UPDATE MemberAddress
-                            SET Street=?, City=?, ProvinceID=?, CountryID=?, PostalCode=?
-                            WHERE MemberAddressID=?
+                            SET Street=%s, City=%s, ProvinceID=%s, CountryID=%s, PostalCode=%s
+                            WHERE MemberAddressID=%s
                         """, (
                             item.get('street'),
                             item.get('city'),
@@ -8160,6 +9221,10 @@ def get_sync_status():
 
 
 # ── Frontend catch-all ────────────────────────────────────────────────────────
+@app.route('/uploads/photos/<path:filename>')
+def serve_uploaded_photo(filename):
+    return send_from_directory(PHOTO_FOLDER, filename)
+
 # Any path that isn't an /api/* route or a real static file (CSS, JS, images)
 # gets served index.html so React Router can handle client-side navigation.
 @app.route('/', defaults={'path': ''})
@@ -8179,6 +9244,29 @@ def serve_frontend(path):
         503,
     )
 
+
+def _run_migrations():
+    conn = get_db_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        # Add ConnectionType to IrishConnectionByCounty if missing
+        try:
+            cursor.execute("ALTER TABLE IrishConnectionByCounty ADD COLUMN ConnectionType TEXT DEFAULT 'Paternal'")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+        # Add ConnectionType to IrishConnectionBySurname if missing
+        try:
+            cursor.execute("ALTER TABLE IrishConnectionBySurname ADD COLUMN ConnectionType TEXT DEFAULT 'Paternal'")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+    finally:
+        conn._conn.close()
+
+_run_migrations()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='0.0.0.0')

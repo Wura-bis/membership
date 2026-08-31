@@ -4,6 +4,7 @@ import ConfirmModal from "../../components/confirmmodal";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, badge, pageHeader } from '../../utils/theme';
 
 export default function MemberProfile() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function MemberProfile() {
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [photoDeleting, setPhotoDeleting] = useState(false);
   const { id } = useParams();
   const { user } = useAuth();
   const [member, setMember] = useState(null);
@@ -28,112 +30,173 @@ export default function MemberProfile() {
 
   // If public user tries to view an active member, show error
   if (user && user.role === "public" && member && member.isActive) {
-    return <MainLayout><div className="p-6 text-red-600">Access denied: Public users can only view historical members.</div></MainLayout>;
+    return (
+      <MainLayout>
+        <div className="dashboard-container">
+          <div style={{ padding: '12px 16px', background: T.redLight, border: `2px solid ${T.redBorder}`, borderRadius: T.radiusMd, color: T.red, fontSize: T.fontBase, fontWeight: '600' }}>
+            Access denied: Public users can only view historical members.
+          </div>
+        </div>
+      </MainLayout>
+    );
   }
 
-  if (error) return <MainLayout><div className="p-6 text-red-600">{error}</div></MainLayout>;
-  if (!member) return <MainLayout><div className="p-6">Loading...</div></MainLayout>;
+  if (error) return (
+    <MainLayout>
+      <div className="dashboard-container">
+        <div style={{ padding: '12px 16px', background: T.redLight, border: `2px solid ${T.redBorder}`, borderRadius: T.radiusMd, color: T.red, fontSize: T.fontBase, fontWeight: '600' }}>
+          {error}
+        </div>
+      </div>
+    </MainLayout>
+  );
+  if (!member) return (
+    <MainLayout>
+      <div className="dashboard-container">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+          <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
+        </div>
+      </div>
+    </MainLayout>
+  );
 
-  // Shared styles
-  const cardStyle = {
-    background: 'var(--card-bg)',
-    borderRadius: 10,
-    padding: '20px 22px',
-    border: '1.5px solid #ccfbf1',
-    boxShadow: '0 1px 4px rgba(20,184,166,0.08)',
-  };
+  const cardStyle = { ...card, padding: '24px', overflow: 'hidden' };
   const cardHeadStyle = {
-    fontSize: '0.9rem',
-    fontWeight: 700,
-    color: 'var(--text-accent)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.6px',
-    marginBottom: 12,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    paddingBottom: 10,
-    borderBottom: '1.5px solid #f0fdfa',
-  };
-  const btnStyle = {
-    padding: '10px 22px',
-    fontSize: '1rem',
-    fontWeight: 700,
-    borderRadius: 8,
-    cursor: 'pointer',
-    border: 'none',
-    minHeight: '2.75rem',
-    whiteSpace: 'nowrap',
+    fontSize: T.fontBase, fontWeight: 700, color: T.primary,
+    textTransform: 'uppercase', letterSpacing: '0.7px',
+    display: 'flex', alignItems: 'center', gap: 8,
+    background: T.primaryBg,
+    margin: '-24px -24px 16px',
+    padding: '10px 16px',
+    borderRadius: `${T.radiusLg} ${T.radiusLg} 0 0`,
+    borderBottom: `1px solid ${T.primaryMid}`,
   };
 
-  // Label-left / value-right row — rem sizes scale with app settings font size
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = String(dateStr).split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   const InfoRow = ({ label, value }) => (
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-      <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '9rem', flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '7px 0', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+      <span style={{ fontSize: T.fontSm, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', minWidth: '8.5rem', flexShrink: 0 }}>
         {label}
       </span>
-      <span style={{ fontSize: '1rem', fontWeight: 600, color: value ? '#0f172a' : '#cbd5e1', wordBreak: 'break-word' }}>
+      <span style={{ fontSize: T.fontBase, fontWeight: 600, color: value ? '#1e293b' : T.textLight, wordBreak: 'break-word' }}>
         {value || '—'}
       </span>
     </div>
   );
 
+  const handleDeletePhoto = async () => {
+    if (!window.confirm('Remove this member\'s photo?')) return;
+    setPhotoDeleting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/members/${id}/photos`, { method: 'DELETE', credentials: 'include' });
+      if (res.ok) setMember(prev => ({ ...prev, photo: null }));
+    } finally {
+      setPhotoDeleting(false);
+    }
+  };
+
   return (
     <MainLayout>
-      <div style={{ background: 'var(--bg-secondary)', minHeight: '100vh', padding: '20px 20px 32px' }}>
+      <div className="dashboard-container">
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
-          {/* ── Header ── */}
-          <div style={{ background: 'white', borderRadius: 10, border: '1.5px solid #14b8a6', padding: '18px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', boxShadow: '0 1px 6px rgba(20,184,166,0.1)' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2.5px solid #14b8a6', overflow: 'hidden' }}>
-              {member.photo
-                ? <img src={`${API_BASE_URL}/uploads/${member.photo}`} alt="Member" style={{ width: 72, height: 72, objectFit: 'cover' }} />
-                : <span style={{ fontSize: '2.375rem' }}>👤</span>
-              }
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '1.625rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-                {member.firstName} {member.lastName}
+          {/* ── Profile Hero Card ── */}
+          <div style={{ ...card, marginBottom: 20, overflow: 'hidden' }}>
+            {/* Soft mint identity band */}
+            <div style={{
+              background: `linear-gradient(135deg, ${T.primaryBg} 0%, ${T.primaryMid} 100%)`,
+              padding: '28px 28px 24px',
+              display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                <div style={{ width: 72, height: 72, borderRadius: '50%', background: T.white, border: `3px solid ${T.primaryBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {member.photo
+                    ? <img src={`${API_BASE_URL}/uploads/photos/${member.photo}`} alt="Member" style={{ width: 72, height: 72, objectFit: 'cover' }} />
+                    : <span style={{ fontSize: '2rem' }}>👤</span>
+                  }
+                </div>
+                {user && user.role === 'admin' && member.photo && (
+                  <button onClick={handleDeletePhoto} disabled={photoDeleting} style={{ fontSize: '0.7rem', color: T.red, background: 'none', border: 'none', cursor: photoDeleting ? 'not-allowed' : 'pointer', padding: 0, fontWeight: 600, opacity: photoDeleting ? 0.5 : 1 }}>
+                    {photoDeleting ? 'Removing…' : '× Remove photo'}
+                  </button>
+                )}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600, marginTop: 3 }}>
-                Member ID: #{member.id?.toString().padStart(4, '0')}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 style={{ fontSize: '1.571rem', fontWeight: '800', color: T.primary, margin: 0, letterSpacing: '-0.01em' }}>
+                  {member.firstName} {member.lastName}
+                </h1>
+                <p style={{ fontSize: T.fontMd, fontWeight: '500', color: T.textMuted, margin: '5px 0 0' }}>
+                  Member #{(member.memberNumber ?? member.id)?.toString().padStart(4, '0')}
+                </p>
               </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               {member.category && (() => {
                 const cat = member.category.toLowerCase();
                 const isActiveCategory = cat === 'active' || cat === 'honorary';
-                return (
-                  <span style={{
-                    padding: '6px 16px', fontSize: '0.9rem', fontWeight: 700, borderRadius: 16,
-                    background: isActiveCategory ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : '#f1f5f9',
-                    color: isActiveCategory ? 'white' : '#64748b',
-                    border: isActiveCategory ? '1.5px solid #059669' : '1.5px solid #cbd5e1',
-                  }}>
-                    {isActiveCategory ? '● ' : '○ '}{member.category}
-                  </span>
-                );
+                return <span style={isActiveCategory ? badge.active : badge.inactive}>{member.category}</span>;
               })()}
+            </div>
+            {/* Action buttons footer — Back on left, everything else on right */}
+            <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', borderTop: `1px solid ${T.primaryMid}`, background: T.white }}>
+              <button
+                onClick={() => navigate(-1)}
+                style={btn.ghost}
+              >← Back</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                {user && user.role === "admin" && (
+                  <>
+                    <button
+                      style={{ ...btn.success, opacity: member.isActive || actionLoading ? 0.4 : 1, cursor: member.isActive || actionLoading ? 'not-allowed' : 'pointer' }}
+                      onClick={() => setShowReinstate(true)}
+                      disabled={member.isActive || actionLoading}
+                    >✅ Reinstate</button>
+                    <button
+                      style={{ ...btn.danger, opacity: !member.isActive || actionLoading ? 0.4 : 1, cursor: !member.isActive || actionLoading ? 'not-allowed' : 'pointer' }}
+                      onClick={() => setShowDeactivate(true)}
+                      disabled={!member.isActive || actionLoading}
+                    >Deactivate</button>
+                    <Link to="/members/new" style={{ ...btn.ghost, background: T.primaryBg, border: `1.5px solid ${T.primaryBorder}`, color: T.primary, textDecoration: 'none' }}>➕ Add Member</Link>
+                  </>
+                )}
+                {user && (user.role === 'admin' || user.role === 'private') && (
+                  <>
+                    <button style={btn.exportCsv} onClick={() => window.open(`${API_BASE_URL}/api/export/member/${member.id}/csv`, '_blank')}>📄 CSV</button>
+                    <button style={btn.exportPdf} onClick={() => window.open(`${API_BASE_URL}/api/export/member/${member.id}/pdf`, '_blank')}>📑 PDF</button>
+                  </>
+                )}
+                {user && user.role === "admin" && (
+                  <Link to={`/members/edit/${member.id}`} replace style={{ ...btn.primary, textDecoration: 'none' }}>✏️ Edit</Link>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* ── 3-column grid ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, alignItems: 'start' }}>
+          {/* ── Card flow — browser balances column heights automatically ── */}
+          <div style={{ columns: '360px 3', columnGap: '20px' }}>
 
-            {/* Column 1: Personal + Irish Connection */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
               <div style={cardStyle}>
                 <h2 style={cardHeadStyle}>👤 Personal</h2>
-                <InfoRow label="Date of Birth" value={member.dateOfBirth} />
+                <InfoRow label="Date of Birth" value={formatDate(member.dateOfBirth)} />
                 <InfoRow label="Place of Birth" value={member.placeOfBirth} />
                 <InfoRow label="Occupation" value={member.occupation} />
               </div>
+            </div>
+
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
               <div style={cardStyle}>
                 <h2 style={cardHeadStyle}>🍀 Irish Connection</h2>
                 {Array.isArray(member.irishConnections) && member.irishConnections.length > 0 ? (
                   member.irishConnections.map((c, idx) => (
-                    <div key={idx} style={{ paddingTop: idx > 0 ? 8 : 0, marginTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? '1px dashed #e2e8f0' : 'none' }}>
-                      <InfoRow label="County" value={c.county} />
+                    <div key={idx} style={{ paddingTop: idx > 0 ? 8 : 0, marginTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? `1px dashed ${T.slateBorder}` : 'none' }}>
+                      <InfoRow label="County" value={c.countyName} />
                       <InfoRow label="Surname" value={c.surname} />
                       <InfoRow label="Connection Type" value={c.type} />
                     </div>
@@ -142,13 +205,12 @@ export default function MemberProfile() {
               </div>
             </div>
 
-            {/* Column 2: Contact + Address */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
               <div style={cardStyle}>
                 <h2 style={cardHeadStyle}>📞 Contact</h2>
                 <InfoRow label="Email" value={member.email} />
                 {Array.isArray(member.phoneNumbers) && member.phoneNumbers.length > 0
-                  ? member.phoneNumbers.map((phone, idx) => (
+                  ? [...new Map(member.phoneNumbers.map(p => [`${p.type}|${p.number}`, p])).values()].map((phone, idx) => (
                       <InfoRow
                         key={idx}
                         label={`${phone.type || 'Phone'}${phone.isPreferred ? ' (Primary)' : ''}`}
@@ -158,13 +220,33 @@ export default function MemberProfile() {
                   : <InfoRow label="Phone" value={null} />
                 }
               </div>
+            </div>
+
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
+              <div style={cardStyle}>
+                <h2 style={cardHeadStyle}>📋 Membership</h2>
+                <InfoRow label="Category" value={member.memberCategory || member.category} />
+                <InfoRow label="Date Joined" value={formatDate(member.dateJoined || member.membershipStartDate)} />
+                <InfoRow label="Date Ended" value={formatDate(member.dateEnded || member.membershipEndDate)} />
+                <InfoRow label="Application" value={formatDate(member.applicationDate)} />
+                <InfoRow label="Date Approved" value={formatDate(member.approvalDate || member.dateApproved)} />
+                <InfoRow label="Approved By" value={member.approvedBy} />
+                <InfoRow label="Signed By" value={member.signedBy} />
+                <InfoRow label="Proposer" value={member.proposer} />
+                <InfoRow label="Seconder(s)" value={member.seconder} />
+                <InfoRow label="Proposal Date" value={formatDate(member.proposalDate)} />
+                <InfoRow label="Other Societies" value={member.otherSocieties} />
+              </div>
+            </div>
+
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
               <div style={cardStyle}>
                 <h2 style={cardHeadStyle}>📍 Address</h2>
                 {Array.isArray(member.addresses) && member.addresses.length > 0 ? (
                   member.addresses.map((addr, idx) => (
-                    <div key={idx} style={{ paddingTop: idx > 0 ? 8 : 0, marginTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? '1px dashed #e2e8f0' : 'none' }}>
-                      <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#14b8a6', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
-                        {addr.isCurrent ? '📌 Current' : `📅 ${addr.yearLabel || 'Historical'}`}
+                    <div key={idx} style={{ paddingTop: idx > 0 ? 8 : 0, marginTop: idx > 0 ? 8 : 0, borderTop: idx > 0 ? `1px dashed ${T.slateBorder}` : 'none' }}>
+                      <div style={{ fontSize: T.fontSm, fontWeight: 700, color: T.primaryLight, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+                        {addr.isCurrent ? '📌 Current' : `📍 Other`}
                       </div>
                       <InfoRow label="Street" value={addr.street} />
                       {addr.addressLine2 && <InfoRow label="Line 2" value={addr.addressLine2} />}
@@ -174,92 +256,63 @@ export default function MemberProfile() {
                       {addr.postalCode && <InfoRow label="Postal Code" value={addr.postalCode} />}
                     </div>
                   ))
-                ) : <p style={{ color: '#94a3b8', fontSize: '1rem', margin: 0 }}>No address on record</p>}
+                ) : <p style={{ color: T.textLight, fontSize: T.fontBase, margin: 0 }}>No address on record</p>}
               </div>
             </div>
 
-            {/* Column 3: Membership + Roles + Volunteering */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={cardStyle}>
-                <h2 style={cardHeadStyle}>📋 Membership</h2>
-                <InfoRow label="Category" value={member.memberCategory || member.category} />
-                <InfoRow label="Date Joined" value={member.dateJoined || member.membershipStartDate} />
-                <InfoRow label="Date Ended" value={member.dateEnded || member.membershipEndDate} />
-                <InfoRow label="Application" value={member.applicationDate} />
-                <InfoRow label="Date Approved" value={member.approvalDate || member.dateApproved} />
-                <InfoRow label="Approved By" value={member.approvedBy} />
-                <InfoRow label="Signed By" value={member.signedBy} />
-                <InfoRow label="Proposer" value={member.proposer} />
-                <InfoRow label="Seconder(s)" value={member.seconder} />
-                <InfoRow label="Proposal Date" value={member.proposalDate} />
-                <InfoRow label="Other Societies" value={member.otherSocieties} />
-              </div>
+            <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
               <div style={cardStyle}>
                 <h2 style={cardHeadStyle}>🏆 Roles Held</h2>
                 {Array.isArray(member.roleFiscalYears) && member.roleFiscalYears.length > 0 ? (
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: T.fontBase }}>
                     <thead>
-                      <tr style={{ borderBottom: '1.5px solid #e2e8f0' }}>
-                        <th style={{ textAlign: 'left', padding: '6px 6px', fontWeight: 700, color: '#0f766e', fontSize: '0.825rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</th>
-                        <th style={{ textAlign: 'left', padding: '6px 6px', fontWeight: 700, color: '#0f766e', fontSize: '0.825rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</th>
+                      <tr style={{ borderBottom: `1.5px solid ${T.primaryMid}` }}>
+                        <th style={{ textAlign: 'left', padding: '5px 6px', fontWeight: 700, color: T.textMain, fontSize: T.fontSm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Role</th>
+                        <th style={{ textAlign: 'left', padding: '5px 6px', fontWeight: 700, color: T.textMain, fontSize: T.fontSm, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Year</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {member.roleFiscalYears.map((rf, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
-                          <td style={{ padding: '7px 6px', fontWeight: 600, color: '#0f172a' }}>{rf.role}</td>
-                          <td style={{ padding: '7px 6px', color: '#64748b', fontWeight: 500 }}>{rf.fiscalYear || rf.fiscalYearLabel || '—'}</td>
+                      {[...member.roleFiscalYears].sort((a, b) => (a.yearLabel || '').localeCompare(b.yearLabel || '') || (a.roleName || '').localeCompare(b.roleName || '')).map((rf, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${T.primaryMid}` }}>
+                          <td style={{ padding: '6px 6px', fontWeight: 600, color: '#1e293b' }}>{rf.roleName}</td>
+                          <td style={{ padding: '6px 6px', color: T.textMuted, fontWeight: 500 }}>{rf.yearLabel || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                ) : <p style={{ color: '#94a3b8', fontSize: '1rem', margin: 0 }}>No roles assigned</p>}
+                ) : <p style={{ color: T.textLight, fontSize: T.fontBase, margin: 0 }}>No roles assigned</p>}
               </div>
-              {user && (user.role === 'admin' || user.role === 'private') && (
+            </div>
+
+            {user && (user.role === 'admin' || user.role === 'private') && (
+              <div style={{ breakInside: 'avoid', marginBottom: 16 }}>
                 <div style={cardStyle}>
                   <h2 style={cardHeadStyle}>🤝 Volunteering</h2>
                   {Array.isArray(member.volunteeringInterests) && member.volunteeringInterests.length > 0 ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                       {member.volunteeringInterests.map((interest, idx) => (
-                        <span key={idx} style={{ padding: '6px 14px', background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)', border: '1.5px solid #14b8a6', borderRadius: 14, fontSize: '0.9rem', fontWeight: 600, color: '#0f766e' }}>
+                        <span key={idx} style={{ padding: '4px 12px', background: `linear-gradient(135deg, ${T.primaryBg} 0%, ${T.primaryMid} 100%)`, border: `1px solid ${T.primaryLight}`, borderRadius: 14, fontSize: T.fontSm, fontWeight: 600, color: T.primary }}>
                           {interest}
                         </span>
                       ))}
                     </div>
-                  ) : <p style={{ color: '#94a3b8', fontSize: '1rem', margin: 0 }}>No interests recorded</p>}
+                  ) : <p style={{ color: T.textLight, fontSize: T.fontBase, margin: 0 }}>No interests recorded</p>}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
           </div>
 
-          {/* ── Action Bar ── */}
-          <div style={{ background: 'white', borderRadius: 10, border: '1.5px solid #14b8a6', padding: '14px 20px', marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', boxShadow: '0 1px 6px rgba(20,184,166,0.1)' }}>
-            <Link
-              to={user && user.role === "public" ? "/members/historical" : "/members"}
-              style={{ ...btnStyle, background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)', color: '#1e293b', border: '1.5px solid #cbd5e1', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            >← Back</Link>
-            {user && (user.role === "admin" || user.role === "private") && (
-              <>
-                <button style={{ ...btnStyle, background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', color: 'white', border: '1.5px solid #16a34a' }} onClick={() => window.open(`${API_BASE_URL}/api/export/member/${member.id}/csv`, '_blank')}>📄 Export CSV</button>
-                <button style={{ ...btnStyle, background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', color: 'white', border: '1.5px solid #2563eb' }} onClick={() => window.open(`${API_BASE_URL}/api/export/member/${member.id}/pdf`, '_blank')}>📑 Export PDF</button>
-              </>
-            )}
-            {user && user.role === "admin" && (
-              <>
-                <Link to={`/members/edit/${member.id}`} style={{ ...btnStyle, background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', color: 'white', border: '1.5px solid #0f766e', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✏️ Edit</Link>
-                <button
-                  style={{ ...btnStyle, background: member.isActive || actionLoading ? '#e2e8f0' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: member.isActive || actionLoading ? '#94a3b8' : 'white', border: member.isActive || actionLoading ? '1.5px solid #cbd5e1' : '1.5px solid #059669', cursor: member.isActive || actionLoading ? 'not-allowed' : 'pointer' }}
-                  onClick={() => setShowReinstate(true)}
-                  disabled={member.isActive || actionLoading}
-                >✅ Reinstate</button>
-                <button
-                  style={{ ...btnStyle, background: !member.isActive || actionLoading ? '#e2e8f0' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: !member.isActive || actionLoading ? '#94a3b8' : 'white', border: !member.isActive || actionLoading ? '1.5px solid #cbd5e1' : '1.5px solid #dc2626', cursor: !member.isActive || actionLoading ? 'not-allowed' : 'pointer' }}
-                  onClick={() => setShowDeactivate(true)}
-                  disabled={!member.isActive || actionLoading}
-                >❌ Deactivate</button>
-              </>
-            )}
-          </div>
+          {/* Notes — full width below the column flow */}
+          {user && (user.role === 'admin' || user.role === 'private') && member.notes && (
+            <div style={{ ...cardStyle, marginBottom: 16 }}>
+              <h2 style={cardHeadStyle}>📝 Notes</h2>
+              <div style={{ fontSize: T.fontBase, fontWeight: 500, color: '#1e293b', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {member.notes}
+              </div>
+            </div>
+          )}
+
 
         </div>
       </div>
@@ -278,8 +331,9 @@ export default function MemberProfile() {
             try {
               const res = await fetch(`${API_BASE_URL}/api/members/${member.id}/reinstate`, { method: "POST", credentials: "include" });
               if (!res.ok) throw new Error("Failed to reinstate member");
+              const updated = await fetch(`${API_BASE_URL}/api/members/${member.id}`, { credentials: "include" });
+              if (updated.ok) setMember(await updated.json());
               setShowReinstate(false);
-              window.location.reload();
             } catch (err) {
               setActionError("Could not reinstate member.");
             } finally {
@@ -303,8 +357,9 @@ export default function MemberProfile() {
             try {
               const res = await fetch(`${API_BASE_URL}/api/members/${member.id}/deactivate`, { method: "POST", credentials: "include" });
               if (!res.ok) throw new Error("Failed to deactivate member");
+              const updated = await fetch(`${API_BASE_URL}/api/members/${member.id}`, { credentials: "include" });
+              if (updated.ok) setMember(await updated.json());
               setShowDeactivate(false);
-              window.location.reload();
             } catch (err) {
               setActionError("Could not deactivate member.");
             } finally {

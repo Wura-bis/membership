@@ -45,7 +45,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Handle specific HTTP errors
       if (response.status === 401) {
-        window.location.href = '/login';
+        window.location.href = import.meta.env.BASE_URL + 'login';
         return null;
       }
       

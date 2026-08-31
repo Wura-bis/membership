@@ -1,0 +1,913 @@
+ * Serving Flask app 'app'
+ * Debug mode: on
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Getting member 124
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Paternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Paternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+DEBUG irishConnections raw from request: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Raw MemberCategory rows: [<sqlite3.Row object at 0x0000014F3CB816F0>, <sqlite3.Row object at 0x0000014F3CB817B0>, <sqlite3.Row object at 0x0000014F3CB81810>, <sqlite3.Row object at 0x0000014F3CB81A20>]
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB816F0>, ID: 1, Name: Active, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB817B0>, ID: 2, Name: Historical, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB81810>, ID: 4, Name: Honorary, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB81A20>, ID: 3, Name: Inactive, ID type: <class 'int'>
+DEBUG: Filtered categories: [{'value': 1, 'label': 'Active'}, {'value': 2, 'label': 'Historical'}, {'value': 4, 'label': 'Honorary'}, {'value': 3, 'label': 'Inactive'}]
+DEBUG: Raw MemberCategory rows: [<sqlite3.Row object at 0x0000014F3CB98520>, <sqlite3.Row object at 0x0000014F3CB98E20>, <sqlite3.Row object at 0x0000014F3CB98A60>, <sqlite3.Row object at 0x0000014F3CB985E0>]
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB98520>, ID: 1, Name: Active, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB98E20>, ID: 2, Name: Historical, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB98A60>, ID: 4, Name: Honorary, ID type: <class 'int'>
+DEBUG: Row: <sqlite3.Row object at 0x0000014F3CB985E0>, ID: 3, Name: Inactive, ID type: <class 'int'>
+DEBUG: Filtered categories: [{'value': 1, 'label': 'Active'}, {'value': 2, 'label': 'Historical'}, {'value': 4, 'label': 'Honorary'}, {'value': 3, 'label': 'Inactive'}]
+DEBUG: Found 32 counties
+DEBUG: Getting member 124
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Found 64 provinces
+DEBUG: Getting member 124
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+DEBUG irishConnections raw from request: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 32 counties
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+DEBUG: Getting member 124
+DEBUG: Found 32 counties
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Found 64 provinces
+DEBUG: Found 4 categories
+DEBUG: Found 210 fiscal years
+DEBUG: Found 0 societies
+DEBUG: Found 3 roles: ['President', 'Secretary', 'Treasurer']
+DEBUG: Found 25 surnames: ['Ahem', 'Aylward', 'Beagan', 'Berrigan', 'Boolavogue', 'Brennan', 'Byrne', 'Clarkin', 'Clohossey', 'Connolly', 'Corcoran', 'Cusack', 'Doyle', 'Ford', 'Kelly', 'Kierstead', 'Lamb', 'MacDonald', 'McCarron', 'McGee', 'McKenna', 'Murphy', "O'Brien", 'Ready', 'Steele']
+DEBUG: Found 16 occupations
+DEBUG: Found 9 unique volunteering interests
+DEBUG: Returning lookups response with 9 sections
+=== BACKEND UPDATE DEBUG ===
+Received data keys: ['firstName', 'lastName', 'dateOfBirth', 'placeOfBirth', 'occupationId', 'email', 'phoneNumbers', 'cellPhone', 'irishConnections', 'addresses', 'otherSocieties', 'memberCategoryId', 'dateJoined', 'dateEnded', 'applicationDate', 'approvalDate', 'approvedBy', 'signedBy', 'proposer', 'seconder', 'proposalDate', 'roleFiscalYears', 'volunteeringInterests', 'notes', 'isActive']
+otherSocieties raw: ['PEI Right to Life', 'Billings PEI', 'WOOMB Canada', 'REAL Women of Canada', 'Reaching Out To Others', 'Friends of St. Andrews']
+Irish connections: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+  Connection 0: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Connection 1: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Connection 2: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Connection 3: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+=== END BACKEND DEBUG ===
+Member update query executed. Rows affected: 1
+DEBUG ADDRESSES: received 1 addresses
+  Address 0: isCurrent=True (type=bool), city='Charlottetown'
+DEBUG irishConnections raw from request: [{'type': 'Paternal', 'countyId': '', 'surnameId': '18'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}, {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}, {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}]
+Deleted existing county connections. Rows affected: 0
+Deleted existing surname connections. Rows affected: 4
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '18'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '5'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Paternal', 'countyId': '', 'surnameId': '19'}
+  Inserted surname connection. Rows affected: 1
+  Processing connection: {'type': 'Maternal', 'countyId': '', 'surnameId': '20'}
+  Inserted surname connection. Rows affected: 1
+DEBUG: Processing role fiscal years: [{'roleID': None, 'fiscalYearID': None}]
+DEBUG: Deleted existing roles. Rows affected: 0
+DEBUG: Processing role assignment: {'roleID': None, 'fiscalYearID': None}
+DEBUG: Converted IDs - roleID: None, fiscalYearID: None
+DEBUG: Skipped role assignment - missing role_id or fiscal_year_id
+Transaction committed successfully!
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0
+DEBUG: Getting member 124
+DEBUG: Successfully built member data for 124
+DEBUG: Member county: 
+DEBUG: Member surname: 
+DEBUG: Member addresses count: 1
+DEBUG: Irish connections count: 4
+DEBUG: Phone numbers count: 1
+DEBUG: Volunteering interests count: 0
+DEBUG: Role fiscal years count: 0

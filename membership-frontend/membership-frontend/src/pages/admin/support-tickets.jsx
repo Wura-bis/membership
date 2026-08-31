@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import { LoadingSpinner, TableSkeleton } from "../../components/loading";
 import { ActionButton, StatusBadge } from "../../components/ui";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, pageHeader } from '../../utils/theme';
 
 export default function SupportTickets() {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export default function SupportTickets() {
     status: 'all',
     priority: 'all'
   });
+  const [search, setSearch] = useState('');
   const [tableError, setTableError] = useState(null);
   const [creatingTable, setCreatingTable] = useState(false);
 
@@ -39,17 +41,13 @@ export default function SupportTickets() {
 
   useEffect(() => {
     fetchTickets();
-  }, [filters]);
+  }, []);
 
   const fetchTickets = async () => {
     setLoading(true);
     setTableError(null);
     try {
-      const params = new URLSearchParams();
-      if (filters.status !== 'all') params.append('status', filters.status);
-      if (filters.priority !== 'all') params.append('priority', filters.priority);
-      
-      const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets?${params}`, {
+      const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets`, {
         credentials: "include"
       });
       
@@ -100,6 +98,7 @@ export default function SupportTickets() {
     setSelectedTicket(ticket);
     setResponseForm({
       status: ticket.status,
+      priority: ticket.priority || 'normal',
       admin_response: ticket.admin_response || ''
     });
     setShowResponseModal(true);
@@ -134,79 +133,67 @@ export default function SupportTickets() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'open': return { bg: '#fee2e2', color: '#dc2626' };
-      case 'in-progress': return { bg: '#fef3c7', color: '#d97706' };
-      case 'resolved': return { bg: '#dcfce7', color: '#166534' };
-      case 'closed': return { bg: '#f3f4f6', color: '#64748b' };
-      default: return { bg: '#f3f4f6', color: '#64748b' };
+      case 'open': return { bg: T.redLight, color: T.red };
+      case 'in-progress': return { bg: T.amberLight, color: T.amber };
+      case 'resolved': return { bg: T.greenLight, color: T.green };
+      case 'closed': return { bg: T.slateLight, color: T.slate };
+      default: return { bg: T.slateLight, color: T.slate };
     }
   };
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'urgent': return { bg: '#fecaca', color: '#dc2626' };
+      case 'urgent': return { bg: T.redLight, color: T.red };
       case 'high': return { bg: '#fed7aa', color: '#ea580c' };
       case 'normal': return { bg: '#e0f2fe', color: '#0369a1' };
       default: return { bg: '#e0f2fe', color: '#0369a1' };
     }
   };
 
+  const q = search.trim().toLowerCase();
+  const filteredTickets = tickets.filter(t => {
+    if (filters.status !== 'all' && t.status !== filters.status) return false;
+    if (filters.priority !== 'all' && t.priority !== filters.priority) return false;
+    if (q && !`${t.subject} ${t.user_name} ${t.user_email}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
   return (
     <MainLayout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ 
-              fontSize: '38px', 
-              fontWeight: '700', 
-              color: '#0f766e', 
-              marginBottom: '12px',
-              margin: 0
-            }}>
-              🎫 Support Tickets
-            </h1>
-            <p style={{ 
-              fontSize: '20px', 
-              fontWeight: '600', 
-              color: '#64748b',
-              margin: 0 
-            }}>
-              Manage and respond to member support requests
-            </p>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>🎫 Support Tickets</h1>
+              <p style={pageHeader.subtitle}>Manage and respond to member support requests</p>
+            </div>
           </div>
 
           {/* Filters */}
-          <div style={{
-            background: '#f0fdfa',
-            borderRadius: '16px',
-            padding: '36px',
-            marginBottom: '32px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)',
-            display: 'flex',
-            gap: '32px',
-            alignItems: 'center'
-          }}>
+          <div style={{ ...card, padding: '20px 24px', marginBottom: '20px', display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', minWidth: '200px' }}>
+              <label style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>
+                🔍 Search:
+              </label>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search by subject, name or email…"
+                className="form-input"
+                style={{ width: '100%', minWidth: '200px' }}
+              />
+            </div>
+
             <div>
-              <label style={{ 
-                fontSize: '16px', 
-                fontWeight: '700', 
-                color: '#0f766e',
-                marginRight: '12px',
-                display: 'inline-block',
-                marginBottom: '8px'
-              }}>
+              <label style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>
                 📊 Status:
               </label>
               <select
                 value={filters.status}
                 onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
                 className="form-input"
-                style={{
-                  width: 'auto',
-                  minWidth: '180px'
-                }}
+                style={{ width: 'auto', minWidth: '160px' }}
               >
                 <option value="all">All Statuses</option>
                 <option value="open">Open</option>
@@ -215,26 +202,16 @@ export default function SupportTickets() {
                 <option value="closed">Closed</option>
               </select>
             </div>
-            
+
             <div>
-              <label style={{ 
-                fontSize: '16px', 
-                fontWeight: '700', 
-                color: '#0f766e',
-                marginRight: '12px',
-                display: 'inline-block',
-                marginBottom: '8px'
-              }}>
+              <label style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, display: 'block', marginBottom: '6px' }}>
                 🔥 Priority:
               </label>
               <select
                 value={filters.priority}
                 onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
                 className="form-input"
-                style={{
-                  width: 'auto',
-                  minWidth: '180px'
-                }}
+                style={{ width: 'auto', minWidth: '140px' }}
               >
                 <option value="all">All Priorities</option>
                 <option value="normal">Normal</option>
@@ -244,17 +221,8 @@ export default function SupportTickets() {
             </div>
 
             <div style={{ marginLeft: 'auto' }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                color: 'white',
-                padding: '14px 28px',
-                borderRadius: '12px',
-                fontSize: '20px',
-                fontWeight: '700',
-                boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)',
-                border: '2px solid white'
-              }}>
-                {tickets.length} {tickets.length !== 1 ? 'Tickets' : 'Ticket'}
+              <div style={{ background: `linear-gradient(135deg, ${T.primaryLight} 0%, ${T.primary} 100%)`, color: T.white, padding: '10px 20px', borderRadius: T.radiusMd, fontSize: T.fontBase, fontWeight: '700' }}>
+                {filteredTickets.length}{filteredTickets.length !== tickets.length ? `/${tickets.length}` : ''} {filteredTickets.length !== 1 ? 'Tickets' : 'Ticket'}
               </div>
             </div>
           </div>
@@ -264,15 +232,15 @@ export default function SupportTickets() {
             <div style={{
               background: '#fff1f2',
               border: '2px solid #fecaca',
-              borderRadius: '16px',
-              padding: '48px 36px',
+              borderRadius: '12px',
+              padding: '40px 24px',
               marginBottom: '32px',
               textAlign: 'center',
               boxShadow: '0 4px 12px rgba(220, 38, 38, 0.15)'
             }}>
-              <div style={{ fontSize: '80px', marginBottom: '20px' }}>⚠️</div>
+              <div style={{ fontSize: 'clamp(40px, 7vw, 56px)', marginBottom: '20px' }}>⚠️</div>
               <h3 style={{ 
-                fontSize: '24px',
+                fontSize: 'clamp(16px, 2.2vw, 20px)',
                 fontWeight: '700',
                 color: '#dc2626', 
                 marginBottom: '12px' 
@@ -323,12 +291,7 @@ export default function SupportTickets() {
           )}
 
           {/* Tickets List */}
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
-          }}>
+          <div style={card}>
             {loading ? (
               <div style={{ padding: '60px' }}>
                 <TableSkeleton />
@@ -339,11 +302,11 @@ export default function SupportTickets() {
                 padding: '80px 48px',
                 color: '#64748b'
               }}>
-                <div style={{ fontSize: '80px', marginBottom: '20px' }}>🔧</div>
+                <div style={{ fontSize: 'clamp(40px, 7vw, 56px)', marginBottom: '20px' }}>🔧</div>
                 <h3 style={{ 
-                  fontSize: '24px',
+                  fontSize: 'clamp(16px, 2.2vw, 20px)',
                   fontWeight: '700',
-                  color: '#0f766e',
+                  color: '#4e5d2e',
                   marginBottom: '12px' 
                 }}>
                   Setup Required
@@ -362,38 +325,33 @@ export default function SupportTickets() {
                 padding: '80px 48px',
                 color: '#64748b'
               }}>
-                <div style={{ fontSize: '80px', marginBottom: '20px' }}>🎫</div>
-                <h3 style={{ 
-                  fontSize: '24px',
+                <div style={{ fontSize: 'clamp(40px, 7vw, 56px)', marginBottom: '20px' }}>🎫</div>
+                <h3 style={{
+                  fontSize: 'clamp(16px, 2.2vw, 20px)',
                   fontWeight: '700',
-                  color: '#0f766e',
-                  marginBottom: '12px' 
+                  color: '#4e5d2e',
+                  marginBottom: '12px'
                 }}>
                   No Support Tickets
                 </h3>
-                <p style={{ 
-                  fontSize: '17px',
-                  fontWeight: '500',
-                  color: '#64748b'
-                }}>
-                  No support tickets match your current filters.
+                <p style={{ fontSize: '17px', fontWeight: '500', color: '#64748b' }}>
+                  No support tickets have been submitted yet.
+                </p>
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px 48px', color: '#64748b' }}>
+                <div style={{ fontSize: 'clamp(40px, 7vw, 56px)', marginBottom: '20px' }}>🔍</div>
+                <h3 style={{ fontSize: 'clamp(16px, 2.2vw, 20px)', fontWeight: '700', color: '#4e5d2e', marginBottom: '12px' }}>
+                  No Matching Tickets
+                </h3>
+                <p style={{ fontSize: '17px', fontWeight: '500', color: '#64748b' }}>
+                  Try adjusting your search or filters.
                 </p>
               </div>
             ) : (
               <div style={{ overflow: 'hidden' }}>
                 {/* Table Header */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '100px 1fr 140px 120px 140px 140px',
-                  gap: '20px',
-                  padding: '20px 32px',
-                  background: '#f0fdfa',
-                  borderBottom: '3px solid #5eead4',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#0f766e',
-                  textTransform: 'uppercase'
-                }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 140px 120px 140px 140px', gap: '20px', padding: '16px 32px', background: T.primaryBg, borderBottom: `2px solid ${T.primaryBorder}`, fontSize: T.fontSm, fontWeight: '700', color: T.textMain, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   <div>🎫 Ticket</div>
                   <div>📧 Subject / User</div>
                   <div>🔥 Priority</div>
@@ -403,53 +361,20 @@ export default function SupportTickets() {
                 </div>
 
                 {/* Table Body */}
-                {tickets.map((ticket) => (
+                {filteredTickets.map((ticket) => (
                   <div
                     key={ticket.ticket_id}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '100px 1fr 140px 120px 140px 140px',
-                      gap: '20px',
-                      padding: '20px 32px',
-                      borderBottom: '2px solid #ccfbf1',
-                      alignItems: 'center',
-                      background: 'white',
-                      transition: 'all 0.2s ease',
-                      cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdfa'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    style={{ display: 'grid', gridTemplateColumns: '100px 1fr 140px 120px 140px 140px', gap: '20px', padding: '16px 32px', borderBottom: `1px solid ${T.primaryMid}`, alignItems: 'center', background: T.white, transition: 'background 0.15s', cursor: 'pointer' }}
+                    onMouseEnter={e => e.currentTarget.style.background = T.primaryBg}
+                    onMouseLeave={e => e.currentTarget.style.background = T.white}
                   >
-                    <div style={{ 
-                      fontSize: '17px', 
-                      fontWeight: '700', 
-                      color: '#0f766e',
-                      background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
-                      padding: '8px 14px',
-                      borderRadius: '10px',
-                      border: '2px solid #5eead4',
-                      textAlign: 'center'
-                    }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMain, background: T.primaryBg, padding: '8px 14px', borderRadius: T.radiusMd, border: `1.5px solid ${T.primaryBorder}`, textAlign: 'center' }}>
                       #{ticket.ticket_id}
                     </div>
                     
                     <div>
-                      <div style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '600', 
-                        color: '#0f766e', 
-                        marginBottom: '6px',
-                        lineHeight: 1.3
-                      }}>
-                        {ticket.subject}
-                      </div>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        fontWeight: '500',
-                        color: '#64748b' 
-                      }}>
-                        👤 {ticket.user_name} • 📧 {ticket.user_email}
-                      </div>
+                      <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMain, marginBottom: '4px' }}>{ticket.subject}</div>
+                      <div style={{ fontSize: T.fontSm, fontWeight: '500', color: T.textMuted }}>👤 {ticket.user_name} • 📧 {ticket.user_email}</div>
                     </div>
                     
                     <div>
@@ -490,51 +415,12 @@ export default function SupportTickets() {
                     </div>
                     
                     <div>
-                      <div style={{ 
-                        fontSize: '16px', 
-                        fontWeight: '600',
-                        color: '#0f766e',
-                        marginBottom: '4px'
-                      }}>
-                        {new Date(ticket.date_created).toLocaleDateString()}
-                      </div>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        fontWeight: '500',
-                        color: '#64748b' 
-                      }}>
-                        {new Date(ticket.date_created).toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
-                      </div>
+                      <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMain, marginBottom: '2px' }}>{new Date(ticket.date_created).toLocaleDateString()}</div>
+                      <div style={{ fontSize: T.fontSm, fontWeight: '500', color: T.textMuted }}>{new Date(ticket.date_created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                     
                     <div>
-                      <button
-                        onClick={() => handleTicketClick(ticket)}
-                        style={{
-                          background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                          color: 'white',
-                          border: '2px solid #0f766e',
-                          padding: '10px 20px',
-                          fontSize: '15px',
-                          fontWeight: '700',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)',
-                          transition: 'all 0.2s ease',
-                          width: '100%'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.transform = 'translateY(-2px)';
-                          e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
-                        }}
-                      >
+                      <button onClick={() => handleTicketClick(ticket)} style={{ ...btn.primary, width: '100%', justifyContent: 'center' }}>
                         👁️ View
                       </button>
                     </div>
@@ -553,7 +439,7 @@ export default function SupportTickets() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(15, 118, 110, 0.5)',
+            background: 'rgba(0,0,0,0.4)',
             backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
@@ -569,32 +455,25 @@ export default function SupportTickets() {
               width: '100%',
               maxHeight: '85vh',
               overflow: 'auto',
-              border: '3px solid #5eead4',
-              boxShadow: '0 20px 50px rgba(20, 184, 166, 0.3)'
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 20px 50px rgba(78, 93, 46, 0.3)'
             }}>
-              <h2 style={{ 
-                marginBottom: '28px', 
-                fontSize: '24px', 
-                fontWeight: '700',
-                color: '#0f766e',
-                borderBottom: '3px solid #5eead4',
-                paddingBottom: '16px'
-              }}>
+              <h2 style={{ marginBottom: '24px', fontSize: '18px', fontWeight: '700', color: T.textMain, borderBottom: `2px solid ${T.primaryBorder}`, paddingBottom: '16px' }}>
                 🎫 Ticket #{selectedTicket.ticket_id}: {selectedTicket.subject}
               </h2>
               
-              <div style={{ 
-                marginBottom: '32px', 
-                padding: '28px', 
-                background: '#f0fdfa', 
+              <div style={{
+                marginBottom: '32px',
+                padding: '28px',
+                background: 'white',
                 borderRadius: '16px',
-                border: '2px solid #ccfbf1'
+                border: '2px solid #e5e7eb'
               }}>
                 <div style={{ 
                   marginBottom: '16px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  color: '#0f766e'
+                  color: '#4e5d2e'
                 }}>
                   <span style={{ fontWeight: '700' }}>👤 From:</span> {selectedTicket.user_name} ({selectedTicket.user_email})
                 </div>
@@ -602,7 +481,7 @@ export default function SupportTickets() {
                   marginBottom: '20px',
                   fontSize: '16px',
                   fontWeight: '600',
-                  color: '#0f766e'
+                  color: '#4e5d2e'
                 }}>
                   <span style={{ fontWeight: '700' }}>📅 Created:</span> {new Date(selectedTicket.date_created).toLocaleString()}
                 </div>
@@ -610,7 +489,7 @@ export default function SupportTickets() {
                   marginBottom: '12px',
                   fontSize: '16px',
                   fontWeight: '700',
-                  color: '#0f766e'
+                  color: '#4e5d2e'
                 }}>
                   💬 Message:
                 </div>
@@ -618,7 +497,7 @@ export default function SupportTickets() {
                   background: 'white', 
                   padding: '20px', 
                   borderRadius: '12px',
-                  border: '2px solid #5eead4',
+                  border: '1px solid #e5e7eb',
                   lineHeight: 1.6,
                   fontSize: '16px',
                   fontWeight: '500',
@@ -629,36 +508,40 @@ export default function SupportTickets() {
               </div>
 
               <form onSubmit={handleResponseSubmit}>
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '16px', 
-                    fontWeight: '700', 
-                    color: '#0f766e',
-                    marginBottom: '12px' 
-                  }}>
-                    📊 Status
-                  </label>
-                  <select
-                    value={responseForm.status}
-                    onChange={(e) => setResponseForm(prev => ({ ...prev, status: e.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="open">📭 Open</option>
-                    <option value="in-progress">⏳ In Progress</option>
-                    <option value="resolved">✅ Resolved</option>
-                    <option value="closed">🔒 Closed</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
+                      📊 Status
+                    </label>
+                    <select
+                      value={responseForm.status}
+                      onChange={(e) => setResponseForm(prev => ({ ...prev, status: e.target.value }))}
+                      className="form-input"
+                    >
+                      <option value="open">📭 Open</option>
+                      <option value="in-progress">⏳ In Progress</option>
+                      <option value="resolved">✅ Resolved</option>
+                      <option value="closed">🔒 Closed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
+                      🔥 Priority
+                    </label>
+                    <select
+                      value={responseForm.priority}
+                      onChange={(e) => setResponseForm(prev => ({ ...prev, priority: e.target.value }))}
+                      className="form-input"
+                    >
+                      <option value="normal">📋 Normal</option>
+                      <option value="high">⚡ High</option>
+                      <option value="urgent">🔥 Urgent</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: '32px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '16px', 
-                    fontWeight: '700', 
-                    color: '#0f766e',
-                    marginBottom: '12px' 
-                  }}>
+                  <label style={{ display: 'block', fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '8px' }}>
                     💬 Admin Response
                   </label>
                   <textarea
@@ -671,60 +554,13 @@ export default function SupportTickets() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowResponseModal(false)}
-                    style={{
-                      background: 'white',
-                      color: '#64748b',
-                      border: '2px solid #cbd5e1',
-                      padding: '12px 32px',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#f1f5f9';
-                      e.target.style.borderColor = '#94a3b8';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'white';
-                      e.target.style.borderColor = '#cbd5e1';
-                    }}
-                  >
+                  <button type="button" onClick={() => setShowResponseModal(false)} style={btn.ghost}>
                     ✕ Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submittingResponse}
-                    style={{
-                      background: submittingResponse 
-                        ? '#9ca3af' 
-                        : 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                      color: 'white',
-                      border: '2px solid #0f766e',
-                      padding: '12px 32px',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      borderRadius: '12px',
-                      cursor: submittingResponse ? 'not-allowed' : 'pointer',
-                      boxShadow: submittingResponse ? 'none' : '0 4px 12px rgba(20, 184, 166, 0.3)',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!submittingResponse) {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 6px 16px rgba(20, 184, 166, 0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!submittingResponse) {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.3)';
-                      }
-                    }}
+                    style={{ ...btn.primary, opacity: submittingResponse ? 0.6 : 1, cursor: submittingResponse ? 'not-allowed' : 'pointer' }}
                   >
                     {submittingResponse ? '⏳ Updating...' : '💾 Update Ticket'}
                   </button>

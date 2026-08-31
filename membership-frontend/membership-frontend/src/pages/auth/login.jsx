@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+﻿import { useState } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
 import { ActionButton } from "../../components/ui";
 import { API_BASE_URL } from '../../utils/api';
+import { T, btn } from '../../utils/theme';
 
 export default function Login() {
   const [userID, setUserID] = useState("");
@@ -14,6 +15,8 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [touched, setTouched] = useState({});
   const navigate = useNavigate();
+  const location = useLocation();
+  const resetMessage = location.state?.message || "";
   const { login } = useAuth();
   const { showToast } = useToast();
 
@@ -23,7 +26,7 @@ export default function Login() {
 
     if (name === 'userID') {
       if (!value.trim()) {
-        errors.userID = 'User ID or email is required';
+        errors.userID = 'Username or email is required';
       } else if (value.includes('@') && !/\S+@\S+\.\S+/.test(value)) {
         errors.userID = 'Please enter a valid email address';
       }
@@ -84,19 +87,24 @@ export default function Login() {
       if (!res.ok) throw new Error(data.error || "Login failed");
       
       // Update AuthContext with user data
-      login(data.user);
+      login(data);
       showToast("Welcome back!", "success");
 
-      // If the session expired while on a page, redirect back there
+      // Return to saved page only if the same account is logging back in
       const savedRedirect = sessionStorage.getItem("redirectAfterLogin");
-      if (savedRedirect && savedRedirect.startsWith("/") && !savedRedirect.startsWith("//")) {
+      const savedUserId = sessionStorage.getItem("redirectUserId");
+      const incomingId = String(data.user_id ?? "");
+      if (savedRedirect && savedRedirect.startsWith("/") && !savedRedirect.startsWith("//") && (!savedUserId || savedUserId === incomingId)) {
         sessionStorage.removeItem("redirectAfterLogin");
+        sessionStorage.removeItem("redirectUserId");
         navigate(savedRedirect);
         return;
       }
+      sessionStorage.removeItem("redirectAfterLogin");
+      sessionStorage.removeItem("redirectUserId");
 
       // Role-based redirect (use lowercase for comparison)
-      const userRole = data.user.role.toLowerCase();
+      const userRole = data.role.toLowerCase();
       if (userRole === "admin") {
         navigate("/dashboard");
       } else if (userRole === "private") {
@@ -114,8 +122,9 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+      background: 'linear-gradient(135deg, #f8f9fa 0%, #e5e7eb 100%)',
       display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '24px'
@@ -123,83 +132,89 @@ export default function Login() {
       <div style={{
         background: 'white',
         borderRadius: '16px',
-        boxShadow: '0 20px 40px rgba(20, 184, 166, 0.15)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.09)',
         padding: '56px',
         width: '100%',
         maxWidth: '480px',
-        border: '3px solid #14b8a6'
+        border: '1px solid #e5e7eb'
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <div style={{
             width: '100px',
             height: '100px',
-            background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
+            background: '#4e5d2e',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 20px auto',
-            fontSize: '42px',
+            fontSize: 'clamp(22px, 4vw, 28px)',
             color: 'white',
             fontWeight: '800',
-            boxShadow: '0 8px 20px rgba(20, 184, 166, 0.3)'
+            boxShadow: '0 8px 20px rgba(78, 93, 46, 0.3)'
           }}>
             BIS
           </div>
           <h1 style={{
-            fontSize: '38px',
+            fontSize: 'clamp(20px, 3.5vw, 26px)',
             fontWeight: '800',
             color: '#0f172a',
             margin: '0 0 12px 0'
           }}>Welcome Back</h1>
           <p style={{
-            fontSize: '18px',
+            fontSize: T.fontXl,
             fontWeight: '600',
-            color: '#64748b',
+            color: T.textMuted,
             margin: 0
           }}>Sign in to your membership account</p>
         </div>
+
+        {resetMessage && (
+          <div style={{ padding: '14px 18px', backgroundColor: '#f0fdf4', border: '2px solid #22c55e', borderRadius: '10px', marginBottom: '20px', fontSize: T.fontLg, fontWeight: '600', color: '#16a34a', display: 'flex', gap: '8px' }}>
+            <span>✅</span> {resetMessage}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* User ID Field */}
           <div>
             <label htmlFor="userID" style={{
               display: 'block',
-              fontSize: '17px',
+              fontSize: T.fontXl,
               fontWeight: '700',
               color: '#0f172a',
               marginBottom: '10px'
-            }}>👤 User ID or Email</label>
+            }}>👤 Username or Email</label>
             <input
               id="userID"
               type="text"
               value={userID}
               onChange={e => handleFieldChange('userID', e.target.value)}
               autoComplete="username"
-              placeholder="Enter your user ID or email"
+              placeholder="Enter your username or email"
               style={{
                 width: '100%',
                 padding: '16px 20px',
-                border: fieldErrors.userID ? '2px solid #ef4444' : '2px solid #14b8a6',
+                border: fieldErrors.userID ? '1.5px solid #ef4444' : '1.5px solid #d1d5db',
                 borderRadius: '10px',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '600',
                 outline: 'none',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.15s ease',
                 backgroundColor: '#f9fafb',
                 boxSizing: 'border-box'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#0f766e';
+                e.target.style.borderColor = '#4e5d2e';
                 e.target.style.backgroundColor = 'white';
-                e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                e.target.style.boxShadow = '0 0 0 3px rgba(78,93,46,0.1)';
               }}
               onBlur={(e) => {
                 handleFieldBlur('userID');
                 e.target.style.boxShadow = 'none';
                 if (!fieldErrors.userID) {
-                  e.target.style.borderColor = '#14b8a6';
+                  e.target.style.borderColor = '#d1d5db';
                   e.target.style.backgroundColor = '#f9fafb';
                 }
               }}
@@ -207,7 +222,7 @@ export default function Login() {
             {fieldErrors.userID && (
               <div style={{
                 color: '#ef4444',
-                fontSize: '15px',
+                fontSize: T.fontMd,
                 fontWeight: '600',
                 marginTop: '8px',
                 display: 'flex',
@@ -223,7 +238,7 @@ export default function Login() {
           <div>
             <label htmlFor="password" style={{
               display: 'block',
-              fontSize: '17px',
+              fontSize: T.fontXl,
               fontWeight: '700',
               color: '#0f172a',
               marginBottom: '10px'
@@ -240,25 +255,25 @@ export default function Login() {
                   width: '100%',
                   padding: '16px 20px',
                   paddingRight: '60px',
-                  border: fieldErrors.password ? '2px solid #ef4444' : '2px solid #14b8a6',
+                  border: fieldErrors.password ? '1.5px solid #ef4444' : '1.5px solid #d1d5db',
                   borderRadius: '10px',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '600',
                   outline: 'none',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.15s ease',
                   backgroundColor: '#f9fafb',
                   boxSizing: 'border-box'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#0f766e';
+                  e.target.style.borderColor = '#4e5d2e';
                   e.target.style.backgroundColor = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(78,93,46,0.1)';
                 }}
                 onBlur={(e) => {
                   handleFieldBlur('password');
                   e.target.style.boxShadow = 'none';
                   if (!fieldErrors.password) {
-                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.borderColor = '#d1d5db';
                     e.target.style.backgroundColor = '#f9fafb';
                   }
                 }}
@@ -273,14 +288,14 @@ export default function Login() {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#14b8a6',
-                  fontSize: '20px',
+                  color: T.primaryLight,
+                  fontSize: 'clamp(14px, 1.8vw, 17px)',
                   cursor: 'pointer',
                   padding: '8px',
                   borderRadius: '6px',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 tabIndex={-1}
               >
@@ -290,7 +305,7 @@ export default function Login() {
             {fieldErrors.password && (
               <div style={{
                 color: '#ef4444',
-                fontSize: '15px',
+                fontSize: T.fontMd,
                 fontWeight: '600',
                 marginTop: '8px',
                 display: 'flex',
@@ -309,16 +324,15 @@ export default function Login() {
             size="large"
             loading={isLoading}
             style={{
+              ...btn.primary,
               width: '100%',
-              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
-              border: 'none',
               borderRadius: '12px',
-              fontWeight: '700',
-              fontSize: '18px',
+              fontSize: T.fontXl,
               padding: '18px 24px',
               letterSpacing: '0.5px',
               transition: 'all 0.2s ease',
-              boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
+              boxShadow: '0 4px 12px rgba(78, 93, 46, 0.3)',
+              justifyContent: 'center'
             }}
           >
             🚀 Sign In
@@ -329,19 +343,19 @@ export default function Login() {
             <Link 
               to="/forgot-password/email"
               style={{
-                color: '#14b8a6',
+                color: T.primaryLight,
                 textDecoration: 'none',
-                fontSize: '17px',
+                fontSize: T.fontXl,
                 fontWeight: '600',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
                 e.target.style.textDecoration = 'underline';
-                e.target.style.color = '#0f766e';
+                e.target.style.color = T.textMain;
               }}
               onMouseLeave={(e) => {
                 e.target.style.textDecoration = 'none';
-                e.target.style.color = '#14b8a6';
+                e.target.style.color = T.primaryLight;
               }}
             >
               🔑 Forgot your password?
@@ -353,15 +367,14 @@ export default function Login() {
             textAlign: 'center', 
             marginTop: '28px',
             padding: '24px',
-            backgroundColor: '#f0fdfa',
+            backgroundColor: '#f8f9fa',
             borderRadius: '12px',
-            border: '2px solid #ccfbf1',
-            boxShadow: '0 2px 8px rgba(20, 184, 166, 0.1)'
+            border: '1px solid #e5e7eb'
           }}>
             <p style={{ 
               margin: '0 0 12px 0', 
               color: '#475569', 
-              fontSize: '17px',
+              fontSize: T.fontXl,
               fontWeight: '600'
             }}>
               Don't have an account?
@@ -369,9 +382,9 @@ export default function Login() {
             <Link 
               to="/signup"
               style={{
-                color: '#14b8a6',
+                color: T.primaryLight,
                 textDecoration: 'none',
-                fontSize: '18px',
+                fontSize: T.fontXl,
                 fontWeight: '700',
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -380,11 +393,11 @@ export default function Login() {
               }}
               onMouseEnter={(e) => {
                 e.target.style.textDecoration = 'underline';
-                e.target.style.color = '#0f766e';
+                e.target.style.color = T.textMain;
               }}
               onMouseLeave={(e) => {
                 e.target.style.textDecoration = 'none';
-                e.target.style.color = '#14b8a6';
+                e.target.style.color = T.primaryLight;
               }}
             >
               <span>✨</span>
@@ -400,6 +413,13 @@ export default function Login() {
             100% { transform: rotate(360deg); }
           }
         `}</style>
+      </div>
+
+      {/* Copyright */}
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <p style={{ fontSize: T.fontSm, color: '#9ca3af', margin: 0 }}>
+          © 2026 Benevolent Irish Society of PEI · Designed &amp; developed by Wuraola
+        </p>
       </div>
     </div>
   );

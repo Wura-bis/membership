@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import {
   PieChart,
   Pie,
@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 import MainLayout from "../../components/mainlayout";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, pageHeader } from '../../utils/theme';
 
 export default function EnhancedAdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -86,7 +87,7 @@ export default function EnhancedAdminDashboard() {
   }, [fetchStats]);
 
   // Chart colors following membership app patterns
-  const COLORS = ['#14b8a6', '#dc2626', '#f59e0b', '#3b82f6'];
+  const COLORS = ['#4e5d2e', '#dc2626', '#f59e0b', '#3b82f6'];
 
   const prepareChartData = () => {
     if (!stats?.breakdown) return [];
@@ -112,40 +113,13 @@ export default function EnhancedAdminDashboard() {
     <MainLayout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          {/* Welcome Section */}
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <h1 style={{
-                  fontSize: '38px',
-                  fontWeight: '700',
-                  color: '#0f766e',
-                  marginBottom: '12px'
-                }}>
-                  Welcome back, {user.firstName} {user.lastName}! 👋
-                </h1>
-                <p style={{
-                  fontSize: '20px',
-                  fontWeight: '600',
-                  color: '#64748b',
-                  margin: '0'
-                }}>
-                  Here's what's happening with your membership system today.
-                </p>
-              </div>
-              <div style={{
-                background: '#14b8a6',
-                color: 'white',
-                padding: '14px 24px',
-                borderRadius: '24px',
-                fontSize: '16px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                border: '2px solid #0f766e'
-              }}>
-                Administrator
-              </div>
+          <div style={{ ...pageHeader.wrapper, marginBottom: '32px' }}>
+            <div>
+              <h1 style={pageHeader.title}>Welcome back, {user.firstName} {user.lastName}! 👋</h1>
+              <p style={pageHeader.subtitle}>Here's what's happening with your membership system today.</p>
+            </div>
+            <div style={{ background: `linear-gradient(135deg, ${T.primaryLight} 0%, ${T.primary} 100%)`, color: T.white, padding: '10px 20px', borderRadius: '24px', fontSize: T.fontBase, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Administrator
             </div>
           </div>
 
@@ -155,109 +129,93 @@ export default function EnhancedAdminDashboard() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '16px' }}>
             {/* Member Summary */}
-            <div style={{
-              background: '#f0fdfa',
-              border: '2px solid #5eead4',
-              borderRadius: '12px',
-              padding: '36px',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div style={{ ...card, padding: '24px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '28px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
                 📊 Member Summary
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '16px 0',
-                  borderBottom: '2px solid #ccfbf1'
+                  padding: '10px 0',
+                  borderBottom: `2px solid ${T.primaryMid}`
                 }}>
-                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Active Memberships</span>
-                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
+                  <span style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted }}>Active Memberships</span>
+                  <span style={{ fontSize: T.fontMd, fontWeight: '800', color: T.primaryLight }}>
                     {dashboardData?.activeMembers || 0}
                   </span>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '16px 0',
-                  borderBottom: '2px solid #ccfbf1'
+                  padding: '10px 0',
+                  borderBottom: `2px solid ${T.primaryMid}`
                 }}>
-                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Non-Active Memberships</span>
-                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#dc2626' }}>
+                  <span style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted }}>Honorary Memberships</span>
+                  <span style={{ fontSize: T.fontMd, fontWeight: '800', color: T.amber }}>
+                    {dashboardData?.honoraryMembers || 0}
+                  </span>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: `2px solid ${T.primaryMid}`
+                }}>
+                  <span style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted }}>Non-Active Memberships</span>
+                  <span style={{ fontSize: T.fontMd, fontWeight: '800', color: T.red }}>
                     {dashboardData?.inactiveMembers || 0}
                   </span>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '16px 0',
-                  borderBottom: '2px solid #ccfbf1'
+                  padding: '10px 0',
+                  borderBottom: `2px solid ${T.primaryMid}`
                 }}>
-                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Active Users</span>
-                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
+                  <span style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted }}>Active Users</span>
+                  <span style={{ fontSize: T.fontMd, fontWeight: '800', color: T.primaryLight }}>
                     {dashboardData?.activeUsers || 0}
                   </span>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '16px 0'
+                  padding: '10px 0'
                 }}>
-                  <span style={{ fontSize: '17px', fontWeight: '600', color: '#64748b' }}>Growth Rate</span>
-                  <span style={{ fontSize: '32px', fontWeight: '800', color: '#14b8a6' }}>
+                  <span style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted }}>Growth Rate</span>
+                  <span style={{ fontSize: T.fontMd, fontWeight: '800', color: T.primaryLight }}>
                     {stats?.growth || 0}%
                   </span>
                 </div>
-                <Link 
-                  to="/members" 
-                  style={{ 
-                    background: '#14b8a6',
-                    color: 'white',
-                    border: '2px solid #0f766e',
-                    padding: '16px 24px',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'block',
-                    marginTop: '12px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
+                <Link to="/members" style={{ ...btn.primary, justifyContent: 'center', marginTop: '12px' }}>
                   VIEW ALL MEMBERS
                 </Link>
               </div>
             </div>
 
             {/* Recent Activities */}
-            <div style={{
-              background: '#f0fdfa',
-              border: '2px solid #5eead4',
-              borderRadius: '12px',
-              padding: '36px',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div style={{ ...card, padding: '24px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '28px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
@@ -266,11 +224,11 @@ export default function EnhancedAdminDashboard() {
               </h2>
               <div>
                 {activities.length === 0 ? (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    padding: '48px 24px', 
-                    color: '#94a3b8',
-                    fontSize: '17px',
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '48px 24px',
+                    color: T.textLight,
+                    fontSize: T.fontMd,
                     fontWeight: '500'
                   }}>
                     No recent activity
@@ -283,47 +241,47 @@ export default function EnhancedAdminDashboard() {
                       paddingRight: showAllActivities ? '8px' : '0'
                     }}>
                       {activitiesToShow.map((item, i) => (
-                        <div key={i} style={{ 
-                          padding: '16px 20px',
-                          background: '#ffffff',
-                          borderRadius: '10px',
-                          border: '2px solid #ccfbf1',
+                        <div key={i} style={{
+                          padding: '12px 16px',
+                          background: T.white,
+                          borderRadius: T.radiusMd,
+                          border: `2px solid ${T.primaryMid}`,
                           marginBottom: '8px'
                         }}>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
                             justifyContent: 'space-between',
-                            marginBottom: '8px',
+                            marginBottom: '6px',
                             gap: '12px'
                           }}>
-                            <div style={{ 
-                              fontSize: '17px',
-                              fontWeight: '700', 
-                              color: '#0f766e',
+                            <div style={{
+                              fontSize: T.fontBase,
+                              fontWeight: '700',
+                              color: T.textMain,
                               display: 'flex',
                               alignItems: 'center',
                               gap: '8px'
                             }}>
-                              <span>{item.type === 'member_added' ? '👤' : '🔑'}</span>
+                              <span>{'👤'}</span>
                               {item.name}
                             </div>
-                            <div style={{ 
-                              fontSize: '15px', 
-                              color: '#64748b',
+                            <div style={{
+                              fontSize: T.fontSm,
+                              color: T.textMuted,
                               fontWeight: '600',
                               whiteSpace: 'nowrap'
                             }}>
                               {item.date}
                             </div>
                           </div>
-                          <div style={{ 
-                            fontSize: '16px', 
-                            color: '#64748b',
+                          <div style={{
+                            fontSize: T.fontBase,
+                            color: T.textMuted,
                             fontWeight: '500',
                             lineHeight: '1.5'
                           }}>
-                            {item.description || (item.type === 'member_added' ? 'New member added' : 'User registered')}
+                            {item.activity || item.description || 'New member joined'}
                           </div>
                         </div>
                       ))}
@@ -332,27 +290,7 @@ export default function EnhancedAdminDashboard() {
                     {activities.length > 3 && (
                       <button
                         onClick={() => setShowAllActivities(!showAllActivities)}
-                        style={{
-                          background: '#ffffff',
-                          border: '2px solid #14b8a6',
-                          color: '#14b8a6',
-                          padding: '12px 20px',
-                          borderRadius: '10px',
-                          fontSize: '16px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          transition: 'all 0.2s',
-                          marginTop: '8px'
-                        }}
-                        onMouseOver={(e) => {
-                          e.target.style.background = '#14b8a6';
-                          e.target.style.color = 'white';
-                        }}
-                        onMouseOut={(e) => {
-                          e.target.style.background = '#ffffff';
-                          e.target.style.color = '#14b8a6';
-                        }}
+                        style={{ ...btn.ghost, border: `1.5px solid ${T.primaryLight}`, color: T.primaryLight, justifyContent: 'center', marginTop: '8px' }}
                       >
                         {showAllActivities ? '▲ Show Less' : `▼ View All (${activities.length})`}
                       </button>
@@ -363,18 +301,12 @@ export default function EnhancedAdminDashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div style={{
-              background: '#f0fdfa',
-              border: '2px solid #5eead4',
-              borderRadius: '12px',
-              padding: '36px',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div style={{ ...card, padding: '24px' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '28px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
@@ -382,89 +314,25 @@ export default function EnhancedAdminDashboard() {
                 ⚡ Quick Actions
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <Link
-                  to="/members/new"
-                  style={{
-                    background: '#14b8a6',
-                    color: 'white',
-                    border: '2px solid #0f766e',
-                    padding: '18px 24px',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>👤</span>
-                  ADD NEW MEMBER
+                <Link to="/members/new" style={{ ...btn.primary, justifyContent: 'center' }}>
+                  👤 Add New Member
                 </Link>
-                <Link
-                  to="/admin/import"
-                  style={{
-                    background: '#14b8a6',
-                    color: 'white',
-                    border: '2px solid #0f766e',
-                    padding: '18px 24px',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>📊</span>
-                  IMPORT MEMBERS
+                <Link to="/admin/import" style={{ ...btn.primary, justifyContent: 'center' }}>
+                  📊 Import Members
                 </Link>
-                <Link
-                  to="/admin/approvals"
-                  style={{
-                    background: '#14b8a6',
-                    color: 'white',
-                    border: '2px solid #0f766e',
-                    padding: '18px 24px',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>✅</span>
-                  USER APPROVALS
+                <Link to="/admin/approvals" style={{ ...btn.primary, justifyContent: 'center' }}>
+                  ✅ User Approvals
                 </Link>
               </div>
             </div>
 
             {/* Analytics Filters */}
-            <div style={{ 
-              gridColumn: 'span 2',
-              background: '#f0fdfa',
-              border: '2px solid #5eead4',
-              borderRadius: '12px',
-              padding: '36px',
-              boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
-            }}>
+            <div style={{ ...card, padding: '24px', gridColumn: 'span 2' }}>
               <h2 style={{
-                fontSize: '24px',
+                fontSize: T.fontLg,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '28px',
+                color: T.textMain,
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
@@ -474,99 +342,45 @@ export default function EnhancedAdminDashboard() {
               <div style={{ marginBottom: '32px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '10px', 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
-                      color: '#0f766e' 
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: T.fontBase, fontWeight: '700', color: T.textMain }}>
                       Start Date
                     </label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        border: '2px solid #5eead4',
-                        borderRadius: '10px',
-                        fontSize: '17px',
-                        fontWeight: '500',
-                        background: 'white'
-                      }}
+                      style={{ width: '100%', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, fontSize: T.fontBase, fontWeight: '500', background: T.white }}
                     />
                   </div>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '10px', 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
-                      color: '#0f766e' 
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: T.fontBase, fontWeight: '700', color: T.textMain }}>
                       End Date
                     </label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        border: '2px solid #5eead4',
-                        borderRadius: '10px',
-                        fontSize: '17px',
-                        fontWeight: '500',
-                        background: 'white'
-                      }}
+                      style={{ width: '100%', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, fontSize: T.fontBase, fontWeight: '500', background: T.white }}
                     />
                   </div>
                   <div>
-                    <label style={{ 
-                      display: 'block', 
-                      marginBottom: '10px', 
-                      fontSize: '16px', 
-                      fontWeight: '700', 
-                      color: '#0f766e' 
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: T.fontBase, fontWeight: '700', color: T.textMain }}>
                       Category
                     </label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '14px 16px',
-                        border: '2px solid #5eead4',
-                        borderRadius: '10px',
-                        fontSize: '17px',
-                        fontWeight: '500',
-                        background: 'white'
-                      }}
+                      style={{ width: '100%', padding: '8px 10px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, fontSize: T.fontBase, fontWeight: '500', background: T.white }}
                     >
                       <option value="">All Categories</option>
-                      <option value="1">Active</option>
-                      <option value="2">Inactive</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Honorary">Honorary</option>
+                      <option value="Historical">Historical</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'end' }}>
-                    <button
-                      onClick={fetchStats}
-                      style={{
-                        width: '100%',
-                        background: '#14b8a6',
-                        color: 'white',
-                        border: '2px solid #0f766e',
-                        padding: '16px 24px',
-                        borderRadius: '10px',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
+                    <button onClick={fetchStats} style={{ ...btn.primary, width: '100%', justifyContent: 'center' }}>
                       Apply Filters
                     </button>
                   </div>
@@ -577,7 +391,7 @@ export default function EnhancedAdminDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
                 {/* Membership Breakdown Pie Chart */}
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMuted, marginBottom: '16px' }}>
                     Membership Breakdown
                   </h3>
                   {stats && prepareChartData().length > 0 ? (
@@ -606,8 +420,8 @@ export default function EnhancedAdminDashboard() {
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       height: '300px', 
-                      color: '#9ca3af',
-                      fontSize: '14px'
+                      color: T.textLight,
+                      fontSize: T.fontBase
                     }}>
                       No data available
                     </div>
@@ -616,7 +430,7 @@ export default function EnhancedAdminDashboard() {
 
                 {/* Yearly Growth Line Chart */}
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: T.fontBase, fontWeight: '700', color: T.textMuted, marginBottom: '16px' }}>
                     Yearly Membership Growth
                   </h3>
                   {stats && prepareYearlyData().length > 0 ? (
@@ -626,7 +440,7 @@ export default function EnhancedAdminDashboard() {
                         <XAxis dataKey="year" />
                         <YAxis />
                         <Tooltip />
-                        <Line type="monotone" dataKey="members" stroke="#14b8a6" strokeWidth={2} />
+                        <Line type="monotone" dataKey="members" stroke="#4e5d2e" strokeWidth={2} />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
@@ -635,8 +449,8 @@ export default function EnhancedAdminDashboard() {
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       height: '300px', 
-                      color: '#9ca3af',
-                      fontSize: '14px'
+                      color: T.textLight,
+                      fontSize: T.fontBase
                     }}>
                       No data available
                     </div>
@@ -647,7 +461,7 @@ export default function EnhancedAdminDashboard() {
 
             {/* Smart Notifications */}
             <div className="dashboard-card">
-              <h2 className="dashboard-card-title">� Smart Notifications</h2>
+              <h2 className="dashboard-card-title">🔔 Smart Notifications</h2>
               <div>
                 {smartNotifications.length === 0 ? (
                   <div style={{ 
@@ -661,24 +475,22 @@ export default function EnhancedAdminDashboard() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {smartNotifications.map((notification, i) => (
-                      <div key={i} style={{ 
-                        padding: '12px',
-                        background: notification.type === 'warning' ? '#fef3cd' : 
-                                  notification.type === 'success' ? '#d1e7dd' : '#f8fafc',
-                        borderRadius: '8px',
-                        border: `1px solid ${notification.type === 'warning' ? '#ffc107' : 
-                                                notification.type === 'success' ? '#198754' : '#e2e8f0'}`,
+                      <div key={i} style={{
+                        padding: '12px 14px',
+                        background: notification.type === 'warning' ? T.amberLight : notification.type === 'success' ? T.greenLight : T.slateLight,
+                        borderRadius: T.radiusMd,
+                        border: `1.5px solid ${notification.type === 'warning' ? T.amberBorder : notification.type === 'success' ? T.greenBorder : T.slateBorder}`,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        gap: '8px'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '16px' }}>{notification.icon}</span>
-                          <span style={{ 
-                            fontSize: '14px', 
-                            color: notification.type === 'warning' ? '#856404' : 
-                                  notification.type === 'success' ? '#0f5132' : '#334155',
-                            fontWeight: '500'
+                          <span>{notification.icon}</span>
+                          <span style={{
+                            fontSize: T.fontBase,
+                            color: notification.type === 'warning' ? T.amber : notification.type === 'success' ? T.green : T.textMuted,
+                            fontWeight: '600'
                           }}>
                             {notification.message}
                           </span>
@@ -687,18 +499,11 @@ export default function EnhancedAdminDashboard() {
                           <Link
                             to={notification.action}
                             style={{
-                              background: notification.type === 'warning' ? '#ffc107' : 
-                                        notification.type === 'success' ? '#198754' : '#14b8a6',
-                              color: 'white',
-                              padding: '4px 12px',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              textDecoration: 'none',
-                              transition: 'opacity 0.2s'
+                              ...(notification.type === 'warning' ? btn.warning : notification.type === 'success' ? btn.success : btn.primary),
+                              padding: '4px 10px',
+                              fontSize: T.fontSm,
+                              textDecoration: 'none'
                             }}
-                            onMouseOver={(e) => e.target.style.opacity = '0.8'}
-                            onMouseOut={(e) => e.target.style.opacity = '1'}
                           >
                             {notification.actionText}
                           </Link>

@@ -1,0 +1,13 @@
+RewriteEngine On
+RewriteBase /membership/
+
+# Let real files and directories through
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Let API requests through to the api/ folder
+RewriteRule ^api/ - [L]
+
+# Send everything else to React's index.html (SPA routing)
+RewriteRule ^ index.html [L]

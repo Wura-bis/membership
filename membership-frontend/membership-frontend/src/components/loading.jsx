@@ -1,4 +1,4 @@
-// Enhanced Loading Components
+﻿// Enhanced Loading Components
 export function LoadingSpinner({ size = 'medium', message = 'Loading...' }) {
   const sizes = {
     small: '24px',
@@ -21,7 +21,7 @@ export function LoadingSpinner({ size = 'medium', message = 'Loading...' }) {
           width: sizes[size],
           height: sizes[size],
           border: '3px solid #e2e8f0',
-          borderTop: '3px solid #14b8a6',
+          borderTop: '3px solid #4e5d2e',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }}

@@ -1,5 +1,6 @@
 ﻿import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useauth";
+import { T } from '../utils/theme';
 
 const linksByRole = {
   admin: [
@@ -9,45 +10,45 @@ const linksByRole = {
     { to: "/admin/support-tickets", label: "Support Tickets", icon: "🎫" },
     { to: "/members", label: "All Members", icon: "👤" },
     { to: "/admin/import", label: "Bulk Import", icon: "📥" },
+    { to: "/members/statistics", label: "Statistics", icon: "📈" },
     { to: "/my-profile", label: "My Profile", icon: "👤" },
-    { to: "/settings", label: "System Settings", icon: "🔧" },
     { to: "/app-settings", label: "App Settings", icon: "⚙️" },
   ],
   private: [
     { to: "/dashboard/private", label: "Dashboard", icon: "📊" },
     { to: "/members", label: "Member Directory", icon: "📋" },
     { to: "/support", label: "Support", icon: "🎧" },
+    { to: "/members/statistics", label: "Statistics", icon: "📈" },
     { to: "/my-profile", label: "My Profile", icon: "👤" },
     { to: "/app-settings", label: "App Settings", icon: "⚙️" },
   ],
   public: [
     { to: "/public", label: "Public Dashboard", icon: "🌐" },
     { to: "/members/historical", label: "Member Directory", icon: "📋" },
+    { to: "/members/statistics", label: "Statistics", icon: "📈" },
     { to: "/my-profile", label: "My Profile", icon: "👤" },
     { to: "/app-settings", label: "App Settings", icon: "⚙️" },
   ],
 };
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose, collapsed }) {
   const { user } = useAuth();
   const location = useLocation();
   const userRole = user?.role || "public";
   const links = linksByRole[userRole] || [];
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' sidebar--open' : ''}${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar-brand">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '16px', fontWeight: '700' }}>B</div>
-          BIS
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+          <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="BIS Logo" style={{ width: '48px', height: '48px', flexShrink: 0, borderRadius: T.radiusMd, objectFit: 'contain' }} />
+          <span className="sidebar-brand-text" style={{ fontSize: '14px', lineHeight: '1.3' }}>BIS Membership Database</span>
         </div>
       </div>
       <nav className="sidebar-nav">
-            {links.map((link) => (
-          <Link key={link.to} to={link.to} className={`sidebar-link ${location.pathname === link.to ? 'active' : ''}`}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '16px' }}>{link.icon}</span>
-              {link.label}
-            </div>
+        {links.map((link) => (
+          <Link key={link.to} to={link.to} className={`sidebar-link ${location.pathname === link.to ? 'active' : ''}`} onClick={onClose} title={link.label}>
+            <span className="sidebar-link-icon">{link.icon}</span>
+            <span className="sidebar-link-label">{link.label}</span>
           </Link>
         ))}
       </nav>

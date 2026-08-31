@@ -1,15 +1,16 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_BASE_URL } from '../../utils/api';
+import { T, btn } from '../../utils/theme';
 
 export default function Signup() {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
-    userID: "",
     requestPrivate: false,
     noEmail: false,
   });
@@ -24,10 +25,14 @@ export default function Signup() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm((prev) => {
+      const next = { ...prev, [name]: type === "checkbox" ? checked : value };
+      // Keep username in sync with firstName until the user edits it independently
+      if (name === 'firstName' && prev.username === prev.firstName) {
+        next.username = value;
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -37,18 +42,16 @@ export default function Signup() {
     setIsLoading(true);
 
     // Validation
-    if (form.noEmail) {
-      if (!form.userID) {
-        setError("User ID is required.");
-        setIsLoading(false);
-        return;
-      }
-    } else {
-      if (!form.email) {
-        setError("Email is required.");
-        setIsLoading(false);
-        return;
-      }
+    if (!form.username.trim()) {
+      setError("Please choose a username.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!form.noEmail && !form.email) {
+      setError("Email is required.");
+      setIsLoading(false);
+      return;
     }
 
     if (!form.password || !form.confirmPassword) {
@@ -74,9 +77,9 @@ export default function Signup() {
       const payload = {
         firstName: form.firstName,
         lastName: form.lastName,
+        username: form.username.trim(),
         email: form.noEmail ? null : form.email,
         password: form.password,
-        userID: form.noEmail ? form.userID : null,
         requestPrivate: form.requestPrivate,
         noEmail: form.noEmail,
       };
@@ -89,10 +92,13 @@ export default function Signup() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Signup failed");
+      if (!res.ok) throw new Error(data.error || data.message || "Signup failed");
 
-      setSuccess("Account created successfully!");
-      setTimeout(() => navigate("/login"), 1500);
+      const msg = form.noEmail
+        ? `Account created! Your username is "${form.username.trim()}". Use it to log in.`
+        : "Account created successfully!";
+      setSuccess(msg);
+      setTimeout(() => navigate("/login"), 2500);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -107,7 +113,7 @@ export default function Signup() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)'
+      background: 'linear-gradient(135deg, #f8f9fa 0%, #e5e7eb 100%)'
     }}>
       <div style={{ 
         width: '100%', 
@@ -115,8 +121,8 @@ export default function Signup() {
         backgroundColor: 'white',
         borderRadius: '16px',
         padding: '56px',
-        boxShadow: '0 20px 40px rgba(20, 184, 166, 0.15)',
-        border: '3px solid #14b8a6'
+        boxShadow: '0 20px 40px rgba(78, 93, 46, 0.15)',
+        border: '3px solid #4e5d2e'
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
@@ -124,20 +130,20 @@ export default function Signup() {
             width: '100px',
             height: '100px',
             margin: '0 auto 20px',
-            background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+            background: 'linear-gradient(135deg, #4e5d2e, #0d9488)',
             borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 8px 20px rgba(20, 184, 166, 0.3)',
-            fontSize: '42px',
+            boxShadow: '0 8px 20px rgba(78, 93, 46, 0.3)',
+            fontSize: 'clamp(22px, 4vw, 28px)',
             fontWeight: '800',
             color: 'white'
           }}>
             ✨
           </div>
           <h1 style={{ 
-            fontSize: '38px', 
+            fontSize: 'clamp(20px, 3.5vw, 26px)', 
             fontWeight: '800', 
             color: '#0f172a', 
             marginBottom: '10px',
@@ -145,9 +151,9 @@ export default function Signup() {
           }}>
             Create Account
           </h1>
-          <p style={{ 
-            color: '#64748b', 
-            fontSize: '18px',
+          <p style={{
+            color: T.textMuted,
+            fontSize: T.fontXl,
             fontWeight: '600'
           }}>
             Join our membership community
@@ -163,9 +169,9 @@ export default function Signup() {
               border: '2px solid #ef4444',
               borderRadius: '10px',
               marginBottom: '24px',
-              fontSize: '16px',
+              fontSize: T.fontLg,
               fontWeight: '600',
-              color: '#dc2626',
+              color: T.red,
               display: 'flex',
               alignItems: 'center',
               gap: '8px'
@@ -181,7 +187,7 @@ export default function Signup() {
               border: '2px solid #22c55e',
               borderRadius: '10px',
               marginBottom: '24px',
-              fontSize: '16px',
+              fontSize: T.fontLg,
               fontWeight: '600',
               color: '#16a34a',
               display: 'flex',
@@ -203,7 +209,7 @@ export default function Signup() {
               <div>
                 <label style={{
                   display: 'block',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '700',
                   color: '#0f172a',
                   marginBottom: '10px'
@@ -221,9 +227,9 @@ export default function Signup() {
                   style={{
                     width: '100%',
                     padding: '16px 20px',
-                    border: '2px solid #14b8a6',
+                    border: '2px solid #4e5d2e',
                     borderRadius: '10px',
-                    fontSize: '17px',
+                    fontSize: T.fontXl,
                     fontWeight: '600',
                     outline: 'none',
                     transition: 'all 0.2s ease',
@@ -231,12 +237,12 @@ export default function Signup() {
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = '#f9fafb';
                     e.target.style.boxShadow = 'none';
                   }}
@@ -245,7 +251,7 @@ export default function Signup() {
               <div>
                 <label style={{
                   display: 'block',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '700',
                   color: '#0f172a',
                   marginBottom: '10px'
@@ -263,9 +269,9 @@ export default function Signup() {
                   style={{
                     width: '100%',
                     padding: '16px 20px',
-                    border: '2px solid #14b8a6',
+                    border: '2px solid #4e5d2e',
                     borderRadius: '10px',
-                    fontSize: '17px',
+                    fontSize: T.fontXl,
                     fontWeight: '600',
                     outline: 'none',
                     transition: 'all 0.2s ease',
@@ -273,12 +279,12 @@ export default function Signup() {
                     boxSizing: 'border-box'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#0f766e';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = 'white';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                   }}
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#14b8a6';
+                    e.target.style.borderColor = '#4e5d2e';
                     e.target.style.backgroundColor = '#f9fafb';
                     e.target.style.boxShadow = 'none';
                   }}
@@ -286,24 +292,71 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Username */}
+            <div style={{ marginBottom: '28px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: T.fontXl,
+                fontWeight: '700',
+                color: '#0f172a',
+                marginBottom: '10px'
+              }} htmlFor="username">
+                🪪 Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                required
+                placeholder="Choose a username"
+                style={{
+                  width: '100%',
+                  padding: '16px 20px',
+                  border: '2px solid #4e5d2e',
+                  borderRadius: '10px',
+                  fontSize: T.fontXl,
+                  fontWeight: '600',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: '#f9fafb',
+                  boxSizing: 'border-box'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#4e5d2e';
+                  e.target.style.backgroundColor = 'white';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#4e5d2e';
+                  e.target.style.backgroundColor = '#f9fafb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <p style={{ fontSize: T.fontBase, fontWeight: '600', color: '#64748b', marginTop: '8px' }}>
+                💡 This is what you'll use to log in
+              </p>
+            </div>
+
             {/* Email Toggle */}
             <div style={{ marginBottom: '28px' }}>
               <label style={{ 
                 display: 'flex', 
                 alignItems: 'center',
-                fontSize: '16px',
+                fontSize: T.fontLg,
                 fontWeight: '600',
                 color: '#475569',
                 cursor: 'pointer',
                 marginBottom: '20px',
                 padding: '14px 18px',
-                backgroundColor: '#f0fdfa',
+                backgroundColor: '#f8f9fa',
                 borderRadius: '10px',
-                border: '2px solid #ccfbf1',
+                border: '2px solid #e5e7eb',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e6fcf9'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f0fdfa'}>
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}>
                 <input
                   type="checkbox"
                   name="noEmail"
@@ -319,54 +372,11 @@ export default function Signup() {
                 📧 I don't have an email address
               </label>
 
-              {form.noEmail ? (
+              {form.noEmail ? null : (
                 <div>
                   <label style={{
                     display: 'block',
-                    fontSize: '17px',
-                    fontWeight: '700',
-                    color: '#0f172a',
-                    marginBottom: '10px'
-                  }} htmlFor="userID">
-                    🆔 User ID
-                  </label>
-                  <input
-                    id="userID"
-                    type="text"
-                    name="userID"
-                    value={form.userID}
-                    onChange={handleChange}
-                    required
-                    placeholder="Choose a unique user ID"
-                    style={{
-                      width: '100%',
-                      padding: '16px 20px',
-                      border: '2px solid #14b8a6',
-                      borderRadius: '10px',
-                      fontSize: '17px',
-                      fontWeight: '600',
-                      outline: 'none',
-                      transition: 'all 0.2s ease',
-                      backgroundColor: '#f9fafb',
-                      boxSizing: 'border-box'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#0f766e';
-                      e.target.style.backgroundColor = 'white';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#14b8a6';
-                      e.target.style.backgroundColor = '#f9fafb';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '17px',
+                    fontSize: T.fontXl,
                     fontWeight: '700',
                     color: '#0f172a',
                     marginBottom: '10px'
@@ -384,9 +394,9 @@ export default function Signup() {
                     style={{
                       width: '100%',
                       padding: '16px 20px',
-                      border: '2px solid #14b8a6',
+                      border: '2px solid #4e5d2e',
                       borderRadius: '10px',
-                      fontSize: '17px',
+                      fontSize: T.fontXl,
                       fontWeight: '600',
                       outline: 'none',
                       transition: 'all 0.2s ease',
@@ -394,12 +404,12 @@ export default function Signup() {
                       boxSizing: 'border-box'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = 'white';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = '#f9fafb';
                       e.target.style.boxShadow = 'none';
                     }}
@@ -418,7 +428,7 @@ export default function Signup() {
               <div>
                 <label style={{
                   display: 'block',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '700',
                   color: '#0f172a',
                   marginBottom: '10px'
@@ -438,9 +448,9 @@ export default function Signup() {
                       width: '100%',
                       padding: '16px 20px',
                       paddingRight: '60px',
-                      border: '2px solid #14b8a6',
+                      border: '2px solid #4e5d2e',
                       borderRadius: '10px',
-                      fontSize: '17px',
+                      fontSize: T.fontXl,
                       fontWeight: '600',
                       outline: 'none',
                       transition: 'all 0.2s ease',
@@ -448,12 +458,12 @@ export default function Signup() {
                       boxSizing: 'border-box'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = 'white';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = '#f9fafb';
                       e.target.style.boxShadow = 'none';
                     }}
@@ -468,22 +478,22 @@ export default function Signup() {
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#14b8a6',
+                      color: T.primaryLight,
                       cursor: 'pointer',
-                      fontSize: '20px',
+                      fontSize: 'clamp(14px, 1.8vw, 17px)',
                       padding: '8px',
                       borderRadius: '6px',
                       transition: 'all 0.2s ease'
                     }}
                     tabIndex={-1}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     {showPassword ? '👁️' : '👁️‍🗨️'}
                   </button>
                 </div>
                 <p style={{ 
-                  fontSize: '14px', 
+                  fontSize: T.fontBase, 
                   fontWeight: '600',
                   color: '#64748b', 
                   marginTop: '8px'
@@ -494,7 +504,7 @@ export default function Signup() {
               <div>
                 <label style={{
                   display: 'block',
-                  fontSize: '17px',
+                  fontSize: T.fontXl,
                   fontWeight: '700',
                   color: '#0f172a',
                   marginBottom: '10px'
@@ -514,9 +524,9 @@ export default function Signup() {
                       width: '100%',
                       padding: '16px 20px',
                       paddingRight: '60px',
-                      border: '2px solid #14b8a6',
+                      border: '2px solid #4e5d2e',
                       borderRadius: '10px',
-                      fontSize: '17px',
+                      fontSize: T.fontXl,
                       fontWeight: '600',
                       outline: 'none',
                       transition: 'all 0.2s ease',
@@ -524,12 +534,12 @@ export default function Signup() {
                       boxSizing: 'border-box'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#0f766e';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = 'white';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(20, 184, 166, 0.1)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(78, 93, 46, 0.1)';
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = '#14b8a6';
+                      e.target.style.borderColor = '#4e5d2e';
                       e.target.style.backgroundColor = '#f9fafb';
                       e.target.style.boxShadow = 'none';
                     }}
@@ -544,15 +554,15 @@ export default function Signup() {
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#14b8a6',
+                      color: T.primaryLight,
                       cursor: 'pointer',
-                      fontSize: '20px',
+                      fontSize: 'clamp(14px, 1.8vw, 17px)',
                       padding: '8px',
                       borderRadius: '6px',
                       transition: 'all 0.2s ease'
                     }}
                     tabIndex={-1}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f0fdfa'}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
                     onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
@@ -566,18 +576,18 @@ export default function Signup() {
               <label style={{ 
                 display: 'flex', 
                 alignItems: 'flex-start',
-                fontSize: '16px',
+                fontSize: T.fontLg,
                 fontWeight: '600',
                 color: '#475569',
                 cursor: 'pointer',
                 padding: '18px 20px',
-                backgroundColor: '#f0fdfa',
+                backgroundColor: '#f8f9fa',
                 borderRadius: '10px',
-                border: '2px solid #ccfbf1',
+                border: '2px solid #e5e7eb',
                 transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e6fcf9'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f0fdfa'}>
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}>
                 <input
                   type="checkbox"
                   name="requestPrivate"
@@ -593,10 +603,10 @@ export default function Signup() {
                 />
                 <div>
                   🔐 Request Private Access
-                  <div style={{ 
-                    fontSize: '14px', 
+                  <div style={{
+                    fontSize: T.fontBase,
                     fontWeight: '500',
-                    color: '#64748b',
+                    color: T.textMuted,
                     marginTop: '6px'
                   }}>
                     Private access requires admin approval
@@ -608,20 +618,18 @@ export default function Signup() {
             <button
               type="submit"
               disabled={isLoading}
-              style={{ 
-                width: '100%', 
+              style={{
+                ...btn.primary,
+                width: '100%',
                 marginBottom: '28px',
                 padding: '18px 24px',
-                background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
-                border: 'none',
                 borderRadius: '12px',
-                fontSize: '18px',
-                fontWeight: '700',
-                color: 'white',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontSize: T.fontXl,
+                justifyContent: 'center',
                 letterSpacing: '0.5px',
                 transition: 'all 0.2s ease',
-                boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)',
+                boxShadow: '0 4px 12px rgba(78, 93, 46, 0.3)',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 opacity: isLoading ? 0.7 : 1
               }}
               onMouseEnter={(e) => !isLoading && (e.target.style.transform = 'translateY(-2px)')}
@@ -648,32 +656,32 @@ export default function Signup() {
           <div style={{ 
             textAlign: 'center',
             padding: '24px',
-            backgroundColor: '#f0fdfa',
+            backgroundColor: '#f8f9fa',
             borderRadius: '12px',
-            border: '2px solid #ccfbf1',
-            boxShadow: '0 2px 8px rgba(20, 184, 166, 0.1)'
+            border: '2px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(78, 93, 46, 0.1)'
           }}>
             <p style={{ 
               color: '#475569', 
-              fontSize: '17px',
+              fontSize: T.fontXl,
               fontWeight: '600',
               margin: '0 0 12px 0'
             }}>
               Already have an account?
             </p>
             <Link to="/login" style={{
-              color: '#14b8a6',
+              color: T.primaryLight,
               textDecoration: 'none',
-              fontSize: '18px',
+              fontSize: T.fontXl,
               fontWeight: '700',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.color = '#0f766e';
+              e.target.style.color = T.textMain;
               e.target.style.textDecoration = 'underline';
             }}
             onMouseLeave={(e) => {
-              e.target.style.color = '#14b8a6';
+              e.target.style.color = T.primaryLight;
               e.target.style.textDecoration = 'none';
             }}>
               🚀 Sign in
@@ -686,11 +694,11 @@ export default function Signup() {
             textAlign: 'center' 
           }}>
             <p style={{ 
-              fontSize: '14px',
+              fontSize: T.fontBase,
               fontWeight: '600',
               color: '#94a3b8' 
             }}>
-              © 2025 Membership System. All rights reserved.
+              © 2026 Benevolent Irish Society of PEI · Designed &amp; developed by Wuraola
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MainLayout from "../components/mainlayout";
 import { useAuth } from "../hooks/useauth";
@@ -6,6 +6,7 @@ import { useToast } from "../components/toast";
 import { ActionButton, FormField } from "../components/ui";
 import { LoadingSpinner } from "../components/loading";
 import { API_BASE_URL } from '../utils/api';
+import { T, card, btn } from '../utils/theme';
 
 export default function Support() {
   const { user } = useAuth();
@@ -19,6 +20,14 @@ export default function Support() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [myTickets, setMyTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
+  const [contactInfo, setContactInfo] = useState({ contactEmail: '', contactPhone: '', contactHours: '' });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/contact-info`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setContactInfo(data); })
+      .catch(() => {});
+  }, []);
 
   // Load user's tickets
   useEffect(() => {
@@ -144,16 +153,16 @@ export default function Support() {
     <MainLayout>
       <div style={{ 
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #f0fdfa 100%)',
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #f8f9fa 50%, #f8f9fa 100%)',
         padding: '32px 24px'
       }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           {/* Header */}
           <div style={{ marginBottom: '32px', textAlign: 'center' }}>
             <h1 style={{
-              fontSize: '38px',
+              fontSize: '1.5rem',
               fontWeight: '700',
-              color: '#0f766e',
+              color: T.textMain,
               marginBottom: '12px',
               display: 'flex',
               alignItems: 'center',
@@ -163,9 +172,9 @@ export default function Support() {
               🎧 Support Center
             </h1>
             <p style={{
-              fontSize: '20px',
+              fontSize: T.fontMd,
               fontWeight: '600',
-              color: '#64748b',
+              color: T.textMuted,
               margin: '0'
             }}>
               Get help and find answers to common questions
@@ -174,18 +183,15 @@ export default function Support() {
 
           {/* Tab Navigation */}
           <div style={{
-            background: '#f0fdfa',
-            borderRadius: '12px',
-            padding: '36px',
+            ...card,
+            padding: '24px',
             marginBottom: '28px',
-            boxShadow: '0 2px 12px rgba(20,184,166,0.08)',
-            border: '2px solid #5eead4'
           }}>
             <div style={{
               display: 'flex',
               gap: '12px',
               marginBottom: '32px',
-              borderBottom: '3px solid #ccfbf1',
+              borderBottom: '3px solid #e5e7eb',
               paddingBottom: '16px',
               flexWrap: 'wrap'
             }}>
@@ -200,11 +206,11 @@ export default function Support() {
                   onClick={() => setActiveTab(tab.id)}
                   style={{
                     padding: '16px 28px',
-                    border: activeTab === tab.id ? '2px solid #14b8a6' : '2px solid transparent',
-                    background: activeTab === tab.id ? '#14b8a6' : '#ffffff',
+                    border: activeTab === tab.id ? '2px solid #4e5d2e' : '2px solid transparent',
+                    background: activeTab === tab.id ? '#4e5d2e' : '#ffffff',
                     color: activeTab === tab.id ? 'white' : '#64748b',
                     borderRadius: '10px',
-                    fontSize: '17px',
+                    fontSize: T.fontMd,
                     fontWeight: '700',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
@@ -219,11 +225,11 @@ export default function Support() {
             {/* FAQ Tab */}
             {activeTab === 'faq' && (
               <div>
-                <h3 style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#0f766e', 
-                  marginBottom: '24px' 
+                <h3 style={{
+                  fontSize: T.fontLg,
+                  fontWeight: '700',
+                  color: T.textMain,
+                  marginBottom: '24px'
                 }}>
                   Frequently Asked Questions
                 </h3>
@@ -233,19 +239,19 @@ export default function Support() {
                       background: '#ffffff',
                       padding: '24px',
                       borderRadius: '12px',
-                      border: '2px solid #ccfbf1',
-                      boxShadow: '0 1px 3px rgba(20,184,166,0.1)'
+                      border: '2px solid #e5e7eb',
+                      boxShadow: '0 1px 3px rgba(78,93,46,0.1)'
                     }}>
                       <h4 style={{
-                        fontSize: '18px',
+                        fontSize: T.fontLg,
                         fontWeight: '700',
-                        color: '#0f766e',
+                        color: T.textMain,
                         marginBottom: '12px'
                       }}>
                         {faq.question}
                       </h4>
                       <p style={{
-                        fontSize: '17px',
+                        fontSize: T.fontMd,
                         fontWeight: '500',
                         color: '#475569',
                         margin: '0',
@@ -262,11 +268,11 @@ export default function Support() {
             {/* Contact Tab */}
             {activeTab === 'contact' && (
               <div>
-                <h3 style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#0f766e', 
-                  marginBottom: '24px' 
+                <h3 style={{
+                  fontSize: T.fontLg,
+                  fontWeight: '700',
+                  color: T.textMain,
+                  marginBottom: '24px'
                 }}>
                   Contact Support
                 </h3>
@@ -275,9 +281,9 @@ export default function Support() {
                   <div style={{ marginBottom: '20px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '16px',
+                      fontSize: T.fontBase,
                       fontWeight: '700',
-                      color: '#0f766e',
+                      color: T.textMain,
                       marginBottom: '10px'
                     }}>
                       Subject
@@ -290,9 +296,9 @@ export default function Support() {
                       style={{
                         width: '100%',
                         padding: '16px',
-                        border: '2px solid #5eead4',
+                        border: '1.5px solid #d1d5db',
                         borderRadius: '10px',
-                        fontSize: '17px',
+                        fontSize: T.fontMd,
                         fontWeight: '500'
                       }}
                       placeholder="Brief description of your issue"
@@ -302,9 +308,9 @@ export default function Support() {
                   <div style={{ marginBottom: '20px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '16px',
+                      fontSize: T.fontBase,
                       fontWeight: '700',
-                      color: '#0f766e',
+                      color: T.textMain,
                       marginBottom: '10px'
                     }}>
                       Priority
@@ -315,9 +321,9 @@ export default function Support() {
                       style={{
                         width: '100%',
                         padding: '16px',
-                        border: '2px solid #5eead4',
+                        border: '1.5px solid #d1d5db',
                         borderRadius: '10px',
-                        fontSize: '17px',
+                        fontSize: T.fontMd,
                         fontWeight: '500'
                       }}
                     >
@@ -331,9 +337,9 @@ export default function Support() {
                   <div style={{ marginBottom: '24px' }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '16px',
+                      fontSize: T.fontBase,
                       fontWeight: '700',
-                      color: '#0f766e',
+                      color: T.textMain,
                       marginBottom: '10px'
                     }}>
                       Message
@@ -346,9 +352,9 @@ export default function Support() {
                       style={{
                         width: '100%',
                         padding: '16px',
-                        border: '2px solid #5eead4',
+                        border: '1.5px solid #d1d5db',
                         borderRadius: '10px',
-                        fontSize: '17px',
+                        fontSize: T.fontMd,
                         fontWeight: '500',
                         resize: 'vertical',
                         lineHeight: '1.6'
@@ -361,15 +367,12 @@ export default function Support() {
                     type="submit"
                     disabled={isSubmitting}
                     style={{
-                      background: isSubmitting ? '#94a3b8' : '#14b8a6',
-                      color: 'white',
-                      border: '2px solid ' + (isSubmitting ? '#94a3b8' : '#0f766e'),
+                      ...btn.primary,
                       padding: '18px 32px',
                       borderRadius: '10px',
-                      fontSize: '16px',
-                      fontWeight: '700',
+                      fontSize: T.fontBase,
+                      opacity: isSubmitting ? 0.6 : 1,
                       cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease'
                     }}
                   >
                     {isSubmitting ? '⏳ Submitting...' : '📨 Submit Support Request'}
@@ -381,11 +384,11 @@ export default function Support() {
             {/* My Tickets Tab */}
             {activeTab === 'my-tickets' && (
               <div>
-                <h3 style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#0f766e', 
-                  marginBottom: '24px' 
+                <h3 style={{
+                  fontSize: T.fontLg,
+                  fontWeight: '700',
+                  color: T.textMain,
+                  marginBottom: '24px'
                 }}>
                   My Support Tickets
                 </h3>
@@ -402,23 +405,19 @@ export default function Support() {
                   <div style={{
                     textAlign: 'center',
                     padding: '40px',
-                    color: '#64748b'
+                    color: T.textMuted
                   }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎫</div>
+                    <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🎫</div>
                     <h4 style={{ marginBottom: '8px' }}>No Support Tickets</h4>
                     <p>You haven't submitted any support requests yet.</p>
                     <button
                       onClick={() => setActiveTab('contact')}
                       style={{
+                        ...btn.primary,
                         marginTop: '16px',
-                        background: '#14b8a6',
-                        color: 'white',
                         padding: '16px 32px',
-                        border: '2px solid #0f766e',
                         borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontSize: '17px',
-                        fontWeight: '700'
+                        fontSize: T.fontMd,
                       }}
                     >
                       Submit Your First Ticket
@@ -428,10 +427,10 @@ export default function Support() {
                   <div style={{ display: 'grid', gap: '16px' }}>
                     {myTickets.map((ticket) => (
                       <div key={ticket.ticket_id} style={{
-                        background: '#f0fdfa',
+                        background: 'white',
                         padding: '24px 28px',
                         borderRadius: '12px',
-                        border: '2px solid #ccfbf1'
+                        border: '2px solid #e5e7eb'
                       }}>
                         <div style={{ 
                           display: 'flex', 
@@ -441,28 +440,28 @@ export default function Support() {
                         }}>
                           <div>
                             <h4 style={{
-                              fontSize: '18px',
+                              fontSize: T.fontLg,
                               fontWeight: '700',
-                              color: '#0f766e',
+                              color: T.textMain,
                               margin: '0 0 8px 0'
                             }}>
                               Ticket #{ticket.ticket_id}: {ticket.subject}
                             </h4>
-                            <div style={{ display: 'flex', gap: '16px', fontSize: '15px', color: '#64748b', fontWeight: '600' }}>
+                            <div style={{ display: 'flex', gap: '16px', fontSize: T.fontBase, color: T.textMuted, fontWeight: '600' }}>
                               <span>Created: {new Date(ticket.date_created).toLocaleDateString()}</span>
                               <span>Priority: {ticket.priority.toUpperCase()}</span>
                             </div>
                           </div>
                           <span style={{
-                            background: ticket.status === 'open' ? '#fee2e2' : 
+                            background: ticket.status === 'open' ? '#fee2e2' :
                                        ticket.status === 'in-progress' ? '#fef3c7' :
                                        ticket.status === 'resolved' ? '#dcfce7' : '#f3f4f6',
-                            color: ticket.status === 'open' ? '#dc2626' : 
-                                   ticket.status === 'in-progress' ? '#d97706' :
-                                   ticket.status === 'resolved' ? '#166534' : '#64748b',
+                            color: ticket.status === 'open' ? T.red :
+                                   ticket.status === 'in-progress' ? T.amber :
+                                   ticket.status === 'resolved' ? '#166534' : T.textMuted,
                             padding: '8px 16px',
                             borderRadius: '20px',
-                            fontSize: '15px',
+                            fontSize: T.fontBase,
                             fontWeight: '700',
                             textTransform: 'uppercase',
                             whiteSpace: 'nowrap'
@@ -475,7 +474,7 @@ export default function Support() {
                           margin: '12px 0',
                           color: '#334155',
                           lineHeight: 1.6,
-                          fontSize: '17px',
+                          fontSize: T.fontMd,
                           fontWeight: '500'
                         }}>
                           {ticket.message}
@@ -492,7 +491,7 @@ export default function Support() {
                             <h5 style={{
                               margin: '0 0 10px 0',
                               color: '#166534',
-                              fontSize: '17px',
+                              fontSize: T.fontMd,
                               fontWeight: '700'
                             }}>
                               💬 Admin Response:
@@ -501,7 +500,7 @@ export default function Support() {
                               margin: 0,
                               color: '#166534',
                               lineHeight: 1.6,
-                              fontSize: '17px',
+                              fontSize: T.fontMd,
                               fontWeight: '500'
                             }}>
                               {ticket.admin_response}
@@ -509,7 +508,7 @@ export default function Support() {
                             {ticket.date_updated && (
                               <p style={{
                                 margin: '8px 0 0 0',
-                                fontSize: '12px',
+                                fontSize: T.fontSm,
                                 color: '#059669'
                               }}>
                                 Updated: {new Date(ticket.date_updated).toLocaleDateString()}
@@ -528,7 +527,7 @@ export default function Support() {
             {activeTab === 'resources' && (
               <div>
                 <h3 style={{ 
-                  fontSize: '20px', 
+                  fontSize: T.fontMd, 
                   fontWeight: '600', 
                   color: '#1e293b', 
                   marginBottom: '20px' 
@@ -544,44 +543,21 @@ export default function Support() {
                     border: '1px solid #e2e8f0'
                   }}>
                     <h4 style={{ 
-                      fontSize: '16px', 
+                      fontSize: T.fontBase, 
                       fontWeight: '600', 
                       color: '#1e293b', 
                       marginBottom: '12px' 
                     }}>
                       📖 User Guide
                     </h4>
-                    <p style={{ 
-                      fontSize: '14px', 
-                      color: '#64748b', 
-                      marginBottom: '12px' 
+                    <p style={{
+                      fontSize: T.fontBase,
+                      color: T.textMuted,
+                      marginBottom: '12px'
                     }}>
                       Complete guide with current system statistics, features, and step-by-step instructions
                     </p>
-                    <button 
-                      onClick={handleDownloadUserGuide}
-                      style={{
-                        background: '#14b8a6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#0f766e';
-                        e.target.style.transform = 'translateY(-1px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = '#14b8a6';
-                        e.target.style.transform = 'translateY(0)';
-                      }}
-                    >
-                      📄 Download PDF
-                    </button>
+                    <p style={{ fontSize: T.fontSm, color: T.textLight, fontStyle: 'italic' }}>Coming soon.</p>
                   </div>
 
                   <div style={{
@@ -591,18 +567,26 @@ export default function Support() {
                     border: '1px solid #e2e8f0'
                   }}>
                     <h4 style={{ 
-                      fontSize: '16px', 
+                      fontSize: T.fontBase, 
                       fontWeight: '600', 
                       color: '#1e293b', 
                       marginBottom: '12px' 
                     }}>
                       📧 Contact Information
                     </h4>
-                    <div style={{ fontSize: '14px', color: '#64748b' }}>
-                      <p><strong>Email:</strong> me_callaghan@bellaliant.net</p>
-                      <p><strong>Phone:</strong> (902) 887-2106</p>
-                      <p><strong>Hours:</strong> Mon-Fri 10AM-2PM AST</p>
+                    <div style={{ fontSize: T.fontBase, color: T.textMuted }}>
+                      {contactInfo.contactEmail && <p><strong>Email:</strong> {contactInfo.contactEmail}</p>}
+                      {contactInfo.contactPhone && <p><strong>Phone:</strong> {contactInfo.contactPhone}</p>}
+                      {contactInfo.contactHours && <p><strong>Hours:</strong> {contactInfo.contactHours}</p>}
+                      {!contactInfo.contactEmail && !contactInfo.contactPhone && !contactInfo.contactHours && (
+                        <p style={{ color: T.textMuted, fontStyle: 'italic' }}>Contact information not yet configured.</p>
+                      )}
                     </div>
+                    {user?.role === 'admin' && (
+                      <Link to="/settings" style={{ ...btn.ghost, display: 'inline-flex', marginTop: '12px', textDecoration: 'none', fontSize: T.fontSm, padding: '6px 12px' }}>
+                        ✏️ Edit Contact Info
+                      </Link>
+                    )}
                   </div>
 
                   <div style={{
@@ -612,7 +596,7 @@ export default function Support() {
                     border: '1px solid #e2e8f0'
                   }}>
                     <h4 style={{ 
-                      fontSize: '16px', 
+                      fontSize: T.fontBase, 
                       fontWeight: '600', 
                       color: '#1e293b', 
                       marginBottom: '12px' 
@@ -621,20 +605,20 @@ export default function Support() {
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <Link to="/my-profile" style={{
-                        color: '#14b8a6',
+                        color: T.primaryLight,
                         textDecoration: 'none',
                         fontSize: '14px'
                       }}>→ Update My Profile</Link>
                       <Link to="/members" style={{
-                        color: '#14b8a6',
+                        color: T.primaryLight,
                         textDecoration: 'none',
                         fontSize: '14px'
                       }}>→ Member Directory</Link>
-                      <Link to="/account-settings" style={{
-                        color: '#14b8a6',
+                      <Link to="/app-settings" style={{
+                        color: T.primaryLight,
                         textDecoration: 'none',
                         fontSize: '14px'
-                      }}>→ Account Settings</Link>
+                      }}>→ App Settings</Link>
                     </div>
                   </div>
                 </div>
@@ -650,7 +634,7 @@ export default function Support() {
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
           }}>
             <h3 style={{ 
-              fontSize: '18px', 
+              fontSize: T.fontLg, 
               fontWeight: '600', 
               color: '#1e293b', 
               marginBottom: '16px',
@@ -665,45 +649,45 @@ export default function Support() {
             }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#14b8a6' 
+                  fontSize: T.fontLg, 
+                  fontWeight: '700',
+                  color: T.primaryLight
                 }}>
                   24/7
                 </div>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b' 
+                  fontSize: T.fontSm,
+                  color: T.textMuted
                 }}>
                   System Availability
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#14b8a6' 
+                  fontSize: T.fontLg, 
+                  fontWeight: '700',
+                  color: T.primaryLight
                 }}>
                   &lt; 1hr
                 </div>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b' 
+                  fontSize: T.fontSm,
+                  color: T.textMuted
                 }}>
                   Average Response Time
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
-                  fontSize: '24px', 
-                  fontWeight: '700', 
-                  color: '#14b8a6' 
+                  fontSize: T.fontLg, 
+                  fontWeight: '700',
+                  color: T.primaryLight
                 }}>
                   99%
                 </div>
                 <div style={{ 
-                  fontSize: '12px', 
-                  color: '#64748b' 
+                  fontSize: T.fontSm,
+                  color: T.textMuted
                 }}>
                   User Satisfaction
                 </div>

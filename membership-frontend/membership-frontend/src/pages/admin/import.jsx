@@ -1,7 +1,8 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import MainLayout from "../../components/mainlayout";
 import { useAuth } from "../../hooks/useauth";
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, pageHeader } from '../../utils/theme';
 
 export default function BulkImport() {
   const { user } = useAuth();
@@ -13,8 +14,14 @@ export default function BulkImport() {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
-        setError("Please select a CSV file");
+      const isCsv = selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv');
+      const isExcel = selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                      selectedFile.type === 'application/vnd.ms-excel' || 
+                      selectedFile.name.endsWith('.xlsx') || 
+                      selectedFile.name.endsWith('.xls');
+      
+      if (!isCsv && !isExcel) {
+        setError("Please select a CSV or Excel file (.csv, .xlsx, .xls)");
         return;
       }
       setFile(selectedFile);
@@ -70,22 +77,22 @@ export default function BulkImport() {
       const previewData = await previewResponse.json();
 
       if (previewResponse.ok) {
-        // Transform backend response to match frontend expectations
-        const validRecords = previewData.preview.filter((_, index) => 
-          !previewData.errors.some(err => err.startsWith(`Row ${index + 1}:`))
-        );
-        
         const errorDetails = previewData.errors.map(errMsg => {
           const match = errMsg.match(/^Row (\d+): (.+)$/);
           return match ? { row: match[1], message: match[2] } : { row: '?', message: errMsg };
         });
 
+        const totalRows = previewData.total_count ?? (previewData.preview.length + previewData.errors.length);
+
         setUploadResult({
-          total_rows: previewData.preview.length,
-          valid_rows: validRecords.length,
+          total_rows: totalRows,
+          valid_rows: previewData.preview.length,
+          insert_rows: previewData.insert_count ?? previewData.preview.filter(r => r.action !== 'update').length,
+          update_rows: previewData.update_count ?? previewData.preview.filter(r => r.action === 'update').length,
           invalid_rows: errorDetails.length,
           errors: errorDetails,
-          preview_data: previewData.preview
+          preview_data: previewData.preview,
+          detected_headers: previewData.detected_headers || []
         });
       } else {
         setError(previewData.error || "Upload failed");
@@ -99,10 +106,7 @@ export default function BulkImport() {
 
   const confirmImport = async () => {
     try {
-      // Filter out invalid records before sending to backend
-      const validMembers = uploadResult.preview_data.filter((_, index) => 
-        !uploadResult.errors.some(err => parseInt(err.row) === index + 1)
-      );
+      const validMembers = uploadResult.preview_data;
 
       const response = await fetch(`${API_BASE_URL}/api/import/members/confirm`, {
         method: "POST",
@@ -119,7 +123,7 @@ export default function BulkImport() {
         setUploadResult({
           ...uploadResult,
           confirmed: true,
-          message: `Successfully imported ${data.inserted} member${data.inserted !== 1 ? 's' : ''}${data.errors && data.errors.length > 0 ? ` (${data.errors.length} error${data.errors.length !== 1 ? 's' : ''})` : ''}`
+          message: `Successfully imported ${(data.created || 0) + (data.updated || 0)} member${((data.created || 0) + (data.updated || 0)) !== 1 ? 's' : ''} (${data.created || 0} new, ${data.updated || 0} updated)${data.errors && data.errors.length > 0 ? ` — ${data.errors.length} error${data.errors.length !== 1 ? 's' : ''}` : ''}`
         });
         setFile(null);
       } else {
@@ -134,84 +138,47 @@ export default function BulkImport() {
     <MainLayout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
+          <div style={pageHeader.wrapper}>
             <div>
-              <h1 style={{ 
-                fontSize: '38px', 
-                fontWeight: '700', 
-                color: '#0f766e', 
-                marginBottom: '12px',
-                margin: 0 
-              }}>
-                📥 Bulk Import Members
-              </h1>
-              <p style={{ 
-                fontSize: '20px', 
-                fontWeight: '600', 
-                color: '#64748b',
-                margin: 0 
-              }}>
-                Import multiple members from a CSV file
-              </p>
+              <h1 style={pageHeader.title}>📥 Bulk Import Members</h1>
+              <p style={pageHeader.subtitle}>Import multiple members from a CSV or Excel file</p>
             </div>
           </div>
 
           {/* Instructions */}
-          <div style={{ 
+          <div style={{
+            ...card,
             marginBottom: '32px',
-            padding: '36px',
-            background: '#f0fdfa',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+            padding: '24px',
           }}>
-            <h3 style={{ 
-              fontSize: '24px',
+            <h3 style={{
+              fontSize: T.fontLg,
               fontWeight: '700',
-              color: '#0f766e', 
-              marginBottom: '20px',
+              color: T.textMain,
               margin: 0,
-              marginBottom: '20px'
+              marginBottom: '16px'
             }}>
               📋 Instructions
             </h3>
-            <ol style={{ 
-              color: '#64748b', 
+            <ol style={{
+              color: T.textMuted,
               lineHeight: '1.8',
-              fontSize: '17px',
+              fontSize: T.fontBase,
               fontWeight: '500',
               paddingLeft: '24px',
               margin: 0
             }}>
               <li style={{ marginBottom: '12px' }}>Download the CSV template below</li>
               <li style={{ marginBottom: '12px' }}>Fill in the member data in the template</li>
-              <li style={{ marginBottom: '12px' }}>Upload the completed CSV file</li>
+              <li style={{ marginBottom: '12px' }}>Upload the completed file (CSV or Excel)</li>
               <li>Review the preview and confirm the import</li>
             </ol>
             
             <button
               onClick={downloadTemplate}
               style={{
-                marginTop: '24px',
-                padding: '14px 32px',
-                background: 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                color: 'white',
-                border: '2px solid #0f766e',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(20, 184, 166, 0.3)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
+                ...btn.primary,
+                marginTop: '20px',
               }}
             >
               📁 Download CSV Template
@@ -220,28 +187,24 @@ export default function BulkImport() {
 
           {/* Upload Section */}
           <div style={{
+            ...card,
             marginBottom: '32px',
-            padding: '36px',
-            background: 'white',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+            padding: '24px',
           }}>
-            <h3 style={{ 
-              fontSize: '24px',
+            <h3 style={{
+              fontSize: 'clamp(16px, 2.2vw, 20px)',
               fontWeight: '700',
-              color: '#0f766e', 
-              marginBottom: '24px',
+              color: T.textMain,
               margin: 0,
-              marginBottom: '24px'
+              marginBottom: '16px'
             }}>
-              📤 Upload CSV File
+              📤 Upload File (CSV or Excel)
             </h3>
             
             <div style={{ marginBottom: '20px', position: 'relative' }}>
               <input
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 onChange={handleFileChange}
                 style={{
                   opacity: 0,
@@ -258,33 +221,31 @@ export default function BulkImport() {
                 style={{
                   display: 'block',
                   padding: '32px',
-                  border: '3px dashed ' + (file ? '#059669' : '#14b8a6'),
-                  borderRadius: '12px',
-                  background: file 
-                    ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
-                    : 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+                  border: `2px dashed ${file ? T.green : T.primaryBorder}`,
+                  borderRadius: T.radiusLg,
+                  background: file ? T.greenLight : T.primaryBg,
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  fontSize: '17px',
+                  fontSize: T.fontBase,
                   fontWeight: '600',
-                  color: '#0f766e'
+                  color: T.textMain
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.borderColor = '#0f766e';
+                  e.target.style.borderColor = T.primary;
                   e.target.style.transform = 'scale(1.01)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.2)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(78, 93, 46, 0.2)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.borderColor = file ? '#059669' : '#14b8a6';
+                  e.target.style.borderColor = file ? T.green : T.primaryBorder;
                   e.target.style.transform = 'scale(1)';
                   e.target.style.boxShadow = 'none';
                 }}
               >
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>
+                <div style={{ fontSize: 'clamp(26px, 4.5vw, 36px)', marginBottom: '12px' }}>
                   {file ? '✅' : '📂'}
                 </div>
-                <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>
+                <div style={{ fontSize: T.fontMd, fontWeight: '700', marginBottom: '8px' }}>
                   {file ? `${file.name}` : 'Choose CSV File'}
                 </div>
                 <div style={{ 
@@ -301,21 +262,8 @@ export default function BulkImport() {
             </div>
 
             {error && (
-              <div style={{ 
-                padding: '20px', 
-                background: '#fff1f2', 
-                borderRadius: '12px', 
-                marginBottom: '20px',
-                fontSize: '16px',
-                fontWeight: '600',
-                color: '#dc2626',
-                border: '2px solid #fecaca',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <span style={{ fontSize: '24px' }}>⚠️</span>
-                {error}
+              <div style={{ padding: '10px 14px', background: T.redLight, borderRadius: T.radiusMd, marginBottom: '16px', fontSize: T.fontBase, fontWeight: '600', color: T.red, border: `2px solid ${T.redBorder}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ⚠️ {error}
               </div>
             )}
 
@@ -323,30 +271,12 @@ export default function BulkImport() {
               onClick={handleUpload}
               disabled={!file || isUploading}
               style={{
+                ...btn.primary,
                 padding: '14px 32px',
-                background: file && !isUploading 
-                  ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' 
-                  : '#e2e8f0',
-                color: file && !isUploading ? 'white' : '#94a3b8',
-                border: '2px solid ' + (file && !isUploading ? '#0f766e' : '#cbd5e1'),
-                borderRadius: '12px',
                 fontSize: '15px',
-                fontWeight: '700',
+                borderRadius: '12px',
+                opacity: (!file || isUploading) ? 0.5 : 1,
                 cursor: file && !isUploading ? 'pointer' : 'not-allowed',
-                boxShadow: file && !isUploading ? '0 2px 8px rgba(20, 184, 166, 0.3)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                if (file && !isUploading) {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (file && !isUploading) {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
-                }
               }}
             >
               {isUploading ? '⏳ Processing...' : '🔍 Preview Import'}
@@ -356,18 +286,14 @@ export default function BulkImport() {
           {/* Preview Results */}
           {uploadResult && !uploadResult.confirmed && (
             <div style={{
+              ...card,
               marginBottom: '32px',
-              padding: '36px',
-              background: 'white',
-              borderRadius: '16px',
-              border: '2px solid #5eead4',
-              boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
+              padding: '24px',
             }}>
-              <h3 style={{ 
-                fontSize: '24px',
+              <h3 style={{
+                fontSize: 'clamp(16px, 2.2vw, 20px)',
                 fontWeight: '700',
-                color: '#0f766e', 
-                marginBottom: '28px',
+                color: T.textMain,
                 margin: 0,
                 marginBottom: '28px'
               }}>
@@ -380,115 +306,56 @@ export default function BulkImport() {
                 flexDirection: 'column',
                 gap: '16px'
               }}>
-                <div style={{ 
-                  padding: '20px',
-                  background: '#f0fdfa',
-                  borderRadius: '12px',
-                  border: '2px solid #ccfbf1'
-                }}>
-                  <div style={{ 
-                    fontSize: '17px',
-                    fontWeight: '600',
-                    color: '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <span style={{ fontSize: '24px' }}>📊</span>
-                    Found <strong style={{ 
-                      fontSize: '20px',
-                      fontWeight: '800',
-                      color: '#0f766e',
-                      margin: '0 6px'
-                    }}>{uploadResult.total_rows}</strong> rows in CSV
+                <div style={{ padding: '14px 16px', background: T.white, borderRadius: T.radiusMd, border: `2px solid ${T.primaryMid}` }}>
+                  <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    📊 Found <strong style={{ fontWeight: '800', color: T.textMain, margin: '0 4px' }}>{uploadResult.total_rows}</strong> rows in CSV
                   </div>
                 </div>
                 
-                <div style={{ 
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-                  borderRadius: '12px',
-                  border: '2px solid #059669'
-                }}>
-                  <div style={{ 
-                    fontSize: '17px',
-                    fontWeight: '600',
-                    color: '#065f46',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}>
-                    <span style={{ fontSize: '24px' }}>✅</span>
-                    <strong style={{ 
-                      fontSize: '20px',
-                      fontWeight: '800',
-                      color: '#059669',
-                      margin: '0 6px'
-                    }}>{uploadResult.valid_rows}</strong> valid records ready to import
+                {uploadResult.insert_rows > 0 && (
+                  <div style={{ padding: '12px 16px', background: T.greenLight, borderRadius: T.radiusMd, border: `2px solid ${T.greenBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.green, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      ✅ <strong style={{ fontWeight: '800', margin: '0 4px' }}>{uploadResult.insert_rows}</strong> new records ready to import
+                    </div>
                   </div>
-                </div>
-                
+                )}
+                {uploadResult.update_rows > 0 && (
+                  <div style={{ padding: '12px 16px', background: T.slateLight, borderRadius: T.radiusMd, border: `2px solid ${T.slateBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.textMuted, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      🔄 <strong style={{ fontWeight: '800', color: T.textMain, margin: '0 4px' }}>{uploadResult.update_rows}</strong> existing records will have missing fields filled in
+                    </div>
+                  </div>
+                )}
                 {uploadResult.invalid_rows > 0 && (
-                  <div style={{ 
-                    padding: '20px',
-                    background: '#fff1f2',
-                    borderRadius: '12px',
-                    border: '2px solid #fecaca'
-                  }}>
-                    <div style={{ 
-                      fontSize: '17px',
-                      fontWeight: '600',
-                      color: '#991b1b',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
-                    }}>
-                      <span style={{ fontSize: '24px' }}>⚠️</span>
-                      <strong style={{ 
-                        fontSize: '20px',
-                        fontWeight: '800',
-                        color: '#dc2626',
-                        margin: '0 6px'
-                      }}>{uploadResult.invalid_rows}</strong> records have errors
+                  <div style={{ padding: '12px 16px', background: T.redLight, borderRadius: T.radiusMd, border: `2px solid ${T.redBorder}` }}>
+                    <div style={{ fontSize: T.fontBase, fontWeight: '600', color: T.red, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      ⚠️ <strong style={{ fontWeight: '800', margin: '0 4px' }}>{uploadResult.invalid_rows}</strong> records have errors
                     </div>
                   </div>
                 )}
               </div>
 
+              {uploadResult.valid_rows === 0 && uploadResult.detected_headers && uploadResult.detected_headers.length > 0 && (
+                <div style={{ padding: '14px 16px', background: T.amberLight, borderRadius: T.radiusMd, border: `2px solid ${T.amberBorder}`, marginBottom: '16px' }}>
+                  <div style={{ fontSize: T.fontBase, fontWeight: '700', color: T.amber, marginBottom: '6px' }}>
+                    ⚠️ Column headers detected in your file:
+                  </div>
+                  <div style={{ fontSize: T.fontSm, fontWeight: '500', color: T.amber, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                    {uploadResult.detected_headers.join(', ')}
+                  </div>
+                  <div style={{ fontSize: T.fontSm, color: T.amber, marginTop: '6px' }}>
+                    Expected columns include: <strong>FirstName</strong> (or Forename), <strong>LastName</strong> (or Surname). Rename your CSV columns to match and re-upload.
+                  </div>
+                </div>
+              )}
+
               {uploadResult.errors && uploadResult.errors.length > 0 && (
-                <div style={{ 
-                  maxHeight: '300px', 
-                  overflowY: 'auto', 
-                  background: '#fff1f2', 
-                  padding: '24px', 
-                  borderRadius: '12px',
-                  marginBottom: '24px',
-                  border: '2px solid #fecaca'
-                }}>
-                  <h4 style={{ 
-                    fontSize: '20px',
-                    fontWeight: '700',
-                    color: '#dc2626', 
-                    marginBottom: '16px',
-                    margin: 0,
-                    marginBottom: '16px'
-                  }}>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', background: T.redLight, padding: '16px', borderRadius: T.radiusMd, marginBottom: '16px', border: `2px solid ${T.redBorder}` }}>
+                  <h4 style={{ fontSize: T.fontBase, fontWeight: '700', color: T.red, margin: 0, marginBottom: '12px' }}>
                     🚨 Errors Found:
                   </h4>
                   {uploadResult.errors.map((error, index) => (
-                    <div 
-                      key={index} 
-                      style={{ 
-                        fontSize: '15px', 
-                        fontWeight: '500',
-                        color: '#991b1b',
-                        padding: '10px 16px',
-                        background: 'white',
-                        borderRadius: '8px',
-                        marginBottom: '8px',
-                        border: '1px solid #fecaca'
-                      }}
-                    >
+                    <div key={index} style={{ fontSize: T.fontBase, fontWeight: '500', color: T.red, padding: '8px 12px', background: T.white, borderRadius: T.radiusSm, marginBottom: '6px', border: `1px solid ${T.redBorder}` }}>
                       <strong>Row {error.row}:</strong> {error.message}
                     </div>
                   ))}
@@ -498,75 +365,26 @@ export default function BulkImport() {
               <button
                 onClick={confirmImport}
                 disabled={uploadResult.valid_rows === 0}
-                style={{
-                  padding: '14px 32px',
-                  background: uploadResult.valid_rows > 0 
-                    ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' 
-                    : '#e2e8f0',
-                  color: uploadResult.valid_rows > 0 ? 'white' : '#94a3b8',
-                  border: '2px solid ' + (uploadResult.valid_rows > 0 ? '#16a34a' : '#cbd5e1'),
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  cursor: uploadResult.valid_rows > 0 ? 'pointer' : 'not-allowed',
-                  boxShadow: uploadResult.valid_rows > 0 ? '0 2px 8px rgba(34, 197, 94, 0.3)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (uploadResult.valid_rows > 0) {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (uploadResult.valid_rows > 0) {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
-                  }
-                }}
+                style={{ ...btn.success, opacity: uploadResult.valid_rows === 0 ? 0.5 : 1, cursor: uploadResult.valid_rows > 0 ? 'pointer' : 'not-allowed' }}
               >
-                ✅ Confirm Import ({uploadResult.valid_rows} {uploadResult.valid_rows === 1 ? 'record' : 'records'})
+                ✅ Confirm Import ({[
+                  uploadResult.insert_rows > 0 ? `${uploadResult.insert_rows} new` : null,
+                  uploadResult.update_rows > 0 ? `${uploadResult.update_rows} updated` : null
+                ].filter(Boolean).join(', ')})
               </button>
             </div>
           )}
 
           {/* Success Message */}
           {uploadResult && uploadResult.confirmed && (
-            <div style={{
-              marginBottom: '32px',
-              padding: '48px 36px',
-              background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-              borderRadius: '16px',
-              border: '3px solid #059669',
-              boxShadow: '0 6px 20px rgba(34, 197, 94, 0.3)'
-            }}>
-              <div style={{ 
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  fontSize: '80px', 
-                  marginBottom: '24px',
-                  animation: 'bounce 1s ease-in-out'
-                }}>✅</div>
-                <h3 style={{ 
-                  fontSize: '28px',
-                  fontWeight: '700',
-                  color: '#065f46',
-                  marginBottom: '16px',
-                  margin: 0,
-                  marginBottom: '16px'
-                }}>
-                  Import Successful!
-                </h3>
-                <p style={{
-                  fontSize: '18px',
-                  fontWeight: '600',
-                  color: '#059669',
-                  margin: 0
-                }}>
-                  {uploadResult.message}
-                </p>
-              </div>
+            <div style={{ marginBottom: '32px', padding: '32px 24px', background: T.greenLight, borderRadius: T.radiusLg, border: `2px solid ${T.greenBorder}`, textAlign: 'center' }}>
+              <div style={{ fontSize: '40px', marginBottom: '16px' }}>✅</div>
+              <h3 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.green, margin: '0 0 12px 0' }}>
+                Import Successful!
+              </h3>
+              <p style={{ fontSize: T.fontBase, fontWeight: '600', color: T.green, margin: 0 }}>
+                {uploadResult.message}
+              </p>
             </div>
           )}
         </div>

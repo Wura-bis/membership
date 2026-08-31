@@ -1,485 +1,308 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useStickyScrollbar } from "../../hooks/useStickyScrollbar";
 import MainLayout from "../../components/mainlayout";
-import { useAuth } from "../../hooks/useauth";
 import { useToast } from "../../components/toast";
-import CreatableSelect from '../../components/creatableselect';
 import { API_BASE_URL } from '../../utils/api';
+import { T, card, btn, badge, thStyle, tdStyle, pageHeader } from '../../utils/theme';
+
+const inputStyle = {
+  width: '100%', padding: '9px 12px',
+  border: `1.5px solid ${T.primaryBorder}`,
+  borderRadius: T.radiusMd, fontSize: T.fontBase,
+  fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+  background: 'var(--card-bg)', color: 'var(--text-primary)',
+};
+
+const labelStyle = {
+  display: 'block', fontSize: T.fontSm, fontWeight: '600',
+  color: T.textMain, marginBottom: '5px',
+};
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+      zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+    }}>
+      <div style={{ ...card, padding: '28px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: T.fontLg, fontWeight: '700', color: T.textMain }}>{title}</h2>
+          <button onClick={onClose} style={{ ...btn.ghost, padding: '4px 10px', fontSize: T.fontLg }}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function AdminRecognitions() {
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [newRecognition, setNewRecognition] = useState({ title: '', description: '', recognitionTypeId: '', fiscalYearId: '', isActive: true });
-  const [recognitionTypes, setRecognitionTypes] = useState([]);
-  const [fiscalYears, setFiscalYears] = useState([]);
-  // ...existing code...
-  useEffect(() => {
-    fetchFiscalYears();
-  }, []);
-  // Optionally, call fetchFiscalYears when opening add/edit modal if you want freshest data
-
-  // Always fetch recognition types when opening add/edit modal
-  const fetchRecognitionTypes = () => {
-    fetch(`${API_BASE_URL}/api/recognition-types`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setRecognitionTypes(data));
-  };
-  // Add logic
-  const handleAdd = () => {
-    fetchRecognitionTypes();
-    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setFiscalYears(data));
-    setNewRecognition({ title: '', description: '', recognitionTypeId: '', fiscalYearId: '', isActive: true });
-    setAddModalOpen(true);
-  };
-
-  const saveAdd = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/recognitions/old`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: newRecognition.title,
-          description: newRecognition.description,
-          recognitionTypeId: newRecognition.recognitionTypeId,
-          fiscalYearId: newRecognition.fiscalYearId,
-          isActive: newRecognition.isActive
-        })
-      });
-      if (response.ok) {
-        showToast('Recognition added', 'success');
-        loadRecognitions();
-        setAddModalOpen(false);
-      } else {
-        showToast('Failed to add recognition', 'error');
-      }
-    } catch (err) {
-      showToast('Error adding recognition', 'error');
-    }
-  };
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editRecognition, setEditRecognition] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, recognition: null });
-  // Delete logic
-  const handleDelete = (recognition) => {
-    setDeleteConfirm({ open: true, recognition });
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteConfirm.recognition) return;
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/recognitions/${deleteConfirm.recognition.id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      if (response.ok) {
-        showToast('Recognition deleted', 'success');
-        loadRecognitions();
-      } else {
-        showToast('Failed to delete recognition', 'error');
-      }
-    } catch (err) {
-      showToast('Error deleting recognition', 'error');
-    }
-    setDeleteConfirm({ open: false, recognition: null });
-  };
-
-  // Edit logic
-  const fetchFiscalYears = () => {
-    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        // Map backend {FiscalYearID, YearLabel} to {value, label}
-        const mapped = Array.isArray(data)
-          ? data.map(y => ({ value: y.id ?? y.FiscalYearID, label: y.label ?? y.yearLabel }))
-          : [];
-        setFiscalYears(mapped);
-      });
-  };
-  const handleEdit = (recognition) => {
-    fetchRecognitionTypes();
-    fetch(`${API_BASE_URL}/api/fiscal-years`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        // Map backend {FiscalYearID, YearLabel} to {value, label}
-        const mapped = Array.isArray(data)
-          ? data.map(y => ({ value: y.id ?? y.FiscalYearID, label: y.label ?? y.yearLabel }))
-          : [];
-        setFiscalYears(mapped);
-        // Find fiscal year ID for this recognition
-        let fyId = recognition.fiscalYearId || recognition.fiscalYearID || recognition.fiscalYear;
-        if (typeof fyId === 'string') {
-          // If it's a label, find the matching ID
-          const match = mapped.find(fy => fy.label === fyId);
-          fyId = match ? match.value : '';
-        }
-        // Ensure id is set
-        setEditRecognition({ ...recognition, fiscalYearId: fyId, id: recognition.id ?? recognition.RecognitionID });
-        setEditModalOpen(true);
-      });
-  };
-
-  const saveEdit = async (updated) => {
-    console.log('saveEdit called with:', updated);
-    if (!updated.id) {
-      showToast('Recognition ID missing, cannot update.', 'error');
-      setEditModalOpen(false);
-      setEditRecognition(null);
-      return;
-    }
-    // Find fiscal year object from fiscalYears list
-    const fyObj = fiscalYears.find(fy => fy.value === updated.fiscalYearId || fy.label === updated.fiscalYearId);
-    let fyId = fyObj ? fyObj.value : updated.fiscalYearId;
-    let fyLabel = fyObj ? fyObj.label : updated.fiscalYearId;
-    // Validate fiscal year is not future-dated
-    try {
-      const endYear = parseInt((fyLabel || '').split('-')[1]);
-      const currentYear = new Date().getFullYear();
-      if (endYear > currentYear) {
-        showToast('Fiscal year cannot be in the future.', 'error');
-        return;
-      }
-    } catch (e) { /* ignore parse errors */ }
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/recognitions/${updated.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: updated.title,
-          description: updated.description,
-          recognitionTypeId: updated.recognitionTypeId,
-          fiscalYearId: fyId,
-          isActive: updated.isActive
-        })
-      });
-      if (response.ok) {
-        showToast('Recognition updated', 'success');
-        loadRecognitions();
-      } else {
-        const errMsg = await response.text();
-        showToast('Failed to update recognition: ' + errMsg, 'error');
-      }
-    } catch (err) {
-      showToast('Error updating recognition', 'error');
-    }
-    setEditModalOpen(false);
-    setEditRecognition(null);
-  };
-  const { user } = useAuth();
+  const { showToast } = useToast();
   const [recognitions, setRecognitions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [recognitionTypes, setRecognitionTypes] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [memberFilter, setMemberFilter] = useState('');
+
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newRec, setNewRec] = useState({ memberId: '', recognitionTypeId: '', notes: '', isActive: true });
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editRec, setEditRec] = useState(null);
+
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, recognition: null });
+  const { tableWrapRef, mirrorScrollbar } = useStickyScrollbar([recognitions]);
 
   useEffect(() => {
     loadRecognitions();
+    fetch(`${API_BASE_URL}/api/recognition-types`, { credentials: 'include' })
+      .then(r => r.json()).then(data => setRecognitionTypes(Array.isArray(data) ? data : []));
+    fetch(`${API_BASE_URL}/api/members`, { credentials: 'include' })
+      .then(r => r.json()).then(data => setMembers(Array.isArray(data) ? data : []));
   }, []);
 
   const loadRecognitions = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recognitions/old`, {
-        credentials: "include"
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Raw recognitions data from backend:', data);
-        // Ensure each recognition has a valid 'id' property
-        const normalized = Array.isArray(data)
-          ? data.map(r => ({ ...r, id: r.id ?? r.RecognitionID ?? r.recognitionID }))
-          : [];
-        setRecognitions(normalized);
+      const res = await fetch(`${API_BASE_URL}/api/recognitions`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setRecognitions(Array.isArray(data) ? data : []);
       }
-    } catch (error) {
-      console.error("Error loading recognitions:", error);
+    } catch (err) {
+      console.error('Error loading recognitions:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const showToast = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+  const filteredMembers = members.filter(m =>
+    !memberFilter ||
+    `${m.lastName} ${m.firstName}`.toLowerCase().includes(memberFilter.toLowerCase())
+  );
+
+  const handleAdd = () => {
+    setMemberFilter('');
+    setNewRec({ memberId: '', recognitionTypeId: '', notes: '', isActive: true });
+    setAddModalOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <MainLayout>
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <div>Loading...</div>
-        </div>
-      </MainLayout>
-    );
-  }
+  const saveAdd = async (e) => {
+    e.preventDefault();
+    if (!newRec.memberId || !newRec.recognitionTypeId) {
+      showToast('Please select a member and recognition type', 'error');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/recognitions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          memberId: parseInt(newRec.memberId),
+          recognitionTypeId: parseInt(newRec.recognitionTypeId),
+          notes: newRec.notes,
+        }),
+      });
+      if (res.ok) {
+        showToast('Recognition added', 'success');
+        loadRecognitions();
+        setAddModalOpen(false);
+      } else showToast('Failed to add recognition', 'error');
+    } catch { showToast('Error adding recognition', 'error'); }
+  };
+
+  const handleEdit = (recognition) => {
+    setEditRec({ ...recognition });
+    setEditModalOpen(true);
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editRec?.id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/recognitions/${editRec.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ notes: editRec.notes, isActive: editRec.isActive }),
+      });
+      if (res.ok) {
+        showToast('Recognition updated', 'success');
+        loadRecognitions();
+        setEditModalOpen(false);
+        setEditRec(null);
+      } else showToast('Failed to update recognition', 'error');
+    } catch { showToast('Error updating recognition', 'error'); }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.recognition) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/recognitions/${deleteConfirm.recognition.id}`, {
+        method: 'DELETE', credentials: 'include',
+      });
+      if (res.ok) { showToast('Recognition deleted', 'success'); loadRecognitions(); }
+      else showToast('Failed to delete recognition', 'error');
+    } catch { showToast('Error deleting recognition', 'error'); }
+    setDeleteConfirm({ open: false, recognition: null });
+  };
 
   return (
     <MainLayout>
-      <div style={{ padding: '20px' }}>
-        {/* Delete Confirmation Dialog */}
-        {deleteConfirm.open && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.2)', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: 32, borderRadius: 8, maxWidth: 400, margin: '100px auto', boxShadow: '0 2px 8px #0002' }}>
-              <h3>Delete Recognition</h3>
-              <p>Are you sure you want to delete this recognition?</p>
-              <div style={{ marginBottom: 16 }}><strong>{deleteConfirm.recognition?.description}</strong></div>
-              <button style={{ marginRight: 8, background: '#ef4444', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4 }} onClick={confirmDelete}>Delete</button>
-              <button style={{ background: '#e5e7eb', color: '#374151', padding: '8px 16px', border: 'none', borderRadius: 4 }} onClick={() => setDeleteConfirm({ open: false, recognition: null })}>Cancel</button>
-            </div>
-          </div>
-        )}
+      <div className="dashboard-container">
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
-        {/* Edit Modal */}
-        {editModalOpen && editRecognition && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.2)', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: 32, borderRadius: 8, maxWidth: 500, margin: '100px auto', boxShadow: '0 2px 8px #0002' }}>
-              <h3>Edit Recognition</h3>
-              <form onSubmit={e => { e.preventDefault(); saveEdit(editRecognition); }}>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Title:<br />
-                    <input type="text" value={editRecognition.title ?? ''} onChange={e => setEditRecognition({ ...editRecognition, title: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required />
-                  </label>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>Recognition Management</h1>
+              <p style={pageHeader.subtitle}>Manage member recognitions and awards</p>
+            </div>
+            <button onClick={handleAdd} style={btn.primary}>+ Add Recognition</button>
+          </div>
+
+          {addModalOpen && (
+            <Modal title="Add Recognition" onClose={() => setAddModalOpen(false)}>
+              <form onSubmit={saveAdd} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={labelStyle}>Filter Members</label>
+                  <input
+                    type="text"
+                    placeholder="Type name to filter..."
+                    value={memberFilter}
+                    onChange={e => setMemberFilter(e.target.value)}
+                    style={inputStyle}
+                  />
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Description:<br />
-                    <textarea value={editRecognition.description ?? ''} onChange={e => setEditRecognition({ ...editRecognition, description: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required />
-                  </label>
+                <div>
+                  <label style={labelStyle}>Member *</label>
+                  <select value={newRec.memberId} onChange={e => setNewRec({ ...newRec, memberId: e.target.value })} style={inputStyle} required>
+                    <option value="">Select member...</option>
+                    {filteredMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.lastName}, {m.firstName}</option>
+                    ))}
+                  </select>
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Type:<br />
-                    <select value={editRecognition.recognitionTypeId ?? ''} onChange={e => setEditRecognition({ ...editRecognition, recognitionTypeId: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required>
-                      <option value="">Select type...</option>
-                      {recognitionTypes.map((type, idx) => (
-                        <option key={type.id ?? `type-idx-${idx}`} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                <div>
+                  <label style={labelStyle}>Recognition Type *</label>
+                  <select value={newRec.recognitionTypeId} onChange={e => setNewRec({ ...newRec, recognitionTypeId: e.target.value })} style={inputStyle} required>
+                    <option value="">Select type...</option>
+                    {recognitionTypes.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>
-                    <CreatableSelect
-                      label="Fiscal Year"
-                      name="fiscalYearId"
-                      value={editRecognition.fiscalYearId}
-                      options={fiscalYears}
-                      onChange={e => setEditRecognition({ ...editRecognition, fiscalYearId: e.target.value })}
-                      onCreate={async (inputYear) => {
-                        // POST to backend to create year, then refresh
-                        const res = await fetch(`${API_BASE_URL}/api/lookups/fiscal-years`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({ yearLabel: inputYear })
-                        });
-                        if (res.ok) {
-                          fetchFiscalYears();
-                        }
-                      }}
-                      placeholder="Type or select year..."
-                    />
-                  </label>
+                <div>
+                  <label style={labelStyle}>Notes</label>
+                  <textarea
+                    value={newRec.notes}
+                    onChange={e => setNewRec({ ...newRec, notes: e.target.value })}
+                    style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: '1.5' }}
+                    placeholder="Optional notes..."
+                  />
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Status:<br />
-                    <select value={editRecognition.isActive ? '1' : '0'} onChange={e => setEditRecognition({ ...editRecognition, isActive: e.target.value === '1' })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }}>
-                      <option value="1">Active</option>
-                      <option value="0">Inactive</option>
-                    </select>
-                  </label>
-                </div>
-                <div style={{ marginTop: 16 }}>
-                  <button type="submit" style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4, marginRight: 8 }}>Save</button>
-                  <button type="button" style={{ background: '#e5e7eb', color: '#374151', padding: '8px 16px', border: 'none', borderRadius: 4 }} onClick={() => { setEditModalOpen(false); setEditRecognition(null); }}>Cancel</button>
+                <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+                  <button type="submit" style={btn.primary}>Add Recognition</button>
+                  <button type="button" onClick={() => setAddModalOpen(false)} style={btn.ghost}>Cancel</button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '20px'
-        }}>
-          <h1 style={{ margin: 0, color: '#1f2937' }}>Recognition Management</h1>
-          <button 
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#14b8a6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-            onClick={handleAdd}
-          >
-            Add Recognition
-          </button>
-        {/* Add Modal */}
-        {addModalOpen && (
-          <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.2)', zIndex: 1000 }}>
-            <div style={{ background: 'white', padding: 32, borderRadius: 8, maxWidth: 500, margin: '100px auto', boxShadow: '0 2px 8px #0002' }}>
-              <h3>Add Recognition</h3>
-              <form onSubmit={saveAdd}>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Title:<br />
-                    <input type="text" value={newRecognition.title} onChange={e => setNewRecognition({ ...newRecognition, title: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required />
-                  </label>
+            </Modal>
+          )}
+
+          {editModalOpen && editRec && (
+            <Modal title="Edit Recognition" onClose={() => { setEditModalOpen(false); setEditRec(null); }}>
+              <form onSubmit={saveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={labelStyle}>Member</label>
+                  <input type="text" value={editRec.memberName ?? ''} disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Description:<br />
-                    <textarea value={newRecognition.description} onChange={e => setNewRecognition({ ...newRecognition, description: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required />
-                  </label>
+                <div>
+                  <label style={labelStyle}>Recognition Type</label>
+                  <input type="text" value={editRec.recognitionType ?? ''} disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Type:<br />
-                    <select value={newRecognition.recognitionTypeId} onChange={e => setNewRecognition({ ...newRecognition, recognitionTypeId: e.target.value })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }} required>
-                      <option value="">Select type...</option>
-                      {recognitionTypes.map((type, idx) => (
-                        <option key={type.id ?? `type-idx-${idx}`} value={type.id}>{type.name}</option>
-                      ))}
-                    </select>
-                  </label>
+                <div>
+                  <label style={labelStyle}>Notes</label>
+                  <textarea
+                    value={editRec.notes ?? ''}
+                    onChange={e => setEditRec({ ...editRec, notes: e.target.value })}
+                    style={{ ...inputStyle, resize: 'vertical', minHeight: '80px', lineHeight: '1.5' }}
+                  />
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Fiscal Year:<br />
-                    <CreatableSelect
-                      label="Fiscal Year"
-                      name="fiscalYearId"
-                      value={newRecognition.fiscalYearId}
-                      options={fiscalYears}
-                      onChange={e => setNewRecognition({ ...newRecognition, fiscalYearId: e.target.value })}
-                      onCreate={async (inputYear) => {
-                        // POST to backend to create year, then refresh
-                        const res = await fetch(`${API_BASE_URL}/api/lookups/fiscal-years`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          credentials: 'include',
-                          body: JSON.stringify({ yearLabel: inputYear })
-                        });
-                        if (res.ok) {
-                          fetchFiscalYears();
-                        }
-                      }}
-                      placeholder="Type or select year..."
-                    />
-                  </label>
+                <div>
+                  <label style={labelStyle}>Status</label>
+                  <select value={editRec.isActive ? '1' : '0'} onChange={e => setEditRec({ ...editRec, isActive: e.target.value === '1' })} style={inputStyle}>
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                  </select>
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label>Status:<br />
-                    <select value={newRecognition.isActive ? '1' : '0'} onChange={e => setNewRecognition({ ...newRecognition, isActive: e.target.value === '1' })} style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #e5e7eb' }}>
-                      <option value="1">Active</option>
-                      <option value="0">Inactive</option>
-                    </select>
-                  </label>
-                </div>
-                <div style={{ marginTop: 16 }}>
-                  <button type="submit" style={{ background: '#14b8a6', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4, marginRight: 8 }}>Add</button>
-                  <button type="button" style={{ background: '#e5e7eb', color: '#374151', padding: '8px 16px', border: 'none', borderRadius: 4 }} onClick={() => setAddModalOpen(false)}>Cancel</button>
+                <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+                  <button type="submit" style={btn.primary}>Save Changes</button>
+                  <button type="button" onClick={() => { setEditModalOpen(false); setEditRec(null); }} style={btn.ghost}>Cancel</button>
                 </div>
               </form>
+            </Modal>
+          )}
+
+          {deleteConfirm.open && (
+            <Modal title="Delete Recognition" onClose={() => setDeleteConfirm({ open: false, recognition: null })}>
+              <p style={{ color: T.textMuted, marginBottom: '12px' }}>Are you sure you want to delete this recognition?</p>
+              <p style={{ fontWeight: '700', color: T.textMain, marginBottom: '24px' }}>
+                {deleteConfirm.recognition?.memberName} — {deleteConfirm.recognition?.recognitionType}
+              </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={confirmDelete} style={btn.danger}>Delete</button>
+                <button onClick={() => setDeleteConfirm({ open: false, recognition: null })} style={btn.ghost}>Cancel</button>
+              </div>
+            </Modal>
+          )}
+
+          {isLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+              <div className="spinner" style={{ width: '36px', height: '36px', borderColor: 'rgba(78,93,46,0.2)', borderTopColor: T.primary }} />
             </div>
-          </div>
-        )}
+          ) : (
+            <div ref={tableWrapRef} style={{ ...card, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: T.fontBase }}>
+                <thead>
+                  <tr>
+                    {['Member', 'Recognition Type', 'Notes', 'Status', 'Actions'].map(h => (
+                      <th key={h} style={thStyle}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recognitions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ ...tdStyle, textAlign: 'center', color: T.textMuted, padding: '40px' }}>
+                        No recognitions found
+                      </td>
+                    </tr>
+                  ) : recognitions.map((r, idx) => (
+                    <tr key={r.id ?? idx} style={{ background: idx % 2 === 0 ? 'var(--card-bg)' : 'var(--bg-secondary)' }}>
+                      <td style={{ ...tdStyle, fontWeight: '600' }}>
+                        <Link to={`/members/${r.memberId}`} style={{ color: T.primary, textDecoration: 'none' }}>
+                          {r.memberName ?? '—'}
+                        </Link>
+                      </td>
+                      <td style={{ ...tdStyle, color: T.textMuted }}>{r.recognitionType ?? '—'}</td>
+                      <td style={{ ...tdStyle, color: T.textMuted, maxWidth: '250px' }}>{r.notes || '—'}</td>
+                      <td style={tdStyle}>
+                        <span style={r.isActive ? badge.active : badge.inactive}>
+                          {r.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button onClick={() => handleEdit(r)} style={{ ...btn.warning, padding: '4px 10px', fontSize: T.fontSm }}>Edit</button>
+                          <button onClick={() => setDeleteConfirm({ open: true, recognition: r })} style={{ ...btn.danger, padding: '4px 10px', fontSize: T.fontSm }}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {mirrorScrollbar}
         </div>
-
-        <div style={{ 
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          overflow: 'hidden'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#f9fafb' }}>
-              <tr>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Title</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Description</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Type</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Society</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Fiscal Year</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Status</th>
-                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recognitions.length === 0 ? (
-                <tr>
-                  <td colSpan={8} style={{ 
-                    padding: '20px', 
-                    textAlign: 'center', 
-                    color: '#6b7280' 
-                  }}>
-                    No recognitions found
-                  </td>
-                </tr>
-              ) : (
-                (() => {
-                  try {
-                    return recognitions.map((recognition, idx) => (
-                      <tr key={recognition?.id ? `rec-${recognition.id}` : `rec-idx-${idx}`}>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{recognition?.title ?? 'N/A'}</td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{recognition?.description ?? 'N/A'}</td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{recognition?.type ?? 'N/A'}</td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{recognition?.society ?? 'N/A'}</td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>{recognition?.fiscalYear ?? 'N/A'}</td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            backgroundColor: recognition?.isActive ? '#dcfce7' : '#fee2e2',
-                            color: recognition?.isActive ? '#166534' : '#991b1b'
-                          }}>
-                            {recognition?.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
-                          <button 
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#3b82f6',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              marginRight: '5px',
-                              fontSize: '12px'
-                            }}
-                            onClick={() => handleEdit(recognition)}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#ef4444',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                            onClick={() => handleDelete(recognition)}
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  } catch (err) {
-                    return (
-                      <tr>
-                        <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: '#991b1b' }}>
-                          Error rendering recognitions: {String(err)}
-                        </td>
-                      </tr>
-                    );
-                  }
-                })()
-              )}
-            </tbody>
-          </table>
-        </div>
-
       </div>
     </MainLayout>
   );

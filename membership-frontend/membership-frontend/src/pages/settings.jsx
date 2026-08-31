@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import MainLayout from "../components/mainlayout";
 import { API_BASE_URL } from '../utils/api';
+import { T, card, btn, pageHeader } from '../utils/theme';
 
 export default function Settings() {
   const [settings, setSettings] = useState({
@@ -13,35 +14,28 @@ export default function Settings() {
     publicRegistration: true,
     defaultRole: "public",
     sessionTimeout: "30",
-    backupFrequency: "daily"
+    backupFrequency: "daily",
+    contactEmail: "",
+    contactPhone: "",
+    contactHours: "",
   });
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // Simulate loading settings from backend
-    fetch(`${API_BASE_URL}/api/admin/settings`, {
-      credentials: "include",
-    })
+    fetch(`${API_BASE_URL}/api/admin/settings`, { credentials: "include" })
       .then((res) => res.json())
-      .then((data) => {
-        setSettings(prev => ({ ...prev, ...data }));
-        setIsLoading(false);
-      })
-      .catch(() => {
-        // If endpoint doesn't exist, just use defaults
-        setIsLoading(false);
-      });
+      .then((data) => { setSettings(prev => ({ ...prev, ...data })); setIsLoading(false); })
+      .catch(() => { setIsLoading(false); });
   }, []);
 
   const handleSave = async () => {
     setIsSaving(true);
     setError("");
     setSuccess("");
-
     try {
       const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
         method: "PUT",
@@ -49,34 +43,26 @@ export default function Settings() {
         credentials: "include",
         body: JSON.stringify(settings),
       });
-
       if (res.ok) {
         setSuccess("Settings saved successfully!");
         setTimeout(() => setSuccess(""), 3000);
       } else {
-        throw new Error("Failed to save settings");
+        throw new Error();
       }
-    } catch (err) {
+    } catch {
       setError("Failed to save settings. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
+  const handleChange = (key, value) => setSettings(prev => ({ ...prev, [key]: value }));
 
   if (isLoading) {
     return (
       <MainLayout>
         <div className="dashboard-container">
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            height: '400px'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
             <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
           </div>
         </div>
@@ -84,565 +70,181 @@ export default function Settings() {
     );
   }
 
+  const toggleRow = (icon, title, description, settingKey, danger = false) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '16px 20px', background: 'var(--bg-secondary)',
+      borderRadius: T.radiusMd,
+      border: danger
+        ? `1.5px solid ${T.redBorder}`
+        : `1.5px solid var(--border-primary)`,
+    }}>
+      <div>
+        <div style={{ fontSize: T.fontMd, fontWeight: '700', marginBottom: '4px', color: danger ? T.red : T.textMain }}>
+          {icon} {title}
+        </div>
+        <div style={{ fontSize: T.fontBase, color: T.textMuted }}>{description}</div>
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0, marginLeft: '16px' }}>
+        <input
+          type="checkbox"
+          checked={settings[settingKey]}
+          onChange={(e) => handleChange(settingKey, e.target.checked)}
+          style={{ display: 'none' }}
+        />
+        <div style={{
+          width: '48px', height: '26px',
+          background: settings[settingKey]
+            ? (danger ? T.red : T.primary)
+            : 'var(--border-primary)',
+          borderRadius: '13px', position: 'relative',
+          transition: 'background 0.2s ease',
+        }}>
+          <div style={{
+            width: '20px', height: '20px', background: 'white', borderRadius: '50%',
+            position: 'absolute', top: '3px',
+            left: settings[settingKey] ? '25px' : '3px',
+            transition: 'left 0.2s ease',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+          }} />
+        </div>
+      </label>
+    </div>
+  );
+
   return (
     <MainLayout>
       <div className="dashboard-container">
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+
           {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-              <div>
-                <h1 style={{ 
-                  fontSize: '38px', 
-                  fontWeight: '700', 
-                  color: '#0f766e', 
-                  marginBottom: '12px',
-                  margin: 0 
-                }}>
-                  🔧 System Settings
-                </h1>
-                <p style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '600', 
-                  color: '#64748b',
-                  margin: 0 
-                }}>
-                  Configure system preferences and global settings
-                </p>
-              </div>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                style={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '14px 32px',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  borderRadius: '12px',
-                  background: isSaving ? '#9ca3af' : 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)',
-                  color: 'white',
-                  border: '2px solid ' + (isSaving ? '#6b7280' : '#0f766e'),
-                  cursor: isSaving ? 'not-allowed' : 'pointer',
-                  boxShadow: isSaving ? 'none' : '0 2px 8px rgba(20, 184, 166, 0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSaving) {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(20, 184, 166, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSaving) {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(20, 184, 166, 0.3)';
-                  }
-                }}
-              >
-                {isSaving ? (
-                  <>
-                    <div className="spinner" style={{ width: '16px', height: '16px' }}></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    💾 Save Settings
-                  </>
-                )}
-              </button>
+          <div style={{ ...pageHeader.wrapper, marginBottom: '32px' }}>
+            <div>
+              <h1 style={pageHeader.title}>🔧 System Settings</h1>
+              <p style={pageHeader.subtitle}>Configure system preferences and global settings</p>
             </div>
+            <button onClick={handleSave} disabled={isSaving} style={{ ...btn.primary, opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}>
+              {isSaving ? <><div className="spinner" style={{ width: '14px', height: '14px' }} />Saving…</> : '💾 Save Settings'}
+            </button>
           </div>
 
           {error && (
-            <div style={{ 
-              marginBottom: '32px',
-              padding: '20px 28px',
-              background: '#fff1f2',
-              border: '2px solid #fecaca',
-              borderRadius: '12px',
-              color: '#dc2626',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <span style={{ fontSize: '24px' }}>⚠️</span>
-              {error}
+            <div style={{ marginBottom: '24px', padding: '14px 18px', background: 'var(--btn-danger-bg)', border: `1.5px solid ${T.redBorder}`, borderRadius: T.radiusMd, color: T.red, fontSize: T.fontBase, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              ⚠️ {error}
             </div>
           )}
 
           {success && (
-            <div style={{ 
-              marginBottom: '32px',
-              padding: '20px 28px',
-              background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-              border: '2px solid #059669',
-              borderRadius: '12px',
-              color: '#065f46',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
-            }}>
-              <span style={{ fontSize: '24px' }}>✅</span>
-              {success}
+            <div style={{ marginBottom: '24px', padding: '14px 18px', background: 'var(--badge-green-bg)', border: `1.5px solid ${T.greenBorder}`, borderRadius: T.radiusMd, color: T.green, fontSize: T.fontBase, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              ✅ {success}
             </div>
           )}
 
           {/* General Settings */}
-          <div style={{ 
-            marginBottom: '32px',
-            padding: '36px',
-            background: '#f0fdfa',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
-          }}>
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px',
-              margin: 0,
-              marginBottom: '28px'
-            }}>
-              🏢 General Settings
-            </h2>
-            <div style={{ display: 'grid', gap: '20px' }}>
+          <div style={{ ...card, marginBottom: '24px', padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0 0 20px' }}>🏢 General Settings</h2>
+            <div style={{ display: 'grid', gap: '16px' }}>
               <div>
                 <label className="form-label">System Name</label>
-                <input
-                  type="text"
-                  value={settings.systemName}
-                  onChange={(e) => handleChange('systemName', e.target.value)}
-                  className="form-input"
-                  placeholder="Enter system name"
-                />
+                <input type="text" value={settings.systemName} onChange={(e) => handleChange('systemName', e.target.value)} className="form-input" placeholder="Enter system name" />
               </div>
-              
               <div>
                 <label className="form-label">Administrator Email</label>
-                <input
-                  type="email"
-                  value={settings.adminEmail}
-                  onChange={(e) => handleChange('adminEmail', e.target.value)}
-                  className="form-input"
-                  placeholder="admin@example.com"
-                />
+                <input type="email" value={settings.adminEmail} onChange={(e) => handleChange('adminEmail', e.target.value)} className="form-input" placeholder="admin@example.com" />
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label className="form-label">Default User Role</label>
-                  <select
-                    value={settings.defaultRole}
-                    onChange={(e) => handleChange('defaultRole', e.target.value)}
-                    className="form-input"
-                  >
+                  <select value={settings.defaultRole} onChange={(e) => handleChange('defaultRole', e.target.value)} className="form-input">
                     <option value="public">Public</option>
                     <option value="private">Private</option>
                   </select>
                 </div>
-                
                 <div>
                   <label className="form-label">Session Timeout (minutes)</label>
-                  <input
-                    type="number"
-                    value={settings.sessionTimeout}
-                    onChange={(e) => handleChange('sessionTimeout', e.target.value)}
-                    className="form-input"
-                    min="5"
-                    max="480"
-                  />
+                  <input type="number" value={settings.sessionTimeout} onChange={(e) => handleChange('sessionTimeout', e.target.value)} className="form-input" min="5" max="1440" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* User Management Settings */}
-          <div style={{ 
-            marginBottom: '32px',
-            padding: '36px',
-            background: 'white',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
-          }}>
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px',
-              margin: 0,
-              marginBottom: '28px'
-            }}>
-              👥 User Management
-            </h2>
-            <div style={{ display: 'grid', gap: '20px' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: '#f0fdfa',
-                borderRadius: '12px',
-                border: '2px solid #ccfbf1'
-              }}>
-                <div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
-                    🌐 Public Registration
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    Allow new users to register accounts
-                  </div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.publicRegistration}
-                    onChange={(e) => handleChange('publicRegistration', e.target.checked)}
-                    style={{ display: 'none' }}
-                  />
-                  <div style={{
-                    width: '56px',
-                    height: '28px',
-                    background: settings.publicRegistration ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
-                    borderRadius: '14px',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    border: '2px solid ' + (settings.publicRegistration ? '#0f766e' : '#94a3b8')
-                  }}>
-                    <div style={{
-                      width: '22px',
-                      height: '22px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '1px',
-                      left: settings.publicRegistration ? '29px' : '1px',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}></div>
-                  </div>
-                </label>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: '#f0fdfa',
-                borderRadius: '12px',
-                border: '2px solid #ccfbf1'
-              }}>
-                <div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
-                    ⚡ Auto-Approval
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    Automatically approve new user registrations
-                  </div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.autoApproval}
-                    onChange={(e) => handleChange('autoApproval', e.target.checked)}
-                    style={{ display: 'none' }}
-                  />
-                  <div style={{
-                    width: '56px',
-                    height: '28px',
-                    background: settings.autoApproval ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
-                    borderRadius: '14px',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    border: '2px solid ' + (settings.autoApproval ? '#0f766e' : '#94a3b8')
-                  }}>
-                    <div style={{
-                      width: '22px',
-                      height: '22px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '1px',
-                      left: settings.autoApproval ? '29px' : '1px',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}></div>
-                  </div>
-                </label>
-              </div>
+          {/* User Management */}
+          <div style={{ ...card, marginBottom: '24px', padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0 0 20px' }}>👥 User Management</h2>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {toggleRow('🌐', 'Public Registration', 'Allow new users to register accounts', 'publicRegistration')}
+              {toggleRow('⚡', 'Auto-Approval', 'Automatically approve new user registrations', 'autoApproval')}
             </div>
           </div>
 
           {/* System Configuration */}
-          <div style={{ 
-            marginBottom: '32px',
-            padding: '36px',
-            background: '#f0fdfa',
-            borderRadius: '16px',
-            border: '2px solid #5eead4',
-            boxShadow: '0 4px 12px rgba(20, 184, 166, 0.15)'
-          }}>
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px',
-              margin: 0,
-              marginBottom: '28px'
-            }}>
-              🔧 System Configuration
-            </h2>
-            <div style={{ display: 'grid', gap: '20px' }}>
+          <div style={{ ...card, marginBottom: '24px', padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0 0 20px' }}>🔧 System Configuration</h2>
+            <div style={{ display: 'grid', gap: '16px' }}>
               <div>
                 <label className="form-label">Maximum Upload Size (MB)</label>
-                <input
-                  type="number"
-                  value={settings.maxUploadSize}
-                  onChange={(e) => handleChange('maxUploadSize', e.target.value)}
-                  className="form-input"
-                  min="1"
-                  max="100"
-                />
+                <input type="number" value={settings.maxUploadSize} onChange={(e) => handleChange('maxUploadSize', e.target.value)} className="form-input" min="1" max="100" />
               </div>
-
               <div>
                 <label className="form-label">Backup Frequency</label>
-                <select
-                  value={settings.backupFrequency}
-                  onChange={(e) => handleChange('backupFrequency', e.target.value)}
-                  className="form-input"
-                >
+                <select value={settings.backupFrequency} onChange={(e) => handleChange('backupFrequency', e.target.value)} className="form-input">
                   <option value="hourly">Hourly</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+              {toggleRow('📧', 'Email Notifications', 'Send system notifications via email', 'emailNotifications')}
+              {toggleRow('🚧', 'Maintenance Mode', 'Temporarily disable public access to the system', 'maintenanceMode', true)}
+            </div>
+          </div>
 
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: '#f0fdfa',
-                borderRadius: '12px',
-                border: '2px solid #ccfbf1'
-              }}>
-                <div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#0f766e' }}>
-                    📧 Email Notifications
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    Send system notifications via email
-                  </div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.emailNotifications}
-                    onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                    style={{ display: 'none' }}
-                  />
-                  <div style={{
-                    width: '56px',
-                    height: '28px',
-                    background: settings.emailNotifications ? 'linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)' : '#cbd5e1',
-                    borderRadius: '14px',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    border: '2px solid ' + (settings.emailNotifications ? '#0f766e' : '#94a3b8')
-                  }}>
-                    <div style={{
-                      width: '22px',
-                      height: '22px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '1px',
-                      left: settings.emailNotifications ? '29px' : '1px',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}></div>
-                  </div>
-                </label>
+          {/* Contact Information */}
+          <div style={{ ...card, marginBottom: '24px', padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, margin: '0 0 20px' }}>📧 Contact Information</h2>
+            <p style={{ fontSize: T.fontBase, color: T.textMuted, marginBottom: '16px' }}>Displayed to members on the Support &gt; Resources tab.</p>
+            <div style={{ display: 'grid', gap: '16px' }}>
+              <div>
+                <label className="form-label">Email Address</label>
+                <input type="email" value={settings.contactEmail} onChange={(e) => handleChange('contactEmail', e.target.value)} className="form-input" placeholder="e.g. contact@bisofpei.com" />
               </div>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: settings.maintenanceMode ? '#fff1f2' : '#f0fdfa',
-                borderRadius: '12px',
-                border: '2px solid ' + (settings.maintenanceMode ? '#fecaca' : '#ccfbf1')
-              }}>
-                <div>
-                  <div style={{ 
-                    fontSize: '17px',
-                    fontWeight: '700', 
-                    marginBottom: '6px',
-                    color: settings.maintenanceMode ? '#dc2626' : '#0f766e'
-                  }}>
-                    🚧 Maintenance Mode
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    Temporarily disable public access to the system
-                  </div>
-                </div>
-                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.maintenanceMode}
-                    onChange={(e) => handleChange('maintenanceMode', e.target.checked)}
-                    style={{ display: 'none' }}
-                  />
-                  <div style={{
-                    width: '56px',
-                    height: '28px',
-                    background: settings.maintenanceMode ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : '#cbd5e1',
-                    borderRadius: '14px',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    border: '2px solid ' + (settings.maintenanceMode ? '#dc2626' : '#94a3b8')
-                  }}>
-                    <div style={{
-                      width: '22px',
-                      height: '22px',
-                      background: 'white',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '1px',
-                      left: settings.maintenanceMode ? '29px' : '1px',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                    }}></div>
-                  </div>
-                </label>
+              <div>
+                <label className="form-label">Phone Number</label>
+                <input type="text" value={settings.contactPhone} onChange={(e) => handleChange('contactPhone', e.target.value)} className="form-input" placeholder="e.g. (902) 887-2106" />
+              </div>
+              <div>
+                <label className="form-label">Office Hours</label>
+                <input type="text" value={settings.contactHours} onChange={(e) => handleChange('contactHours', e.target.value)} className="form-input" placeholder="e.g. Mon-Fri 10AM-2PM AST" />
               </div>
             </div>
           </div>
 
           {/* Danger Zone */}
-          <div style={{ 
-            padding: '36px',
-            border: '3px solid #fecaca', 
-            background: '#fff1f2',
-            borderRadius: '16px',
-            boxShadow: '0 6px 20px rgba(220, 38, 38, 0.15)'
-          }}>
-            <h2 style={{ 
-              color: '#dc2626', 
-              fontSize: '24px', 
-              fontWeight: '700', 
-              marginBottom: '24px',
-              margin: 0,
-              marginBottom: '24px'
-            }}>
-              ⚠️ Danger Zone
-            </h2>
-            <div style={{ display: 'grid', gap: '20px' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: 'white',
-                borderRadius: '12px',
-                border: '2px solid #fecaca'
-              }}>
+          <div style={{ ...card, padding: '24px', border: `1.5px solid ${T.redBorder}` }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.red, margin: '0 0 20px' }}>⚠️ Danger Zone</h2>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '16px 20px', background: 'var(--bg-secondary)', borderRadius: T.radiusMd, border: `1.5px solid var(--border-primary)` }}>
                 <div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#dc2626' }}>
-                    🗄️ Export All Data
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    Download a complete backup of all system data
-                  </div>
+                  <div style={{ fontSize: T.fontMd, fontWeight: '700', marginBottom: '4px', color: T.textMain }}>🗄️ Export All Data</div>
+                  <div style={{ fontSize: T.fontBase, color: T.textMuted }}>Download a complete backup of all system data</div>
                 </div>
-                <button
-                  onClick={() => alert('Export functionality coming soon!')}
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: 'white',
-                    border: '2px solid #d97706',
-                    padding: '10px 24px',
-                    borderRadius: '10px',
-                    fontSize: '15px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
-                  }}
-                >
+                <button onClick={() => window.location.href = `${API_BASE_URL}/api/export/members/csv`} style={{ ...btn.warning, flexShrink: 0 }}>
                   📥 Export Data
                 </button>
               </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '20px 24px',
-                background: 'white',
-                borderRadius: '12px',
-                border: '2px solid #fecaca'
-              }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '16px 20px', background: 'var(--bg-secondary)', borderRadius: T.radiusMd, border: `1.5px solid ${T.redBorder}` }}>
                 <div>
-                  <div style={{ fontSize: '17px', fontWeight: '700', marginBottom: '6px', color: '#dc2626' }}>
-                    🗑️ Reset System
-                  </div>
-                  <div style={{ fontSize: '15px', fontWeight: '500', color: '#64748b' }}>
-                    This will permanently delete all data and reset the system
-                  </div>
+                  <div style={{ fontSize: T.fontMd, fontWeight: '700', marginBottom: '4px', color: T.red }}>🗑️ Reset System</div>
+                  <div style={{ fontSize: T.fontBase, color: T.textMuted }}>Server-level operation — contact the system administrator</div>
                 </div>
-                <button
-                  onClick={() => {
-                    if (confirm('Are you sure you want to reset the entire system? This action cannot be undone.')) {
-                      alert('System reset functionality would be implemented here.');
-                    }
-                  }}
-                  style={{
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                    color: 'white',
-                    border: '2px solid #b91c1c',
-                    padding: '10px 24px',
-                    borderRadius: '10px',
-                    fontSize: '15px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
-                  }}
-                >
+                <button disabled style={{ ...btn.danger, flexShrink: 0, opacity: 0.4, cursor: 'not-allowed' }}>
                   💣 Reset System
                 </button>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </MainLayout>

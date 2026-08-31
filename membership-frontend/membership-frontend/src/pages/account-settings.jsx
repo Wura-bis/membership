@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useauth";
 import MainLayout from "../components/mainlayout";
+import { API_BASE_URL } from '../utils/api';
+import { T, card, btn, pageHeader } from '../utils/theme';
 
 export default function AccountSettings() {
   const { user } = useAuth();
@@ -13,6 +15,10 @@ export default function AccountSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
 
   useEffect(() => {
     // Load user settings (for now, use defaults)
@@ -43,23 +49,32 @@ export default function AccountSettings() {
     if (success) setSuccess("");
   };
 
+  const handleChangePassword = async () => {
+    setPwError(""); setPwSuccess("");
+    if (!pwForm.currentPassword || !pwForm.newPassword) { setPwError("All fields are required."); return; }
+    if (pwForm.newPassword !== pwForm.confirmPassword) { setPwError("New passwords do not match."); return; }
+    if (pwForm.newPassword.length < 8) { setPwError("New password must be at least 8 characters."); return; }
+    setPwLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/my-profile/change-password`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPwError(data.error || 'Failed to change password.'); return; }
+      setPwSuccess("Password changed successfully.");
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch { setPwError("Network error. Please try again."); }
+    finally { setPwLoading(false); }
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
-        <div style={{ 
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #f0fdfa 100%)',
-          padding: '32px 24px'
-        }}>
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              height: '400px'
-            }}>
-              <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
-            </div>
+        <div className="dashboard-container">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+            <div className="spinner" style={{ width: '40px', height: '40px' }}></div>
           </div>
         </div>
       </MainLayout>
@@ -68,76 +83,46 @@ export default function AccountSettings() {
 
   return (
     <MainLayout>
-      <div style={{ 
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f0fdfa 0%, #e6fffa 50%, #f0fdfa 100%)',
-        padding: '32px 24px'
-      }}>
+      <div className="dashboard-container">
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          {/* Header */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{
-              fontSize: '38px',
-              fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              ⚙️ Account Settings
-            </h1>
-            <p style={{
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#64748b',
-              margin: '0'
-            }}>
-              Manage your account preferences and privacy settings
-            </p>
+          <div style={pageHeader.wrapper}>
+            <div>
+              <h1 style={pageHeader.title}>⚙️ Account Settings</h1>
+              <p style={pageHeader.subtitle}>Manage your account preferences and privacy settings</p>
+            </div>
           </div>
 
-          {/* Error/Success Messages */}
           {error && (
-            <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
-              padding: '12px',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
+            <div style={{ background: T.redLight, border: `2px solid ${T.redBorder}`, color: T.red, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '16px', fontSize: T.fontBase }}>
               {error}
             </div>
           )}
-
           {success && (
-            <div style={{
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              color: '#166534',
-              padding: '12px',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
+            <div style={{ background: T.greenLight, border: `2px solid ${T.greenBorder}`, color: T.green, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '16px', fontSize: T.fontBase }}>
               {success}
             </div>
           )}
 
+          {/* User ID card */}
+          <div style={{ ...card, padding: '20px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Your User ID</div>
+              <div style={{ fontSize: '26px', fontWeight: '800', color: T.textMain, letterSpacing: '1px' }}>{user?.id || '—'}</div>
+              <div style={{ fontSize: T.fontSm, color: T.textMuted, marginTop: '4px' }}>Use this ID to reset your password if you ever lose access to your email.</div>
+            </div>
+          </div>
+
           {/* Settings Form */}
           <div style={{
-            background: '#f0fdfa',
-            border: '2px solid #5eead4',
-            borderRadius: '12px',
-            padding: '36px',
+            ...card,
+            padding: '24px',
             marginBottom: '28px',
-            boxShadow: '0 2px 12px rgba(20,184,166,0.08)'
           }}>
             <h2 style={{
-              fontSize: '24px',
+              fontSize: T.fontLg,
               fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px'
+              color: T.textMain,
+              marginBottom: '16px'
             }}>
               Notification Preferences
             </h2>
@@ -156,22 +141,18 @@ export default function AccountSettings() {
                   style={{
                     width: '18px',
                     height: '18px',
-                    accentColor: '#14b8a6'
+                    accentColor: T.primaryLight
                   }}
                 />
-                <span style={{
-                  fontSize: '17px',
-                  color: '#1e293b',
-                  fontWeight: '600'
-                }}>
+                <span style={{ fontSize: T.fontBase, color: T.textMuted, fontWeight: '600' }}>
                   Email Notifications
                 </span>
               </label>
               <p style={{
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#64748b',
-                margin: '10px 0 0 30px',
+                color: T.textMuted,
+                margin: '8px 0 0 30px',
                 lineHeight: '1.6'
               }}>
                 Receive updates about society events, news, and important announcements
@@ -179,10 +160,10 @@ export default function AccountSettings() {
             </div>
 
             <h2 style={{
-              fontSize: '24px',
+              fontSize: T.fontLg,
               fontWeight: '700',
-              color: '#0f766e',
-              marginBottom: '28px',
+              color: T.textMain,
+              marginBottom: '16px',
               marginTop: '36px'
             }}>
               Privacy Settings
@@ -191,10 +172,10 @@ export default function AccountSettings() {
             <div style={{ marginBottom: '28px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '10px'
+                color: T.textMain,
+                marginBottom: '6px'
               }}>
                 Profile Visibility
               </label>
@@ -204,21 +185,21 @@ export default function AccountSettings() {
                 style={{
                   width: '100%',
                   maxWidth: '400px',
-                  padding: '16px',
-                  border: '2px solid #5eead4',
-                  borderRadius: '10px',
-                  fontSize: '17px',
+                  padding: '8px 10px',
+                  border: `2px solid ${T.primaryBorder}`,
+                  borderRadius: T.radiusMd,
+                  fontSize: T.fontBase,
                   fontWeight: '500',
-                  background: 'white'
+                  background: 'var(--card-bg)'
                 }}
               >
                 <option value="private">Private (Members only)</option>
                 <option value="public">Public</option>
               </select>
               <p style={{
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#64748b',
+                color: T.textMuted,
                 margin: '10px 0 0 0',
                 lineHeight: '1.6'
               }}>
@@ -229,10 +210,10 @@ export default function AccountSettings() {
             <div style={{ marginBottom: '32px' }}>
               <label style={{
                 display: 'block',
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '700',
-                color: '#0f766e',
-                marginBottom: '10px'
+                color: T.textMain,
+                marginBottom: '6px'
               }}>
                 Preferred Contact Method
               </label>
@@ -242,12 +223,12 @@ export default function AccountSettings() {
                 style={{
                   width: '100%',
                   maxWidth: '400px',
-                  padding: '16px',
-                  border: '2px solid #5eead4',
-                  borderRadius: '10px',
-                  fontSize: '17px',
+                  padding: '8px 10px',
+                  border: `2px solid ${T.primaryBorder}`,
+                  borderRadius: T.radiusMd,
+                  fontSize: T.fontBase,
                   fontWeight: '500',
-                  background: 'white'
+                  background: 'var(--card-bg)'
                 }}
               >
                 <option value="email">Email</option>
@@ -255,114 +236,60 @@ export default function AccountSettings() {
                 <option value="mail">Physical Mail</option>
               </select>
               <p style={{
-                fontSize: '16px',
+                fontSize: T.fontBase,
                 fontWeight: '500',
-                color: '#64748b',
+                color: T.textMuted,
                 margin: '8px 0 0 0'
               }}>
                 How the society should contact you for important matters
               </p>
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '16px',
-              paddingTop: '32px',
-              borderTop: '3px solid #ccfbf1'
-            }}>
-              <button
-                onClick={handleSave}
-                disabled={isSaving}
-                style={{
-                  background: isSaving ? '#94a3b8' : '#14b8a6',
-                  color: 'white',
-                  border: '2px solid ' + (isSaving ? '#94a3b8' : '#0f766e'),
-                  padding: '18px 32px',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: isSaving ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '24px', borderTop: `2px solid ${T.primaryMid}` }}>
+              <button onClick={handleSave} disabled={isSaving} style={{ ...btn.primary, opacity: isSaving ? 0.6 : 1, cursor: isSaving ? 'not-allowed' : 'pointer' }}>
                 {isSaving ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{
-            background: 'white',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '24px',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-          }}>
-            <h2 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#1e293b',
-              marginBottom: '16px'
-            }}>
+          {/* Change Password — hidden for public/shared accounts */}
+          {user?.role !== 'public' && <div style={{ ...card, padding: '24px', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, marginBottom: '4px' }}>Change Password</h2>
+            <p style={{ fontSize: T.fontBase, color: T.textMuted, marginBottom: '20px' }}>Update your login password. You'll need your current password to do this.</p>
+
+            {pwError && <div style={{ background: T.redLight, border: `2px solid ${T.redBorder}`, color: T.red, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '14px', fontSize: T.fontBase }}>{pwError}</div>}
+            {pwSuccess && <div style={{ background: T.greenLight, border: `2px solid ${T.greenBorder}`, color: T.green, padding: '10px 14px', borderRadius: T.radiusMd, marginBottom: '14px', fontSize: T.fontBase }}>{pwSuccess}</div>}
+
+            {[
+              { key: 'currentPassword', label: 'Current Password' },
+              { key: 'newPassword',     label: 'New Password' },
+              { key: 'confirmPassword', label: 'Confirm New Password' },
+            ].map(({ key, label }) => (
+              <div key={key} style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: T.fontBase, fontWeight: '700', color: T.textMain, marginBottom: '6px' }}>{label}</label>
+                <input
+                  type="password"
+                  value={pwForm[key]}
+                  onChange={e => { setPwForm(p => ({ ...p, [key]: e.target.value })); setPwError(""); setPwSuccess(""); }}
+                  style={{ width: '100%', maxWidth: '400px', padding: '9px 12px', border: `2px solid ${T.primaryBorder}`, borderRadius: T.radiusMd, fontSize: T.fontBase, fontFamily: 'inherit', background: 'var(--card-bg)', color: T.textMain, boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
+            ))}
+
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: `2px solid ${T.primaryMid}` }}>
+              <button onClick={handleChangePassword} disabled={pwLoading} style={{ ...btn.primary, opacity: pwLoading ? 0.6 : 1, cursor: pwLoading ? 'not-allowed' : 'pointer' }}>
+                {pwLoading ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </div>}
+
+          <div style={{ ...card, padding: '24px' }}>
+            <h2 style={{ fontSize: T.fontLg, fontWeight: '700', color: T.textMain, marginBottom: '16px' }}>
               Quick Actions
             </h2>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <a 
-                href="/my-profile"
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  color: '#1e293b',
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#f1f5f9';
-                  e.target.style.borderColor = '#14b8a6';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#e2e8f0';
-                }}
-              >
-                👤 Edit Profile
-              </a>
-              <a 
-                href="/support"
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  color: '#1e293b',
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#f1f5f9';
-                  e.target.style.borderColor = '#14b8a6';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#e2e8f0';
-                }}
-              >
-                🎧 Get Support
-              </a>
+              <a href="/my-profile" style={{ ...btn.ghost, textDecoration: 'none' }}>👤 Edit Profile</a>
+              <a href="/support" style={{ ...btn.ghost, textDecoration: 'none' }}>🎧 Get Support</a>
             </div>
           </div>
         </div>
